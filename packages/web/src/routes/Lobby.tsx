@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import type { Participant } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
+import { SwipeDeck } from "../components/SwipeDeck.js";
 
 function initials(name: string): string {
   return name.trim().slice(0, 2).toUpperCase();
@@ -71,7 +72,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, error, status, send } = useSessionSocket(code, displayName);
+  const { session, deck, error, status, send } = useSessionSocket(code, displayName);
   const [copied, setCopied] = useState(false);
 
   const me = session?.participants.find((p) => p.displayName === displayName);
@@ -86,12 +87,24 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
   if (session?.status === "swiping") {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <h1 className="font-display text-4xl font-bold">Deck incoming.</h1>
-        <p className="mt-3 text-muted max-w-sm">
-          The swiping screen is the next build step. The round started, so the
-          realtime handoff works. That is the point of today.
-        </p>
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-10">
+        {deck && deck.length > 0 ? (
+          <SwipeDeck
+            restaurants={deck}
+            onSwipe={(restaurantId, direction) =>
+              send({ type: "swipe", restaurantId, direction })
+            }
+          />
+        ) : deck ? (
+          <div className="text-center max-w-sm">
+            <h1 className="font-display text-3xl font-bold">Nothing nearby.</h1>
+            <p className="mt-2 text-muted">
+              Nothing matched your filters. Bold of this area to have no food.
+            </p>
+          </div>
+        ) : (
+          <p className="text-muted">Dealing the deck...</p>
+        )}
       </main>
     );
   }

@@ -9,9 +9,17 @@ compatibility_flags = ["nodejs_compat"]
 name = "SESSION_ROOM"
 class_name = "SessionRoom"
 
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["SessionRoom"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["RateLimiter"]
 
 # Durable cross-session data: session records + visited-places history.
 [[d1_databases]]

@@ -50,7 +50,10 @@ export function useSessionSocket(code: string, displayName: string) {
     if (!code || !displayName) return;
 
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${proto}://${location.host}/ws/${code}`);
+    // In prod the Worker may live on another origin; in dev Vite proxies /ws.
+    const wsBase =
+      import.meta.env.VITE_WS_BASE ?? `${proto}://${location.host}`;
+    const ws = new WebSocket(`${wsBase}/ws/${code}`);
     wsRef.current = ws;
 
     ws.onopen = () => {

@@ -1,0 +1,21 @@
+name = "wherever-honestly"
+main = "src/index.ts"
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat"]
+
+# One Durable Object per session. The instance holds live vote state and owns
+# every WebSocket for that session.
+[[durable_objects.bindings]]
+name = "SESSION_ROOM"
+class_name = "SessionRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionRoom"]
+
+# Durable cross-session data: session records + visited-places history.
+[[d1_databases]]
+binding = "DB"
+database_name = "wherever"
+database_id = "local-dev-placeholder"
+migrations_dir = "migrations"

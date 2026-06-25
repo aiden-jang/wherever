@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ClientMessage, ServerMessage, Session } from "@wherever/shared";
+import type {
+  ClientMessage,
+  Restaurant,
+  ServerMessage,
+  Session,
+} from "@wherever/shared";
 
 type Status = "connecting" | "open" | "closed";
 
@@ -10,6 +15,7 @@ type Status = "connecting" | "open" | "closed";
  */
 export function useSessionSocket(code: string, displayName: string) {
   const [session, setSession] = useState<Session | null>(null);
+  const [deck, setDeck] = useState<Restaurant[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("connecting");
   const wsRef = useRef<WebSocket | null>(null);
@@ -29,6 +35,7 @@ export function useSessionSocket(code: string, displayName: string) {
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data as string) as ServerMessage;
       if (msg.type === "session_state") setSession(msg.session);
+      else if (msg.type === "deck") setDeck(msg.restaurants);
       else if (msg.type === "error") setError(msg.message);
     };
 
@@ -39,5 +46,5 @@ export function useSessionSocket(code: string, displayName: string) {
     wsRef.current?.send(JSON.stringify(message));
   }, []);
 
-  return { session, error, status, send };
+  return { session, deck, error, status, send };
 }

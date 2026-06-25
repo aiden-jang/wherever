@@ -2,12 +2,14 @@ import { DurableObject } from "cloudflare:workers";
 import {
   clientMessageSchema,
   type Participant,
+  type Restaurant,
   type ServerMessage,
   type Session,
   type SessionFilters,
   type SessionStatus,
   type VoteMode,
 } from "@wherever/shared";
+import { createRestaurantSource } from "./restaurantSource.js";
 import type { Env } from "./env.js";
 
 /** What we attach to each WebSocket so presence survives DO hibernation. */
@@ -73,12 +75,10 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleJoin(ws, msg.displayName);
       case "start_round":
         return this.handleStartRound(ws);
-      default:
-        // swipe / decide_now arrive in Phase 3.
-        return this.send(ws, {
-          type: "error",
-          message: `"${msg.type}" lands in a later step.`,
-        });
+      case "swipe":
+      case "decide_now":
+        // Accepted but not yet tallied; voting + match land in Phase 3.
+        return;
     }
   }
 
@@ -110,6 +110,12 @@ export class SessionRoom extends DurableObject<Env> {
     ws.serializeAttachment(attachment);
 
     await this.broadcastState();
+
+    // Late joiner during a live round gets the same deck everyone else has.
+    if (meta.status === "swiping") {
+      const deck = await this.getOrCreateDeck(meta);
+      this.send(ws, { type: "deck", restaurants: deck });
+    }
   }
 
   private async handleStartRound(ws: WebSocket): Promise<void> {
@@ -124,7 +130,22 @@ export class SessionRoom extends DurableObject<Env> {
     if (!meta) return;
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
+
+    // Fetch the deck once and store it so every participant votes the same set.
+    const deck = await this.getOrCreateDeck(meta);
+    this.broadcast({ type: "deck", restaurants: deck });
     await this.broadcastState();
+  }
+
+  /** Deck is fetched once per session and reused for late joiners / reconnects. */
+  private async getOrCreateDeck(meta: SessionMeta): Promise<Restaurant[]> {
+    let deck = await this.ctx.storage.get<Restaurant[]>("deck");
+    if (!deck) {
+      const source = createRestaurantSource(this.env.RESTAURANT_SOURCE ?? "mock");
+      deck = await source.fetchDeck(meta.filters);
+      await this.ctx.storage.put("deck", deck);
+    }
+    return deck;
   }
 
   /** Rebuild the participant list from live sockets and push it to everyone. */
@@ -172,5 +193,17 @@ export class SessionRoom extends DurableObject<Env> {
 
   private send(ws: WebSocket, message: ServerMessage): void {
     ws.send(JSON.stringify(message));
+  }
+
+  /** Send one message to every connected socket. */
+  private broadcast(message: ServerMessage): void {
+    const payload = JSON.stringify(message);
+    for (const s of this.ctx.getWebSockets()) {
+      try {
+        s.send(payload);
+      } catch {
+        // gone; next broadcast omits it.
+      }
+    }
   }
 }

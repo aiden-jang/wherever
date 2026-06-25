@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* Design tokens (Tailwind v4 @theme -> utility classes like bg-ink, text-ember). */
+@theme {
+  --color-ink: #0c0a09;
+  --color-ink-soft: #16120f;
+  --color-cream: #f6f1e7;
+  --color-muted: #a8a097;
+  --color-ember: #ff5e2c;
+  --color-flare: #ff2d78;
+  --color-grape: #7c3aed;
+  --color-acid: #d7ff3e;
+
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  /* Respect notches on mobile. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Slow-drifting sunset aurora behind everything. */
+@keyframes aurora-drift {
+  0% {
+    transform: translate3d(-8%, -6%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6%, 8%, 0) scale(1.15);
+  }
+  100% {
+    transform: translate3d(-8%, -6%, 0) scale(1);
+  }
+}
+
+.aurora {
+  position: fixed;
+  inset: -25%;
+  z-index: -2;
+  filter: blur(80px);
+  background:
+    radial-gradient(40% 40% at 25% 30%, var(--color-ember) 0%, transparent 60%),
+    radial-gradient(38% 38% at 75% 35%, var(--color-flare) 0%, transparent 60%),
+    radial-gradient(45% 45% at 55% 80%, var(--color-grape) 0%, transparent 65%);
+  opacity: 0.55;
+  animation: aurora-drift 18s ease-in-out infinite;
+}
+
+/* Fine film grain over the whole page for a tactile, less-flat feel. */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Card stack float. */
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+  }
+  50% {
+    transform: translateY(-10px) rotate(var(--rot, 0deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora,
+  .float {
+    animation: none;
+  }
+}

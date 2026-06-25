@@ -1,1 +1,60 @@
-# wherever-honestly
+# Wherever, Honestly
+
+> Everyone swipes. Majority wins. Dinner is decided before the group chat even starts typing.
+
+A group picks a restaurant by swiping, instead of sending 60 messages and eating cereal at 9pm. Join a session, swipe left or right on nearby spots, and the place with the most yeses wins. You can dislike something, but the group does not care about your feelings. That is the point.
+
+## What it does
+
+- **Swipe to vote.** Left or right on each restaurant. Arrow keys work on desktop.
+- **Group matching.** Everyone in a session votes on the same deck in real time.
+- **Majority wins.** A left swipe is a downvote, not a veto. One picky person cannot tank dinner.
+- **No accounts.** Type a name, share a code, done.
+- **Remembers where you went.** Already-visited spots stop showing up.
+
+## Stack
+
+- TypeScript monorepo (pnpm workspaces)
+- **Web:** React + Vite + Tailwind v4, mobile-first, installable as a PWA, deploys to Cloudflare Pages
+- **Realtime + API:** a Cloudflare Worker (Hono) with one **Durable Object per session** (`SessionRoom`) holding live vote state. See [ADR 0001](docs/adr/0001-durable-objects.md).
+- **Durable data:** Cloudflare D1 (SQLite) + Drizzle
+- **Validation:** Zod at every HTTP and WebSocket boundary
+- **Restaurant data:** swappable source (seeded mock now, Foursquare later)
+
+Runs entirely on free tiers.
+
+## Getting started
+
+Requires Node 20+ (an `.nvmrc` pins Node 22). No Docker needed; Wrangler runs the Worker, Durable Object, and a local D1 for you.
+
+```bash
+nvm use                       # picks up .nvmrc
+corepack enable               # makes pnpm available
+pnpm install
+
+# Terminal 1: the Worker + Durable Object + local D1
+pnpm dev:worker               # http://localhost:8787
+
+# Terminal 2: the web app (proxies /api and /ws to the Worker)
+pnpm dev:web                  # http://localhost:5173
+```
+
+## Project layout
+
+```
+packages/
+  shared/   # types, websocket protocol, Zod schemas (imported by both sides)
+  worker/   # Cloudflare Worker (Hono) + SessionRoom Durable Object + D1/Drizzle
+  web/      # React client
+docs/adr/   # architecture decision records
+```
+
+## Roadmap
+
+0. Scaffold + landing (you are here)
+1. Sessions + lobby (create, join by code, presence). Zod validation, rate limiting.
+2. Restaurant deck + swipe UI
+3. Realtime voting + match detection: pure decision core + exhaustive tests, idempotent votes, decide-exactly-once, reconnection
+4. Majority decision logic + "decide now"
+5. Visited-places history
+6. Polish, PWA, deploy

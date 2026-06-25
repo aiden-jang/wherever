@@ -49,12 +49,18 @@ packages/
 docs/adr/   # architecture decision records
 ```
 
+## Deploy
+
+Runs entirely on Cloudflare's free tier (Worker + Durable Objects + D1, plus Pages for the web app). See [DEPLOY.md](DEPLOY.md) for the step-by-step.
+
 ## Roadmap
 
-0. Scaffold + landing (you are here)
-1. Sessions + lobby (create, join by code, presence). Zod validation, rate limiting.
-2. Restaurant deck + swipe UI
-3. Realtime voting + match detection: pure decision core + exhaustive tests, idempotent votes, decide-exactly-once, reconnection
-4. Majority decision logic + "decide now"
-5. Visited-places history
-6. Polish, PWA, deploy
+All phases complete:
+
+0. Scaffold + landing
+1. Sessions + lobby (create, join by code, live presence), Zod validation
+2. Restaurant deck + swipe UI (drag, buttons, keyboard)
+3. Realtime voting + match detection: pure decision core with unit tests, idempotent votes, decide-exactly-once, reconnection
+4. Majority decision logic + "decide now" (folded into 3)
+5. Visited-places history (D1), excluded from future rounds, "pick again"
+6. Polish (PWA install, reconnect + not-found states), rate limiting, deploy prep

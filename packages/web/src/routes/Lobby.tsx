@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import type { Participant } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
@@ -36,6 +36,17 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
         </button>
       </form>
     </main>
+  );
+}
+
+function DisconnectBanner() {
+  return (
+    <div className="fixed top-0 inset-x-0 z-40 bg-flare/90 text-ink text-center text-sm font-medium py-2">
+      Connection lost.{" "}
+      <button onClick={() => location.reload()} className="underline font-semibold">
+        Reload to rejoin
+      </button>
+    </div>
   );
 }
 
@@ -87,6 +98,25 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setTimeout(() => setCopied(false), 1500);
   }
 
+  // An error before any session state means a bad or expired code.
+  if (error && !session && !match) {
+    return (
+      <main className="flex-1 flex items-center justify-center px-6 text-center">
+        <div className="max-w-sm">
+          <div className="text-6xl">🫥</div>
+          <h1 className="mt-4 font-display text-4xl font-bold">No session here.</h1>
+          <p className="mt-3 text-muted">{error}</p>
+          <Link
+            to="/"
+            className="mt-8 inline-block rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
+          >
+            Start a fresh one
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   // The match outcome wins over everything else once it arrives.
   if (match) {
     return (
@@ -104,6 +134,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   if (session?.status === "swiping") {
     return (
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-10">
+        {status === "closed" && <DisconnectBanner />}
         {deck && deck.length > 0 ? (
           <>
             <SwipeDeck
@@ -144,6 +175,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
   return (
     <main className="flex-1 flex flex-col items-center px-6 pb-16 w-full max-w-md mx-auto">
+      {status === "closed" && <DisconnectBanner />}
       <div className="w-full text-center mt-4">
         <p className="text-sm text-muted">Share this code. Or the link. Whatever is less effort.</p>
         <div className="mt-3 font-display text-5xl font-extrabold tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-ember via-flare to-grape">

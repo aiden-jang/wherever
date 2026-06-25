@@ -7,11 +7,14 @@ export const DEFAULT_FILTERS: SessionFilters = {
   categories: [],
 };
 
+// Empty in dev (Vite proxies /api to the Worker); set to the Worker origin in prod.
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+
 export async function createSession(
   displayName: string,
   filters: SessionFilters = DEFAULT_FILTERS,
 ): Promise<string> {
-  const res = await fetch("/api/sessions", {
+  const res = await fetch(`${API_BASE}/api/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ displayName, filters }),

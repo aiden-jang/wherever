@@ -7,6 +7,11 @@ import { generateSessionCode } from "./code.js";
 import type { Env } from "./env.js";
 
 export { SessionRoom } from "./sessionRoom.js";
+export { RateLimiter } from "./rateLimiter.js";
+
+// At most this many session creations per IP per minute.
+const CREATE_LIMIT = 10;
+const CREATE_WINDOW_MS = 60_000;
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -16,9 +21,17 @@ app.get("/api/health", (c) =>
   c.json({ ok: true, source: c.env.RESTAURANT_SOURCE ?? "mock" }),
 );
 
-// Create a session: validate input, mint an unguessable code, persist it,
-// return the code. The Durable Object is created lazily on first WS connect.
+// Create a session: rate-limit, validate input, mint an unguessable code,
+// persist it. The Durable Object is created lazily on first WS connect.
 app.post("/api/sessions", async (c) => {
+  const ip = c.req.header("cf-connecting-ip") ?? "local";
+  const limiter = c.env.RATE_LIMITER.get(
+    c.env.RATE_LIMITER.idFromName(`create:${ip}`),
+  );
+  if (!(await limiter.hit(CREATE_LIMIT, CREATE_WINDOW_MS))) {
+    return c.json({ error: "Slow down. Too many sessions." }, 429);
+  }
+
   const body = await c.req.json().catch(() => null);
   const parsed = createSessionSchema.safeParse(body);
   if (!parsed.success) {

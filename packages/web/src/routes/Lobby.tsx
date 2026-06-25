@@ -73,7 +73,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, alreadyVoted, progress, match, error, status, send } =
+  const { session, deck, alreadyVoted, progress, match, visited, error, status, send } =
     useSessionSocket(code, displayName);
   const [copied, setCopied] = useState(false);
 
@@ -91,7 +91,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   if (match) {
     return (
       <main className="flex-1 flex items-center justify-center px-6 py-10">
-        <MatchScreen match={match} />
+        <MatchScreen
+          match={match}
+          visited={visited}
+          isHost={isHost}
+          onAgain={() => send({ type: "again" })}
+        />
       </main>
     );
   }
@@ -102,6 +107,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         {deck && deck.length > 0 ? (
           <>
             <SwipeDeck
+              key={deck.map((r) => r.id).join(",")}
               restaurants={deck}
               alreadyVoted={alreadyVoted}
               onSwipe={(restaurantId, direction) =>

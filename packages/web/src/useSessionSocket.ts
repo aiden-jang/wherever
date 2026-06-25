@@ -4,6 +4,7 @@ import type {
   Restaurant,
   ServerMessage,
   Session,
+  VisitedPlace,
 } from "@wherever/shared";
 
 type Status = "connecting" | "open" | "closed";
@@ -40,6 +41,7 @@ export function useSessionSocket(code: string, displayName: string) {
   const [alreadyVoted, setAlreadyVoted] = useState<string[]>([]);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [match, setMatch] = useState<MatchState>(null);
+  const [visited, setVisited] = useState<VisitedPlace[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("connecting");
   const wsRef = useRef<WebSocket | null>(null);
@@ -69,6 +71,9 @@ export function useSessionSocket(code: string, displayName: string) {
         case "session_state":
           return setSession(msg.session);
         case "deck":
+          // A fresh deck means a new round: clear any prior match outcome.
+          setMatch(null);
+          setProgress(null);
           setDeck(msg.restaurants);
           return setAlreadyVoted(msg.alreadyVoted ?? []);
         case "vote_progress":
@@ -85,6 +90,8 @@ export function useSessionSocket(code: string, displayName: string) {
           });
         case "no_match":
           return setMatch({ kind: "none" });
+        case "history":
+          return setVisited(msg.visited);
         case "error":
           return setError(msg.message);
       }
@@ -97,5 +104,5 @@ export function useSessionSocket(code: string, displayName: string) {
     wsRef.current?.send(JSON.stringify(message));
   }, []);
 
-  return { session, deck, alreadyVoted, progress, match, error, status, send };
+  return { session, deck, alreadyVoted, progress, match, visited, error, status, send };
 }

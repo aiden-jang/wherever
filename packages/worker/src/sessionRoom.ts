@@ -1,4 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
+import { drizzle } from "drizzle-orm/d1";
+import { eq } from "drizzle-orm";
 import {
   clientMessageSchema,
   countFinished,
@@ -11,10 +13,12 @@ import {
   type SessionFilters,
   type SessionStatus,
   type SwipeDirection,
+  type VisitedPlace,
   type Vote,
   type VoteMode,
 } from "@wherever/shared";
 import { createRestaurantSource } from "./restaurantSource.js";
+import { visitedPlaces } from "./db/schema.js";
 import type { Env } from "./env.js";
 
 /** Attached to each WebSocket so presence survives DO hibernation. */
@@ -88,6 +92,8 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleSwipe(ws, msg.restaurantId, msg.direction);
       case "decide_now":
         return this.handleDecideNow(ws);
+      case "again":
+        return this.handleAgain(ws);
     }
   }
 
@@ -114,6 +120,7 @@ export class SessionRoom extends DurableObject<Env> {
     ws.serializeAttachment({ ...identity, displayName });
 
     await this.broadcastState();
+    this.send(ws, { type: "history", visited: await this.getVisited(meta.code) });
 
     if (meta.status === "swiping") {
       const deck = await this.getOrCreateDeck(meta);
@@ -219,8 +226,46 @@ export class SessionRoom extends DurableObject<Env> {
     const result = decideWinner(deck, votes);
     await this.ctx.storage.put("winner", result);
 
+    // The chosen place joins the group's history so it drops out of next time.
+    if (result) {
+      await this.recordVisit(meta.code, result.restaurant.id, result.restaurant.name);
+    }
+
     this.broadcastResult(result, this.connectedParticipants().length);
+    await this.broadcastHistory(meta.code);
     await this.broadcastState();
+  }
+
+  /** Host starts a fresh round; already-picked places are excluded. */
+  private async handleAgain(ws: WebSocket): Promise<void> {
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att?.isHost) {
+      return this.send(ws, {
+        type: "error",
+        message: "Only the host can start another round.",
+      });
+    }
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta || meta.status !== "decided") return;
+
+    await this.ctx.storage.delete("deck");
+    await this.ctx.storage.delete("votes");
+    await this.ctx.storage.delete("winner");
+
+    const deck = await this.fetchFreshDeck(meta); // excludes visited
+    if (deck.length === 0) {
+      await this.ctx.storage.delete("deck");
+      return this.broadcast({
+        type: "error",
+        message: "You've been everywhere nearby. Widen the search and try again.",
+      });
+    }
+
+    meta.status = "swiping";
+    await this.ctx.storage.put("meta", meta);
+    this.broadcast({ type: "deck", restaurants: deck });
+    await this.broadcastState();
+    await this.evaluate(meta);
   }
 
   // ---- helpers ----
@@ -250,13 +295,46 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   private async getOrCreateDeck(meta: SessionMeta): Promise<Restaurant[]> {
-    let deck = await this.ctx.storage.get<Restaurant[]>("deck");
-    if (!deck) {
-      const source = createRestaurantSource(this.env.RESTAURANT_SOURCE ?? "mock");
-      deck = await source.fetchDeck(meta.filters);
-      await this.ctx.storage.put("deck", deck);
-    }
+    const cached = await this.ctx.storage.get<Restaurant[]>("deck");
+    return cached ?? this.fetchFreshDeck(meta);
+  }
+
+  /** Fetch from the source, drop anything the group already picked, cache it. */
+  private async fetchFreshDeck(meta: SessionMeta): Promise<Restaurant[]> {
+    const source = createRestaurantSource(this.env.RESTAURANT_SOURCE ?? "mock");
+    const all = await source.fetchDeck(meta.filters);
+    const visited = await this.getVisited(meta.code);
+    const seen = new Set(visited.map((v) => v.restaurantId));
+    const deck = all.filter((r) => !seen.has(r.id));
+    await this.ctx.storage.put("deck", deck);
     return deck;
+  }
+
+  private async getVisited(code: string): Promise<VisitedPlace[]> {
+    const db = drizzle(this.env.DB);
+    const rows = await db
+      .select()
+      .from(visitedPlaces)
+      .where(eq(visitedPlaces.sessionCode, code));
+    return rows.map((r) => ({
+      restaurantId: r.restaurantId,
+      name: r.name,
+      visitedAt: r.visitedAt.toISOString(),
+    }));
+  }
+
+  private async recordVisit(
+    code: string,
+    restaurantId: string,
+    name: string,
+  ): Promise<void> {
+    const db = drizzle(this.env.DB);
+    await db.insert(visitedPlaces).values({
+      id: crypto.randomUUID(),
+      sessionCode: code,
+      restaurantId,
+      name,
+    });
   }
 
   /** Unique connected participants (dedup across reconnect overlap). */
@@ -282,6 +360,10 @@ export class SessionRoom extends DurableObject<Env> {
     } else {
       this.send(ws, { type: "no_match" });
     }
+  }
+
+  private async broadcastHistory(code: string): Promise<void> {
+    this.broadcast({ type: "history", visited: await this.getVisited(code) });
   }
 
   private broadcastResult(

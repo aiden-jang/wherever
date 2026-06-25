@@ -1,32 +1,51 @@
 import { DurableObject } from "cloudflare:workers";
-import { clientMessageSchema, type ServerMessage } from "@wherever/shared";
+import {
+  clientMessageSchema,
+  type Participant,
+  type ServerMessage,
+  type Session,
+  type SessionFilters,
+  type SessionStatus,
+  type VoteMode,
+} from "@wherever/shared";
 import type { Env } from "./env.js";
+
+/** What we attach to each WebSocket so presence survives DO hibernation. */
+interface SocketAttachment {
+  participantId: string;
+  displayName: string;
+  isHost: boolean;
+}
+
+/** Session metadata, persisted in DO storage (seeded by the Worker via RPC). */
+interface SessionMeta {
+  code: string;
+  status: SessionStatus;
+  voteMode: VoteMode;
+  filters: SessionFilters;
+}
 
 /**
  * One instance per session, addressed by session code. It owns every WebSocket
- * for the session and (from Phase 3) holds the live vote tally in memory.
+ * for the session and (from Phase 3) holds the live vote tally.
  *
- * Because a Durable Object is single-threaded, "count this vote" and "decide
- * the winner exactly once" need no locks: they cannot interleave. That is the
- * whole reason we picked this primitive. See docs/adr/0001-durable-objects.md.
- *
- * WebSockets use the hibernation API (acceptWebSocket) so an idle session does
- * not keep the object resident and billable.
+ * Single-threaded, so counting a vote and deciding a winner cannot interleave.
+ * See docs/adr/0001-durable-objects.md.
  */
 export class SessionRoom extends DurableObject<Env> {
+  /** RPC: the Worker calls this right after creating the session row. */
+  async initialize(meta: SessionMeta): Promise<void> {
+    const existing = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!existing) await this.ctx.storage.put("meta", meta);
+  }
+
   override async fetch(request: Request): Promise<Response> {
-    const upgrade = request.headers.get("Upgrade");
-    if (upgrade !== "websocket") {
+    if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected a WebSocket upgrade.", { status: 426 });
     }
-
-    const pair = new WebSocketPair();
-    const [client, server] = [pair[0], pair[1]];
-
-    // Hibernatable: the runtime can evict this object between messages and
-    // rehydrate it when the next frame arrives.
+    const { 0: client, 1: server } = new WebSocketPair();
+    // Hibernatable: the runtime can evict this object between frames.
     this.ctx.acceptWebSocket(server);
-
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -48,16 +67,107 @@ export class SessionRoom extends DurableObject<Env> {
       return this.send(ws, { type: "error", message: "Unrecognized message." });
     }
 
-    // Phase 1+ wires join / start_round / swipe / decide_now here. Phase 0 just
-    // proves the validated round-trip works end to end.
-    this.send(ws, {
-      type: "error",
-      message: `Got "${result.data.type}". Not wired up yet, but I heard you.`,
-    });
+    const msg = result.data;
+    switch (msg.type) {
+      case "join":
+        return this.handleJoin(ws, msg.displayName);
+      case "start_round":
+        return this.handleStartRound(ws);
+      default:
+        // swipe / decide_now arrive in Phase 3.
+        return this.send(ws, {
+          type: "error",
+          message: `"${msg.type}" lands in a later step.`,
+        });
+    }
   }
 
-  override async webSocketClose(ws: WebSocket, code: number): Promise<void> {
-    ws.close(code, "session_room_closing");
+  override async webSocketClose(ws: WebSocket): Promise<void> {
+    // The socket is on its way out; rebuild presence for everyone else.
+    await this.broadcastState(ws);
+  }
+
+  private async handleJoin(ws: WebSocket, displayName: string): Promise<void> {
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta) {
+      return this.send(ws, {
+        type: "error",
+        message: "That session does not exist.",
+      });
+    }
+
+    // First participant to join becomes the host.
+    let hostId = await this.ctx.storage.get<string>("hostId");
+    const participantId = crypto.randomUUID();
+    let isHost = false;
+    if (!hostId) {
+      hostId = participantId;
+      isHost = true;
+      await this.ctx.storage.put("hostId", hostId);
+    }
+
+    const attachment: SocketAttachment = { participantId, displayName, isHost };
+    ws.serializeAttachment(attachment);
+
+    await this.broadcastState();
+  }
+
+  private async handleStartRound(ws: WebSocket): Promise<void> {
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att?.isHost) {
+      return this.send(ws, {
+        type: "error",
+        message: "Only the host can start the round.",
+      });
+    }
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta) return;
+    meta.status = "swiping";
+    await this.ctx.storage.put("meta", meta);
+    await this.broadcastState();
+  }
+
+  /** Rebuild the participant list from live sockets and push it to everyone. */
+  private async broadcastState(closing?: WebSocket): Promise<void> {
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta) return;
+
+    const sockets = this.ctx.getWebSockets();
+    const participants: Participant[] = [];
+    for (const s of sockets) {
+      if (s === closing) continue;
+      const att = s.deserializeAttachment() as SocketAttachment | null;
+      if (!att) continue; // connected but has not joined yet
+      participants.push({
+        id: att.participantId,
+        displayName: att.displayName,
+        isHost: att.isHost,
+        connected: true,
+      });
+    }
+
+    const session: Session = {
+      id: meta.code,
+      code: meta.code,
+      status: meta.status,
+      voteMode: meta.voteMode,
+      filters: meta.filters,
+      participants,
+    };
+
+    const payload = JSON.stringify({
+      type: "session_state",
+      session,
+    } satisfies ServerMessage);
+
+    for (const s of sockets) {
+      if (s === closing) continue;
+      try {
+        s.send(payload);
+      } catch {
+        // socket is gone; the next broadcast will omit it.
+      }
+    }
   }
 
   private send(ws: WebSocket, message: ServerMessage): void {

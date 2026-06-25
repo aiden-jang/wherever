@@ -38,6 +38,10 @@ app.post("/api/sessions", async (c) => {
     filters: JSON.stringify(filters),
   });
 
+  // Seed the Durable Object that will own this session's realtime state.
+  const room = c.env.SESSION_ROOM.get(c.env.SESSION_ROOM.idFromName(code));
+  await room.initialize({ code, status: "lobby", voteMode: "majority", filters });
+
   return c.json({ code }, 201);
 });
 

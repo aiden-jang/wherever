@@ -7,5 +7,14 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#g)" />
-  <text x="50%" y="62%" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="300" font-weight="800" fill="#f6f1e7">W,</text>
+  <!-- "W," wordmark drawn as strokes + a dot, so it rasterizes without fonts. -->
+  <path
+    d="M150 176 L200 336 L256 214 L312 336 L362 176"
+    fill="none"
+    stroke="#f6f1e7"
+    stroke-width="36"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  />
+  <circle cx="386" cy="330" r="22" fill="#d7ff3e" />
 </svg>

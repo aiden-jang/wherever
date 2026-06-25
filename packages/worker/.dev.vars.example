@@ -1,0 +1,5 @@
+# Copy to .dev.vars (gitignored) to run the Worker locally against real data.
+# Leave RESTAURANT_SOURCE unset (or "mock") to use seeded data with no key.
+
+RESTAURANT_SOURCE=foursquare
+FOURSQUARE_API_KEY=your-foursquare-places-api-key

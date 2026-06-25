@@ -39,12 +39,15 @@ const swipeSchema = z.object({
 
 const decideNowSchema = z.object({ type: z.literal("decide_now") });
 
+const againSchema = z.object({ type: z.literal("again") });
+
 /** Discriminated union of everything a client may send over the socket. */
 export const clientMessageSchema = z.discriminatedUnion("type", [
   joinSchema,
   startRoundSchema,
   swipeSchema,
   decideNowSchema,
+  againSchema,
 ]);
 
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;

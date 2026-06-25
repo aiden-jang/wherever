@@ -1,8 +1,40 @@
 import { useNavigate } from "react-router-dom";
+import type { VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { distanceLabel, priceLabel, styleFor } from "./cardStyle.js";
 
-export function MatchScreen({ match }: { match: NonNullable<MatchState> }) {
+function History({ visited }: { visited: VisitedPlace[] }) {
+  if (visited.length === 0) return null;
+  return (
+    <div className="mt-10 text-left">
+      <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">
+        Already landed on
+      </h3>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {visited.map((v) => (
+          <span
+            key={v.restaurantId}
+            className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-sm text-muted"
+          >
+            {v.name}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function MatchScreen({
+  match,
+  visited,
+  isHost,
+  onAgain,
+}: {
+  match: NonNullable<MatchState>;
+  visited: VisitedPlace[];
+  isHost: boolean;
+  onAgain: () => void;
+}) {
   const navigate = useNavigate();
 
   if (match.kind === "none") {
@@ -13,12 +45,17 @@ export function MatchScreen({ match }: { match: NonNullable<MatchState> }) {
         <p className="mt-3 text-muted">
           Genuinely impressive. You all swiped left on dinner. Maybe cereal.
         </p>
-        <button
-          onClick={() => navigate("/")}
-          className="mt-8 rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
-        >
-          Try again, pickier this time
-        </button>
+        {isHost ? (
+          <button
+            onClick={onAgain}
+            className="mt-8 rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
+          >
+            Run it back
+          </button>
+        ) : (
+          <p className="mt-8 text-muted">Waiting for the host to run it back.</p>
+        )}
+        <History visited={visited} />
       </div>
     );
   }
@@ -80,13 +117,24 @@ export function MatchScreen({ match }: { match: NonNullable<MatchState> }) {
         >
           Tell the group it&apos;s settled
         </button>
-        <button
-          onClick={() => navigate("/")}
-          className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
-        >
-          Start another
-        </button>
+        {isHost ? (
+          <button
+            onClick={onAgain}
+            className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
+          >
+            Pick again (this one drops out)
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate("/")}
+            className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
+          >
+            Leave
+          </button>
+        )}
       </div>
+
+      <History visited={visited} />
     </div>
   );
 }

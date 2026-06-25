@@ -7,6 +7,7 @@ import type {
   Restaurant,
   Session,
   SwipeDirection,
+  VisitedPlace,
 } from "./types.js";
 
 // ---- Client -> Server ----
@@ -34,11 +35,17 @@ export interface DecideNowMessage {
   type: "decide_now";
 }
 
+/** Host starts a fresh round, excluding places the group already picked. */
+export interface AgainMessage {
+  type: "again";
+}
+
 export type ClientMessage =
   | JoinMessage
   | StartRoundMessage
   | SwipeMessage
-  | DecideNowMessage;
+  | DecideNowMessage
+  | AgainMessage;
 
 // ---- Server -> Client ----
 
@@ -78,6 +85,12 @@ export interface NoMatchMessage {
   type: "no_match";
 }
 
+/** Places this group has already landed on, excluded from future decks. */
+export interface HistoryMessage {
+  type: "history";
+  visited: VisitedPlace[];
+}
+
 export interface ErrorMessage {
   type: "error";
   message: string;
@@ -90,4 +103,5 @@ export type ServerMessage =
   | VoteProgressMessage
   | MatchMessage
   | NoMatchMessage
+  | HistoryMessage
   | ErrorMessage;

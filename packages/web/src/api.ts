@@ -24,6 +24,22 @@ export async function createSession(
   return data.code;
 }
 
+/**
+ * Best-effort geolocation for the search center. Resolves null if the browser
+ * has no geolocation, the user denies it, or it times out, so creation never
+ * blocks on it (real sources fall back to a default; mock ignores it).
+ */
+export function getLocation(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 5000, maximumAge: 600_000 },
+    );
+  });
+}
+
 /** displayName is kept per-tab so a refresh in the lobby does not lose it. */
 export function rememberName(name: string): void {
   sessionStorage.setItem("displayName", name);

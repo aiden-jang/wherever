@@ -40,6 +40,9 @@ export interface SessionFilters {
   maxPriceTier: PriceTier;
   /** Empty means no cuisine filter. */
   categories: string[];
+  /** Search center. Optional: the mock source ignores it; real sources need it. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface Session {

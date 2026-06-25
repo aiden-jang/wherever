@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal.js";
-import { createSession, rememberName, recallName } from "../api.js";
+import {
+  createSession,
+  getLocation,
+  rememberName,
+  recallName,
+  DEFAULT_FILTERS,
+} from "../api.js";
 
 const DEADPAN_LINES = [
   "Pretending to think about it...",
@@ -88,7 +94,11 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
     setBusy(true);
     try {
       rememberName(name.trim());
-      const code = await createSession(name.trim());
+      const loc = await getLocation();
+      const code = await createSession(name.trim(), {
+        ...DEFAULT_FILTERS,
+        ...(loc ?? {}),
+      });
       navigate(`/s/${code}`);
     } catch (err) {
       onError(err instanceof Error ? err.message : "Something broke.");

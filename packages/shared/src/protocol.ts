@@ -15,6 +15,8 @@ export interface JoinMessage {
   type: "join";
   code: string;
   displayName: string;
+  /** Stable per-session id so a reconnecting client keeps its identity + votes. */
+  clientId?: string;
 }
 
 export interface StartRoundMessage {
@@ -48,6 +50,8 @@ export interface SessionStateMessage {
 export interface DeckMessage {
   type: "deck";
   restaurants: Restaurant[];
+  /** Restaurant ids this client already voted on, for resume after reconnect. */
+  alreadyVoted?: string[];
 }
 
 export interface ParticipantJoinedMessage {
@@ -69,6 +73,11 @@ export interface MatchMessage {
   totalParticipants: number;
 }
 
+/** Round ended with nobody swiping right on anything. */
+export interface NoMatchMessage {
+  type: "no_match";
+}
+
 export interface ErrorMessage {
   type: "error";
   message: string;
@@ -80,4 +89,5 @@ export type ServerMessage =
   | ParticipantJoinedMessage
   | VoteProgressMessage
   | MatchMessage
+  | NoMatchMessage
   | ErrorMessage;

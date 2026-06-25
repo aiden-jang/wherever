@@ -6,29 +6,9 @@ import {
   useTransform,
 } from "framer-motion";
 import type { Restaurant, SwipeDirection } from "@wherever/shared";
+import { distanceLabel, priceLabel, styleFor } from "./cardStyle.js";
 
 const SWIPE_THRESHOLD = 110;
-
-// Mock data has no photos, so we render a category-themed gradient + emoji.
-const CATEGORY_STYLE: Record<string, { emoji: string; gradient: string }> = {
-  Pizza: { emoji: "🍕", gradient: "linear-gradient(135deg, #ff5e2c, #ff2d78)" },
-  Tacos: { emoji: "🌮", gradient: "linear-gradient(135deg, #ff8a3d, #ff5e2c)" },
-  Ramen: { emoji: "🍜", gradient: "linear-gradient(135deg, #7c3aed, #ff2d78)" },
-  Burgers: { emoji: "🍔", gradient: "linear-gradient(135deg, #ff8a3d, #ff2d78)" },
-  Healthy: { emoji: "🥗", gradient: "linear-gradient(135deg, #d7ff3e, #7c3aed)" },
-};
-const FALLBACK_STYLE = {
-  emoji: "🍽️",
-  gradient: "linear-gradient(135deg, #ff5e2c, #7c3aed)",
-};
-
-function styleFor(category: string) {
-  return CATEGORY_STYLE[category] ?? FALLBACK_STYLE;
-}
-
-function distanceLabel(m: number): string {
-  return m < 1000 ? `${m}m` : `${(m / 1609).toFixed(1)} mi`;
-}
 
 function CardFace({ restaurant }: { restaurant: Restaurant }) {
   const s = styleFor(restaurant.category);
@@ -55,7 +35,7 @@ function CardFace({ restaurant }: { restaurant: Restaurant }) {
             {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
           </span>
           <span className="text-white/20">|</span>
-          <span>{"$".repeat(restaurant.priceTier)}</span>
+          <span>{priceLabel(restaurant.priceTier)}</span>
           <span className="text-white/20">|</span>
           <span>{distanceLabel(restaurant.distanceMeters)}</span>
         </div>
@@ -114,12 +94,19 @@ function TopCard({
 
 export function SwipeDeck({
   restaurants,
+  alreadyVoted = [],
   onSwipe,
 }: {
   restaurants: Restaurant[];
+  alreadyVoted?: string[];
   onSwipe: (restaurantId: string, direction: SwipeDirection) => void;
 }) {
-  const [index, setIndex] = useState(0);
+  // Resume after a reconnect: start at the first card this client has not voted.
+  const [index, setIndex] = useState(() => {
+    const voted = new Set(alreadyVoted);
+    const first = restaurants.findIndex((r) => !voted.has(r.id));
+    return first === -1 ? restaurants.length : first;
+  });
   const [exitDir, setExitDir] = useState<SwipeDirection>("right");
 
   const commit = useCallback(

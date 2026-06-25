@@ -26,6 +26,7 @@ const joinSchema = z.object({
   type: z.literal("join"),
   code: z.string().trim().length(6),
   displayName: z.string().trim().min(1).max(24),
+  clientId: z.string().min(1).max(64).optional(),
 });
 
 const startRoundSchema = z.object({ type: z.literal("start_round") });

@@ -4,6 +4,7 @@ import type { Participant } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
 import { SwipeDeck } from "../components/SwipeDeck.js";
+import { MatchScreen } from "../components/MatchScreen.js";
 
 function initials(name: string): string {
   return name.trim().slice(0, 2).toUpperCase();
@@ -72,7 +73,8 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, error, status, send } = useSessionSocket(code, displayName);
+  const { session, deck, alreadyVoted, progress, match, error, status, send } =
+    useSessionSocket(code, displayName);
   const [copied, setCopied] = useState(false);
 
   const me = session?.participants.find((p) => p.displayName === displayName);
@@ -85,16 +87,41 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setTimeout(() => setCopied(false), 1500);
   }
 
+  // The match outcome wins over everything else once it arrives.
+  if (match) {
+    return (
+      <main className="flex-1 flex items-center justify-center px-6 py-10">
+        <MatchScreen match={match} />
+      </main>
+    );
+  }
+
   if (session?.status === "swiping") {
     return (
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-10">
         {deck && deck.length > 0 ? (
-          <SwipeDeck
-            restaurants={deck}
-            onSwipe={(restaurantId, direction) =>
-              send({ type: "swipe", restaurantId, direction })
-            }
-          />
+          <>
+            <SwipeDeck
+              restaurants={deck}
+              alreadyVoted={alreadyVoted}
+              onSwipe={(restaurantId, direction) =>
+                send({ type: "swipe", restaurantId, direction })
+              }
+            />
+            {progress && progress.totalParticipants > 0 && (
+              <p className="mt-6 text-sm text-muted">
+                {progress.finishedCount} of {progress.totalParticipants} done
+                {isHost && progress.finishedCount < progress.totalParticipants && (
+                  <button
+                    onClick={() => send({ type: "decide_now" })}
+                    className="ml-3 underline hover:text-cream transition-colors"
+                  >
+                    just decide now
+                  </button>
+                )}
+              </p>
+            )}
+          </>
         ) : deck ? (
           <div className="text-center max-w-sm">
             <h1 className="font-display text-3xl font-bold">Nothing nearby.</h1>

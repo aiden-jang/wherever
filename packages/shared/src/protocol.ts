@@ -40,12 +40,19 @@ export interface AgainMessage {
   type: "again";
 }
 
+/** Throw an emoji reaction to everyone in the session. Ephemeral, not persisted. */
+export interface ReactMessage {
+  type: "react";
+  emoji: string;
+}
+
 export type ClientMessage =
   | JoinMessage
   | StartRoundMessage
   | SwipeMessage
   | DecideNowMessage
-  | AgainMessage;
+  | AgainMessage
+  | ReactMessage;
 
 // ---- Server -> Client ----
 
@@ -96,6 +103,14 @@ export interface ErrorMessage {
   message: string;
 }
 
+/** A reaction someone threw, fanned out to the whole session. */
+export interface ReactionMessage {
+  type: "reaction";
+  emoji: string;
+  /** Display name of whoever sent it. */
+  from: string;
+}
+
 export type ServerMessage =
   | SessionStateMessage
   | DeckMessage
@@ -104,4 +119,5 @@ export type ServerMessage =
   | MatchMessage
   | NoMatchMessage
   | HistoryMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | ReactionMessage;

@@ -94,7 +94,16 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleDecideNow(ws);
       case "again":
         return this.handleAgain(ws);
+      case "react":
+        return this.handleReact(ws, msg.emoji);
     }
+  }
+
+  /** Fan an ephemeral emoji reaction out to everyone in the session. */
+  private handleReact(ws: WebSocket, emoji: string): void {
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att) return;
+    this.broadcast({ type: "reaction", emoji, from: att.displayName });
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {
@@ -301,10 +310,9 @@ export class SessionRoom extends DurableObject<Env> {
 
   /** Fetch from the source, drop anything the group already picked, cache it. */
   private async fetchFreshDeck(meta: SessionMeta): Promise<Restaurant[]> {
-    const source = createRestaurantSource(
-      this.env.RESTAURANT_SOURCE ?? "mock",
-      this.env.FOURSQUARE_API_KEY,
-    );
+    const kind = this.env.RESTAURANT_SOURCE ?? "mock";
+    const apiKey = kind === "google" ? this.env.GOOGLE_PLACES_API_KEY : this.env.FOURSQUARE_API_KEY;
+    const source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
     const all = await source.fetchDeck(meta.filters);
     const visited = await this.getVisited(meta.code);
     const seen = new Set(visited.map((v) => v.restaurantId));

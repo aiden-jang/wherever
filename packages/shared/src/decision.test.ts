@@ -14,6 +14,7 @@ function restaurant(id: string): Restaurant {
     category: "Test",
     priceTier: 1,
     rating: null,
+    reviewCount: null,
     distanceMeters: 100,
     imageUrl: null,
     address: null,

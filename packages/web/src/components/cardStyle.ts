@@ -24,3 +24,9 @@ export function distanceLabel(meters: number): string {
 export function priceLabel(tier: Restaurant["priceTier"]): string {
   return "$".repeat(tier);
 }
+
+/** Compact review count, e.g. 1540 -> "1.5k". */
+export function reviewCountLabel(count: number): string {
+  if (count < 1000) return String(count);
+  return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+}

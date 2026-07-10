@@ -1,4 +1,5 @@
-// Rasterize public/icon.svg into the PNG sizes installable apps expect.
+// Rasterize public/icon.svg into the PNG sizes installable apps expect, and public/og.svg into
+// the PNG that link-unfurl previews need (most platforms won't render an SVG og:image).
 // Run with: pnpm --filter @wherever/web gen:icons
 import sharp from "sharp";
 import { readFile } from "node:fs/promises";
@@ -18,3 +19,8 @@ for (const { name, size } of sizes) {
   await sharp(svg).resize(size, size).png().toFile(join(pub, name));
   console.log(`wrote ${name} (${size}x${size})`);
 }
+
+// Open Graph card (1200x630) rasterized from og.svg.
+const og = await readFile(join(pub, "og.svg"));
+await sharp(og).resize(1200, 630).png().toFile(join(pub, "og.png"));
+console.log("wrote og.png (1200x630)");

@@ -1,14 +1,50 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { VisitedPlace } from "@wherever/shared";
+import type { Restaurant, VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
-import { distanceLabel, priceLabel, styleFor } from "./cardStyle.js";
+import { distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { RestaurantPhoto } from "./RestaurantPhoto.js";
+import { Confetti } from "./Confetti.js";
+import { buzz } from "./haptics.js";
+import { renderShareCard } from "./shareCard.js";
+
+const APP_URL = "wherever.aidenjang.com";
+
+/**
+ * Share the verdict. Prefers the native share sheet with a generated image (the viral bit);
+ * falls back to sharing text, then to copying. Returns how it resolved so the UI can confirm.
+ */
+async function shareVerdict(restaurant: Restaurant): Promise<"shared" | "copied"> {
+  const text = `We're eating at ${restaurant.name}. Decided by swipe, not by group chat. ${APP_URL}`;
+  const blob = await renderShareCard(restaurant).catch(() => null);
+  const file = blob ? new File([blob], "wherever.png", { type: "image/png" }) : null;
+
+  if (file && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ title: "Wherever, Honestly", text, files: [file] });
+      return "shared";
+    } catch {
+      // User dismissed the sheet or it failed; fall through to text/copy.
+    }
+  }
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Wherever, Honestly", text });
+      return "shared";
+    } catch {
+      /* fall through */
+    }
+  }
+  await navigator.clipboard.writeText(text).catch(() => {});
+  return "copied";
+}
 
 function History({ visited }: { visited: VisitedPlace[] }) {
   if (visited.length === 0) return null;
   return (
     <div className="mt-10 text-left">
       <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">
-        Already landed on
+        Already been dragged to
       </h3>
       <div className="mt-2 flex flex-wrap gap-2">
         {visited.map((v) => (
@@ -43,7 +79,7 @@ export function MatchScreen({
         <div className="text-6xl">🤷</div>
         <h1 className="mt-4 font-display text-4xl font-bold">Nobody liked anything.</h1>
         <p className="mt-3 text-muted">
-          Genuinely impressive. You all swiped left on dinner. Maybe cereal.
+          A clean sweep of nos. Genuinely impressive. Cereal is still on the table, spiritually.
         </p>
         {isHost ? (
           <button
@@ -60,34 +96,57 @@ export function MatchScreen({
     );
   }
 
-  const { restaurant, rightSwipes, totalParticipants } = match;
-  const s = styleFor(restaurant.category);
+  return <WinnerScreen match={match} visited={visited} isHost={isHost} onAgain={onAgain} navigate={navigate} />;
+}
 
-  function share() {
-    const text = `We're eating at ${restaurant.name}. Decided by swipe, not by group chat.`;
-    if (navigator.share) {
-      navigator.share({ title: "Wherever, Honestly", text }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(text);
-    }
+function WinnerScreen({
+  match,
+  visited,
+  isHost,
+  onAgain,
+  navigate,
+}: {
+  match: Extract<NonNullable<MatchState>, { kind: "match" }>;
+  visited: VisitedPlace[];
+  isHost: boolean;
+  onAgain: () => void;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  const { restaurant, rightSwipes, totalParticipants } = match;
+  const [shareState, setShareState] = useState<"idle" | "sharing" | "shared" | "copied">("idle");
+
+  // Celebrate once when the verdict lands: confetti + a short victory buzz.
+  const [celebrate, setCelebrate] = useState(true);
+  useEffect(() => {
+    buzz([18, 40, 18]);
+    const t = setTimeout(() => setCelebrate(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
+  async function share() {
+    setShareState("sharing");
+    const how = await shareVerdict(restaurant);
+    setShareState(how);
+    if (how === "copied") setTimeout(() => setShareState("idle"), 1800);
   }
 
+  const shareLabel =
+    shareState === "sharing"
+      ? "Rounding everyone up..."
+      : shareState === "copied"
+        ? "Copied. Go gloat."
+        : shareState === "shared"
+          ? "Sent. It's official."
+          : "Tell the group it's settled";
+
   return (
-    <div className="text-center max-w-sm mx-auto w-full">
+    <div className="relative text-center max-w-sm mx-auto w-full">
+      {celebrate && <Confetti />}
       <p className="font-display text-lg font-bold tracking-widest text-acid uppercase">
         It&apos;s decided
       </p>
-      <div className="mt-5 rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/60 overflow-hidden">
-        <div
-          className="h-44 flex items-center justify-center text-7xl"
-          style={{ background: restaurant.imageUrl ? undefined : s.gradient }}
-        >
-          {restaurant.imageUrl ? (
-            <img src={restaurant.imageUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="drop-shadow-lg">{s.emoji}</span>
-          )}
-        </div>
+      <div className="pop-in mt-5 rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/60 overflow-hidden">
+        <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
         <div className="p-5">
           <div className="font-display text-3xl font-extrabold leading-tight">
             {restaurant.name}
@@ -97,6 +156,9 @@ export function MatchScreen({
             <span className="text-white/20">|</span>
             <span className="text-acid">
               {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
+              {restaurant.rating && restaurant.reviewCount
+                ? ` (${reviewCountLabel(restaurant.reviewCount)})`
+                : ""}
             </span>
             <span className="text-white/20">|</span>
             <span>{priceLabel(restaurant.priceTier)}</span>
@@ -107,29 +169,38 @@ export function MatchScreen({
       </div>
 
       <p className="mt-4 text-muted">
-        {rightSwipes} of {totalParticipants} wanted it. Democracy works.
+        {rightSwipes} of {totalParticipants} wanted it. The rest will cope.
       </p>
 
       <div className="mt-8 flex flex-col gap-3">
         <button
           onClick={share}
-          className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
+          disabled={shareState === "sharing"}
+          className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] disabled:opacity-70 transition"
         >
-          Tell the group it&apos;s settled
+          {shareLabel}
         </button>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.name} ${restaurant.address ?? ""}`.trim())}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition"
+        >
+          Get directions ↗
+        </a>
         {isHost ? (
           <button
             onClick={onAgain}
             className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
           >
-            Pick again (this one drops out)
+            Nope, again (this one&apos;s out)
           </button>
         ) : (
           <button
             onClick={() => navigate("/")}
             className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
           >
-            Leave
+            Show myself out
           </button>
         )}
       </div>

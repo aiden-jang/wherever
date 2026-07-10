@@ -22,7 +22,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-3xl bg-ink-soft border border-white/10 p-6 shadow-2xl"
+        className="w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-3xl bg-ink-soft border border-white/10 p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="font-display text-2xl font-bold mb-4">{title}</h2>

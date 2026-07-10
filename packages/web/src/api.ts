@@ -1,10 +1,14 @@
 import type { SessionFilters } from "@wherever/shared";
 
-// Sensible defaults until the filter UI lands (Phase 2).
+// Sensible defaults; the create form lets the host adjust these before starting.
 export const DEFAULT_FILTERS: SessionFilters = {
-  radiusMeters: 5000,
+  radiusMeters: 8000, // 5 mi
   maxPriceTier: 4,
   categories: [],
+  minRating: 0,
+  minReviews: 0,
+  openNow: false,
+  sort: "popularity",
 };
 
 // Empty in dev (Vite proxies /api to the Worker); set to the Worker origin in prod.

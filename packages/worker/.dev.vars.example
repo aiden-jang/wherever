@@ -1,5 +1,11 @@
 # Copy to .dev.vars (gitignored) to run the Worker locally against real data.
 # Leave RESTAURANT_SOURCE unset (or "mock") to use seeded data with no key.
 
-RESTAURANT_SOURCE=foursquare
-FOURSQUARE_API_KEY=your-foursquare-places-api-key
+RESTAURANT_SOURCE=google
+GOOGLE_PLACES_API_KEY=your-google-places-api-key
+# Leave PUBLIC_API_BASE empty in dev: photo-proxy URLs stay relative and Vite proxies /api.
+PUBLIC_API_BASE=
+
+# Alternate source, kept behind the same RestaurantSource interface:
+# RESTAURANT_SOURCE=foursquare
+# FOURSQUARE_API_KEY=your-foursquare-places-api-key

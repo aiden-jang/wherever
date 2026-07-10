@@ -3,6 +3,7 @@
 // Worker / Durable Object trusts it.
 
 import { z } from "zod";
+import { REACTION_EMOJIS } from "./constants.js";
 
 export const priceTierSchema = z.union([
   z.literal(1),
@@ -14,7 +15,12 @@ export const priceTierSchema = z.union([
 export const sessionFiltersSchema = z.object({
   radiusMeters: z.number().int().positive().max(50_000),
   maxPriceTier: priceTierSchema,
-  categories: z.array(z.string().min(1).max(40)).max(20),
+  categories: z.array(z.string().min(1).max(40)).max(40),
+  minRating: z.number().min(0).max(5).optional(),
+  minReviews: z.number().int().min(0).max(100_000).optional(),
+  openNow: z.boolean().optional(),
+  sort: z.enum(["popularity", "distance"]).optional(),
+  area: z.string().min(1).max(40).optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
 });
@@ -43,6 +49,11 @@ const decideNowSchema = z.object({ type: z.literal("decide_now") });
 
 const againSchema = z.object({ type: z.literal("again") });
 
+const reactSchema = z.object({
+  type: z.literal("react"),
+  emoji: z.enum(REACTION_EMOJIS),
+});
+
 /** Discriminated union of everything a client may send over the socket. */
 export const clientMessageSchema = z.discriminatedUnion("type", [
   joinSchema,
@@ -50,6 +61,7 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   swipeSchema,
   decideNowSchema,
   againSchema,
+  reactSchema,
 ]);
 
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;

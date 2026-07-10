@@ -3,6 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2024-12-30"
 compatibility_flags = ["nodejs_compat"]
 
+[vars]
+# This Worker's own public origin, used to build absolute photo-proxy URLs the web app loads
+# cross-origin. Must match the custom_domain route below.
+PUBLIC_API_BASE = "https://api.wherever.aidenjang.com"
+
 # One Durable Object per session. The instance holds live vote state and owns
 # every WebSocket for that session.
 [[durable_objects.bindings]]
@@ -25,5 +30,19 @@ new_sqlite_classes = ["RateLimiter"]
 [[d1_databases]]
 binding = "DB"
 database_name = "wherever"
-database_id = "local-dev-placeholder"
+database_id = "bc8f7c67-ddf5-40ee-af38-7cee0697bc9a"
 migrations_dir = "migrations"
+
+# Custom domain for the API. The web app (Cloudflare Pages) lives at
+# wherever.aidenjang.com; the Worker serves the API from this subdomain. Provisioned on
+# `wrangler deploy`. workers.dev stays enabled during the cutover so the currently-live
+# frontend keeps working until it's rebuilt to point here.
+[[routes]]
+pattern = "api.wherever.aidenjang.com"
+custom_domain = true
+
+# Workers Logs — native, free-tier error/log observability. Tail live with `wrangler tail`;
+# browse + query in the dashboard (Workers & Pages → the worker → Logs).
+[observability]
+enabled = true
+head_sampling_rate = 1

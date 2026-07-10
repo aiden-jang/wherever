@@ -34,7 +34,7 @@ npx wrangler d1 migrations apply wherever --remote
 ## 3. Deploy the Worker
 
 ```bash
-pnpm --filter @wherever/worker deploy
+pnpm --filter @wherever/worker run deploy
 ```
 
 Note the deployed URL, e.g. `https://wherever-honestly.<your-subdomain>.workers.dev`.
@@ -58,4 +58,4 @@ Or connect the repo in the Cloudflare Pages dashboard with build command `pnpm -
 
 - CORS on the Worker already allows any origin, so the Pages site can call it cross-origin.
 - Local dev is unaffected: with the `VITE_*` vars unset, the app talks to `localhost:8787` through the Vite proxy.
-- Restaurant data is still the seeded mock. To go live with real places, set `RESTAURANT_SOURCE=foursquare` and `FOURSQUARE_API_KEY` as Worker secrets and add the Foursquare adapter in `restaurantSource.ts`.
+- Restaurant data defaults to the seeded mock. The Foursquare adapter is already implemented in `restaurantSource.ts`; to go live with real places, set `FOURSQUARE_API_KEY` and `RESTAURANT_SOURCE=foursquare` as Worker secrets.

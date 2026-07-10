@@ -12,32 +12,40 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
 - **No accounts.** Type a name, share a code, done.
 - **Remembers where you went.** Already-visited spots stop showing up.
 
+> Part of the [platform monorepo](../../README.md). Unlike the other apps (which serve their SPA
+> from the Worker), wherever keeps its web and worker as **separate deploys** — the Worker is
+> pure API + realtime, the web is a standalone PWA.
+
 ## Stack
 
-- TypeScript monorepo (pnpm workspaces)
 - **Web:** React + Vite + Tailwind v4, mobile-first, installable as a PWA, deploys to Cloudflare Pages
 - **Realtime + API:** a Cloudflare Worker (Hono) with one **Durable Object per session** (`SessionRoom`) holding live vote state. See [ADR 0001](docs/adr/0001-durable-objects.md).
 - **Durable data:** Cloudflare D1 (SQLite) + Drizzle
 - **Validation:** Zod at every HTTP and WebSocket boundary
-- **Restaurant data:** swappable source (seeded mock now, Foursquare later)
+- **Restaurant data:** Google Places API (New), behind a swappable `RestaurantSource` interface with a seeded mock fallback (Foursquare kept as an alternate implementation)
 
 Runs entirely on free tiers.
 
 ## Getting started
 
-Requires Node 20+ (an `.nvmrc` pins Node 22). No Docker needed; Wrangler runs the Worker, Durable Object, and a local D1 for you.
+Requires **Node 22** (repo `.nvmrc`) and pnpm. No Docker needed; Wrangler runs the Worker, Durable Object, and a local D1 for you.
 
 ```bash
-nvm use                       # picks up .nvmrc
 corepack enable               # makes pnpm available
 pnpm install
 
 # Terminal 1: the Worker + Durable Object + local D1
-pnpm dev:worker               # http://localhost:8787
+pnpm --filter @wherever/worker dev    # http://localhost:8787
 
 # Terminal 2: the web app (proxies /api and /ws to the Worker)
-pnpm dev:web                  # http://localhost:5173
+pnpm --filter @wherever/web dev       # http://localhost:5173
 ```
+
+Set `RESTAURANT_SOURCE=google` and a `GOOGLE_PLACES_API_KEY` (`wrangler secret`) to use live data;
+without a key the seeded mock deck keeps the app fully playable. See
+`packages/worker/.dev.vars.example`. Restrict the key to the Places API and set a per-API usage
+quota to stay inside the budget. To use Foursquare instead, set `RESTAURANT_SOURCE=foursquare` and
+`FOURSQUARE_API_KEY`.
 
 ## Project layout
 

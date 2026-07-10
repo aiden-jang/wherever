@@ -3,27 +3,21 @@ import {
   AnimatePresence,
   motion,
   useMotionValue,
+  useReducedMotion,
   useTransform,
 } from "framer-motion";
 import type { Restaurant, SwipeDirection } from "@wherever/shared";
-import { distanceLabel, priceLabel, styleFor } from "./cardStyle.js";
+import { distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { RestaurantPhoto } from "./RestaurantPhoto.js";
+import { buzz } from "./haptics.js";
 
 const SWIPE_THRESHOLD = 110;
+const HINT_KEY = "wherever:swipe-hint-seen";
 
 function CardFace({ restaurant }: { restaurant: Restaurant }) {
-  const s = styleFor(restaurant.category);
   return (
     <>
-      <div
-        className="h-48 flex items-center justify-center text-7xl"
-        style={{ background: restaurant.imageUrl ? undefined : s.gradient }}
-      >
-        {restaurant.imageUrl ? (
-          <img src={restaurant.imageUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span className="drop-shadow-lg">{s.emoji}</span>
-        )}
-      </div>
+      <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-48" />
       <div className="p-5">
         <div className="font-display text-2xl font-bold leading-tight">
           {restaurant.name}
@@ -33,6 +27,9 @@ function CardFace({ restaurant }: { restaurant: Restaurant }) {
           <span className="text-white/20">|</span>
           <span className="text-acid">
             {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
+            {restaurant.rating && restaurant.reviewCount
+              ? ` (${reviewCountLabel(restaurant.reviewCount)})`
+              : ""}
           </span>
           <span className="text-white/20">|</span>
           <span>{priceLabel(restaurant.priceTier)}</span>
@@ -53,8 +50,10 @@ function TopCard({
   exitDir: SwipeDirection;
   onCommit: (dir: SwipeDirection) => void;
 }) {
+  const reduce = useReducedMotion();
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-220, 220], [-16, 16]);
+  // No tilt for motion-sensitive users; the card still tracks the drag horizontally.
+  const rotate = useTransform(x, [-220, 220], reduce ? [0, 0] : [-16, 16]);
   const yes = useTransform(x, [30, 130], [0, 1]);
   const nope = useTransform(x, [-130, -30], [1, 0]);
 
@@ -69,11 +68,11 @@ function TopCard({
         if (info.offset.x > SWIPE_THRESHOLD) onCommit("right");
         else if (info.offset.x < -SWIPE_THRESHOLD) onCommit("left");
       }}
-      exit={{
-        x: exitDir === "right" ? 700 : -700,
-        opacity: 0,
-        transition: { duration: 0.28 },
-      }}
+      exit={
+        reduce
+          ? { opacity: 0, transition: { duration: 0.12 } }
+          : { x: exitDir === "right" ? 700 : -700, opacity: 0, transition: { duration: 0.28 } }
+      }
     >
       <CardFace restaurant={restaurant} />
       <motion.span
@@ -89,6 +88,28 @@ function TopCard({
         HARD PASS
       </motion.span>
     </motion.div>
+  );
+}
+
+/** Card-shaped placeholder shown while the first deck is being fetched. */
+export function DeckSkeleton() {
+  return (
+    <div className="w-full max-w-sm mx-auto">
+      <div className="relative h-[360px]">
+        <div
+          className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden animate-pulse"
+          style={{ transform: "scale(0.95) translateY(14px)" }}
+        />
+        <div className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden animate-pulse">
+          <div className="h-48 bg-white/5" />
+          <div className="p-5 space-y-3">
+            <div className="h-6 w-2/3 rounded bg-white/10" />
+            <div className="h-4 w-1/2 rounded bg-white/5" />
+          </div>
+        </div>
+      </div>
+      <p className="mt-8 text-center text-sm text-muted">Rounding up the options...</p>
+    </div>
   );
 }
 
@@ -109,16 +130,43 @@ export function SwipeDeck({
   });
   const [exitDir, setExitDir] = useState<SwipeDirection>("right");
 
+  // First-run gesture hint: shown once ever, then remembered.
+  const [showHint, setShowHint] = useState(() => {
+    try {
+      return !localStorage.getItem(HINT_KEY);
+    } catch {
+      return false;
+    }
+  });
+  const dismissHint = useCallback(() => {
+    setShowHint(false);
+    try {
+      localStorage.setItem(HINT_KEY, "1");
+    } catch {
+      /* private mode; fine */
+    }
+  }, []);
+
   const commit = useCallback(
     (dir: SwipeDirection) => {
       const current = restaurants[index];
       if (!current) return;
+      // A light tap on a like, a slightly firmer double-tap on a pass.
+      buzz(dir === "right" ? 12 : [8, 20]);
+      dismissHint();
       setExitDir(dir);
       onSwipe(current.id, dir);
       setIndex((i) => i + 1);
     },
-    [index, restaurants, onSwipe],
+    [index, restaurants, onSwipe, dismissHint],
   );
+
+  // Don't let the hint linger if they just sit there.
+  useEffect(() => {
+    if (!showHint) return;
+    const t = setTimeout(dismissHint, 5000);
+    return () => clearTimeout(t);
+  }, [showHint, dismissHint]);
 
   // Desktop: arrow keys swipe.
   useEffect(() => {
@@ -138,8 +186,8 @@ export function SwipeDeck({
         <div className="text-5xl">🧾</div>
         <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
         <p className="mt-2 text-muted">
-          Your votes are in. Now we wait for everyone else to stop overthinking
-          it. Results land in the next build step.
+          Your votes are in. Now we wait on everyone else to stop overthinking a
+          taco. This is the longest part.
         </p>
       </div>
     );
@@ -176,12 +224,20 @@ export function SwipeDeck({
         </AnimatePresence>
       </div>
 
+      {showHint && (
+        <p className="mt-4 text-center text-xs text-muted animate-pulse">
+          Drag the card, or tap below. <span className="text-flare">✕ pass</span>
+          {" · "}
+          <span className="text-acid">♥ eat</span>
+        </p>
+      )}
+
       <div className="mt-8 flex items-center justify-center gap-6">
         <button
           type="button"
           aria-label="Hard pass"
           onClick={() => commit("left")}
-          className="grid place-items-center h-16 w-16 rounded-full border border-white/15 text-2xl hover:border-flare hover:text-flare hover:scale-105 transition"
+          className="grid place-items-center h-16 w-16 rounded-full border border-white/15 text-2xl hover:border-flare hover:text-flare hover:scale-105 active:scale-95 transition"
         >
           ✕
         </button>
@@ -192,7 +248,7 @@ export function SwipeDeck({
           type="button"
           aria-label="Let's eat"
           onClick={() => commit("right")}
-          className="grid place-items-center h-16 w-16 rounded-full bg-acid text-ink text-2xl font-bold hover:scale-105 transition"
+          className="grid place-items-center h-16 w-16 rounded-full bg-acid text-ink text-2xl font-bold hover:scale-105 active:scale-95 transition"
         >
           ♥
         </button>

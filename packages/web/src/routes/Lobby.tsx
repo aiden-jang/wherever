@@ -178,6 +178,37 @@ function useJoinLeaveToasts(
   return toasts;
 }
 
+/**
+ * A one-off toast when *you* become the host (the previous host left and the server handed it off).
+ * Seeds silently once the session is known, so the original host isn't toasted on load.
+ */
+function useHostPromotionToasts(
+  isHost: boolean,
+  ready: boolean,
+  onEvent?: (text: string) => void,
+): Toast[] {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const prev = useRef<boolean | null>(null);
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+
+  useEffect(() => {
+    if (!ready) return;
+    const before = prev.current;
+    prev.current = isHost;
+    if (before === null) return; // seed silently on first known state
+    if (before || !isHost) return; // only fire on a false -> true handoff
+
+    const text = "You're the host now. You can start the round.";
+    onEventRef.current?.(text);
+    const toast = { id: crypto.randomUUID(), text };
+    setToasts((t) => [...t, toast]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== toast.id)), 4000);
+  }, [isHost, ready]);
+
+  return toasts;
+}
+
 function ParticipantChip({ p }: { p: Participant }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
@@ -253,6 +284,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
   const me = session?.participants.find((p) => p.displayName === displayName);
   const isHost = me?.isHost ?? false;
+  const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
+  const allToasts = [...toasts, ...hostToasts];
   const count = session?.participants.length ?? 0;
 
   const [codeCopied, setCodeCopied] = useState(false);
@@ -322,7 +355,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
         {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
         <LiveRegion message={announcement} />
-        <Toasts toasts={toasts} />
+        <Toasts toasts={allToasts} />
         <FloatingReactions reactions={reactions} />
         {deck && deck.length > 0 ? (
           <>
@@ -369,7 +402,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     <main className="flex-1 flex flex-col items-center px-6 pb-16 w-full max-w-md mx-auto">
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <LiveRegion message={announcement} />
-      <Toasts toasts={toasts} />
+      <Toasts toasts={allToasts} />
       <div className="w-full text-center mt-4">
         <p className="text-sm text-muted">Share this code. Or the link. Whatever is less effort.</p>
         <button

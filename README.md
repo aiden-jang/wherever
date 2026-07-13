@@ -106,6 +106,14 @@ docs/adr/   # architecture decision records
 
 Runs entirely on Cloudflare's free tier (Worker + Durable Objects + D1, plus Pages for the web app). See [DEPLOY.md](DEPLOY.md) for the step-by-step.
 
+## Observability
+
+- **Errors + requests:** Workers Logs is enabled (`[observability]` in `wrangler.toml`), so uncaught
+  throws and handled errors (via `app.onError`) are captured. Tail live with
+  `pnpm --filter @wherever/worker exec wrangler tail`.
+- **Uptime:** `GET /api/health` returns a small JSON ok, ready for a free external monitor (e.g.
+  UptimeRobot).
+
 ## License
 
 [MIT](LICENSE) © Aiden Jang

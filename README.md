@@ -12,7 +12,7 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
 - **No accounts.** Type a name, share a code, done.
 - **Remembers where you went.** Already-visited spots stop showing up.
 
-> Part of the [platform monorepo](../../README.md). Unlike the other apps (which serve their SPA
+> Part of a [platform of apps](https://github.com/aiden-jang/platform/blob/main/PLATFORM.md) that share one sign-in. Unlike the other apps (which serve their SPA
 > from the Worker), wherever keeps its web and worker as **separate deploys**: the Worker is
 > pure API + realtime, the web is a standalone PWA.
 

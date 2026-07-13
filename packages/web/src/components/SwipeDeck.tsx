@@ -41,6 +41,20 @@ function CardFace({ restaurant }: { restaurant: Restaurant }) {
   );
 }
 
+/** A screen-reader summary of the card, so deciding isn't a guess without sight. */
+function cardDescription(r: Restaurant): string {
+  const parts = [r.name, r.category];
+  if (r.rating) {
+    parts.push(
+      r.reviewCount
+        ? `${r.rating} stars, ${reviewCountLabel(r.reviewCount)} reviews`
+        : `${r.rating} stars`,
+    );
+  }
+  parts.push(priceLabel(r.priceTier), distanceLabel(r.distanceMeters));
+  return parts.filter(Boolean).join(", ");
+}
+
 function TopCard({
   restaurant,
   exitDir,
@@ -60,6 +74,9 @@ function TopCard({
   return (
     <motion.div
       className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/60 overflow-hidden cursor-grab active:cursor-grabbing"
+      role="group"
+      aria-roledescription="restaurant card"
+      aria-label={cardDescription(restaurant)}
       style={{ x, rotate }}
       drag="x"
       dragSnapToOrigin

@@ -72,3 +72,7 @@ All phases complete:
 4. Majority decision logic + "decide now" (folded into 3)
 5. Visited-places history (D1), excluded from future rounds, "pick again"
 6. Polish (PWA install, reconnect + not-found states), rate limiting, deploy prep
+
+## License
+
+[MIT](LICENSE) © Aiden Jang

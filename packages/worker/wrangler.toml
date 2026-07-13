@@ -3,6 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2024-12-30"
 compatibility_flags = ["nodejs_compat"]
 
+# Daily prune of sessions + visited-history older than the TTL (see pruneOldSessions in index.ts),
+# so D1 doesn't grow without bound. 4am UTC = low traffic.
+[triggers]
+crons = ["0 4 * * *"]
+
 [vars]
 # This Worker's own public origin, used to build absolute photo-proxy URLs the web app loads
 # cross-origin. Must match the custom_domain route below.

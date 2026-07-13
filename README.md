@@ -13,20 +13,65 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
 - **Remembers where you went.** Already-visited spots stop showing up.
 
 > Part of the [platform monorepo](../../README.md). Unlike the other apps (which serve their SPA
-> from the Worker), wherever keeps its web and worker as **separate deploys** — the Worker is
+> from the Worker), wherever keeps its web and worker as **separate deploys**: the Worker is
 > pure API + realtime, the web is a standalone PWA.
 
-## Stack
+## How it works
 
-- **Web:** React + Vite + Tailwind v4, mobile-first, installable as a PWA, deploys to Cloudflare Pages
-- **Realtime + API:** a Cloudflare Worker (Hono) with one **Durable Object per session** (`SessionRoom`) holding live vote state. See [ADR 0001](docs/adr/0001-durable-objects.md).
-- **Durable data:** Cloudflare D1 (SQLite) + Drizzle
-- **Validation:** Zod at every HTTP and WebSocket boundary
-- **Restaurant data:** Google Places API (New), behind a swappable `RestaurantSource` interface with a seeded mock fallback (Foursquare kept as an alternate implementation)
+The Worker (Hono) is pure API + realtime; the web is a standalone, installable PWA that talks to it
+over HTTP and a WebSocket. Each session is owned by **one Durable Object** (`SessionRoom`) that is
+the single authority for that session's live state: roster, the shared deck, and every vote. Durable
+data (sessions, visited history) lives in Cloudflare D1 via Drizzle. Every HTTP and WebSocket payload
+is validated with Zod at the boundary, so nothing untrusted reaches the game logic. It all runs on
+free tiers.
 
-Runs entirely on free tiers.
+Restaurants come from the Google Places API (New), reached through a swappable `RestaurantSource`
+interface. Without an API key the app falls back to a seeded mock deck, so it is fully playable
+offline and in CI, and Foursquare is kept as an alternate implementation.
 
-## Getting started
+## Decisions & trade-offs
+
+**One Durable Object per session, as the single writer.** Realtime voting needs a single source of
+truth for "who has voted on what" with no races. A Durable Object gives that natively: one isolate
+owns one session, so votes serialize without a lock or an external store. The cost is that a session
+lives in one isolate (not horizontally sharded), which is the right trade for group-sized rooms.
+See [ADR 0001](docs/adr/0001-durable-objects.md).
+
+**The decision is computed in a pure core, and made exactly once.** Whether the group has reached a
+decision is a pure function of the votes, unit-tested in isolation from any I/O. Votes are
+idempotent (re-sending the same vote is a no-op), and the "decided" transition fires exactly once
+even if two final votes land in the same tick, so nobody sees a double-decide or a flicker between
+outcomes.
+
+**Majority, not consensus.** A left swipe is a downvote, not a veto. This is a product decision with
+teeth: it means one holdout cannot stall the group, which is the entire reason the app exists.
+
+**The data source is swappable behind an interface.** Google Places (New) is the default, but the
+app is written against a `RestaurantSource` interface with a seeded mock and a Foursquare alternate.
+That keeps the vendor at arm's length, keeps CI and offline dev fully playable with no key, and made
+the provider a one-line switch. See [ADR 0002](docs/adr/0002-restaurant-source.md).
+
+**Realtime resilience is handled, not hand-waved.** Three edge cases that decide whether a live app
+feels solid or broken:
+
+- **Reconnect.** A dropped client reconnects and the Worker replays full session state, so a flaky
+  phone connection never desyncs the deck or loses your votes.
+- **Host hand-off.** If the host leaves, another player is automatically promoted so the session
+  never gets stuck with no one able to start or decide.
+- **No leaks.** Stale sessions are pruned on a daily cron and bounded by a TTL, so abandoned rooms
+  do not accumulate in D1.
+
+## Testing
+
+- **Pure decision core.** The "has the group decided" logic is unit-tested with no I/O, covering
+  idempotent votes, decide-exactly-once, and majority edge cases.
+- **Data-source adapter.** The `RestaurantSource` normalization and mock fallback are covered so a
+  provider change or a bad upstream response cannot silently corrupt the deck.
+- **Session lifecycle.** The full join / vote / decide / reconnect flow runs against the **real
+  Workers runtime** via `@cloudflare/vitest-pool-workers`, with migrations applied to an in-memory
+  D1 per file. Around 40 tests across the three layers.
+
+## Running locally
 
 Requires **Node 22** (repo `.nvmrc`) and pnpm. No Docker needed; Wrangler runs the Worker, Durable Object, and a local D1 for you.
 
@@ -51,27 +96,15 @@ quota to stay inside the budget. To use Foursquare instead, set `RESTAURANT_SOUR
 
 ```
 packages/
-  shared/   # types, websocket protocol, Zod schemas (imported by both sides)
+  shared/   # types, websocket protocol, Zod schemas, pure decision core (imported by both sides)
   worker/   # Cloudflare Worker (Hono) + SessionRoom Durable Object + D1/Drizzle
-  web/      # React client
+  web/      # React client (PWA)
 docs/adr/   # architecture decision records
 ```
 
 ## Deploy
 
 Runs entirely on Cloudflare's free tier (Worker + Durable Objects + D1, plus Pages for the web app). See [DEPLOY.md](DEPLOY.md) for the step-by-step.
-
-## Roadmap
-
-All phases complete:
-
-0. Scaffold + landing
-1. Sessions + lobby (create, join by code, live presence), Zod validation
-2. Restaurant deck + swipe UI (drag, buttons, keyboard)
-3. Realtime voting + match detection: pure decision core with unit tests, idempotent votes, decide-exactly-once, reconnection
-4. Majority decision logic + "decide now" (folded into 3)
-5. Visited-places history (D1), excluded from future rounds, "pick again"
-6. Polish (PWA install, reconnect + not-found states), rate limiting, deploy prep
 
 ## License
 

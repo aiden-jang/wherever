@@ -319,7 +319,8 @@ export class SessionRoom extends DurableObject<Env> {
       await this.ctx.storage.delete("deck");
       return this.broadcast({
         type: "error",
-        message: "You've been everywhere nearby. Widen the search and try again.",
+        message:
+          "That's everywhere nearby, picked clean. Start a new session with a wider radius to keep eating.",
       });
     }
 

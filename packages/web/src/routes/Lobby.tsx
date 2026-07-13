@@ -388,7 +388,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           <div className="text-center max-w-sm">
             <h1 className="font-display text-3xl font-bold">Nothing survived the filters.</h1>
             <p className="mt-2 text-muted">
-              Your standards met this neighborhood and won. Loosen something and try again.
+              Your standards met this neighborhood and won. Start a fresh session with a wider radius
+              or fewer filters.
             </p>
           </div>
         ) : (

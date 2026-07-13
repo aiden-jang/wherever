@@ -107,7 +107,60 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {
+    await this.reassignHostIfNeeded(ws);
     await this.broadcastState(ws);
+  }
+
+  /**
+   * If the host's last socket is closing, hand host to another connected participant so the group
+   * isn't stranded in the lobby (only the host can start rounds / decide). host is cached in three
+   * places — the `hostId` record, the `clientMap`, and each live socket attachment — so all three
+   * are updated, and the new host keeps it across a reconnect. Empty room: clear host so the next
+   * person to join becomes it.
+   */
+  private async reassignHostIfNeeded(closing: WebSocket): Promise<void> {
+    const att = closing.deserializeAttachment() as SocketAttachment | null;
+    if (!att?.isHost) return;
+    const hostId = await this.ctx.storage.get<string>("hostId");
+    if (hostId !== att.participantId) return;
+
+    // Still present on another socket (second tab / reconnect race)? Keep them as host.
+    const stillHere = this.ctx.getWebSockets().some((s) => {
+      if (s === closing) return false;
+      const a = s.deserializeAttachment() as SocketAttachment | null;
+      return a?.participantId === att.participantId;
+    });
+    if (stillHere) return;
+
+    // Pick another connected participant, if any.
+    let newHostId: string | undefined;
+    for (const s of this.ctx.getWebSockets()) {
+      if (s === closing) continue;
+      const a = s.deserializeAttachment() as SocketAttachment | null;
+      if (a && a.participantId !== att.participantId) {
+        newHostId = a.participantId;
+        break;
+      }
+    }
+
+    const map = (await this.ctx.storage.get<ClientMap>("clientMap")) ?? {};
+    for (const [key, entry] of Object.entries(map)) {
+      if (entry.participantId === att.participantId) map[key] = { ...entry, isHost: false };
+      else if (newHostId && entry.participantId === newHostId) map[key] = { ...entry, isHost: true };
+    }
+
+    if (!newHostId) {
+      await this.ctx.storage.delete("hostId");
+      await this.ctx.storage.put("clientMap", map);
+      return;
+    }
+
+    await this.ctx.storage.put("hostId", newHostId);
+    await this.ctx.storage.put("clientMap", map);
+    for (const s of this.ctx.getWebSockets()) {
+      const a = s.deserializeAttachment() as SocketAttachment | null;
+      if (a?.participantId === newHostId && !a.isHost) s.serializeAttachment({ ...a, isHost: true });
+    }
   }
 
   // ---- handlers ----

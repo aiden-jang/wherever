@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Group restaurant picking by swipe. Less group chat, more eating.",
+  "license": "MIT",
   "engines": {
     "node": ">=22"
   },

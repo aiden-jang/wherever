@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createSessionSchema, type SessionFilters } from "@wherever/shared";
-import { sessions } from "./db/schema.js";
+import { sessions, visitedPlaces } from "./db/schema.js";
 import { generateSessionCode } from "./code.js";
 import { isValidPhotoRef } from "./restaurantSource.js";
 import type { Env } from "./env.js";
@@ -109,4 +110,21 @@ app.get("/ws/:code", (c) => {
   return room.fetch(c.req.raw);
 });
 
-export default app;
+// Sessions (and their visited-history) are ephemeral — one dinner decision. Prune anything past the
+// TTL on a daily cron so D1 doesn't grow without bound. There's no FK cascade, so both tables are
+// swept by age. 7 days keeps a shared result link valid for about a week.
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function pruneOldSessions(env: Env): Promise<void> {
+  const cutoff = new Date(Date.now() - SESSION_TTL_MS);
+  const db = drizzle(env.DB);
+  await db.delete(sessions).where(lt(sessions.createdAt, cutoff));
+  await db.delete(visitedPlaces).where(lt(visitedPlaces.visitedAt, cutoff));
+}
+
+export default {
+  fetch: app.fetch,
+  scheduled: async (_controller, env: Env): Promise<void> => {
+    await pruneOldSessions(env);
+  },
+} satisfies ExportedHandler<Env>;

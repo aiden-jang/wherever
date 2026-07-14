@@ -214,7 +214,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (!att?.isHost) {
       return this.send(ws, {
         type: "error",
-        message: "Only the host can start the round.",
+        message: "Only the host can start swiping.",
       });
     }
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
@@ -327,7 +327,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (!att?.isHost) {
       return this.send(ws, {
         type: "error",
-        message: "Only the host can start another round.",
+        message: "Only the host can run it back.",
       });
     }
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
@@ -360,7 +360,7 @@ export class SessionRoom extends DurableObject<Env> {
       return this.send(ws, {
         type: "error",
         message:
-          "That's everywhere nearby, picked clean. Start a new session with a wider radius to keep eating.",
+          "That's everywhere nearby, picked clean. Start a fresh session with a wider radius to keep eating.",
       });
     }
 

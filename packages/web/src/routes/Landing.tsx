@@ -72,11 +72,11 @@ function Card({ card, isFront }: { card: TeaserCard; isFront: boolean }) {
         <div className="font-display text-lg font-semibold leading-tight">{card.name}</div>
         <div className="mt-2 flex items-center gap-3 text-sm text-muted">
           <span>{card.category}</span>
-          <span className="text-white/20">|</span>
+          <span className="text-white/20">·</span>
           <span className="text-acid">★ {card.rating}</span>
-          <span className="text-white/20">|</span>
+          <span className="text-white/20">·</span>
           <span>{card.price}</span>
-          <span className="text-white/20">|</span>
+          <span className="text-white/20">·</span>
           <span>{card.distance}</span>
         </div>
       </div>

@@ -36,7 +36,7 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
           onChange={(e) => setName(e.target.value)}
         />
         <button type="submit" disabled={!name.trim()} className="mt-3 w-full rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition">
-          Join the table
+          Join the session
         </button>
       </form>
     </main>
@@ -53,7 +53,7 @@ function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
   }
   return (
     <div className="fixed top-0 inset-x-0 z-40 bg-flare/90 text-ink text-center text-sm font-medium py-2">
-      Still can&apos;t reach the table.{" "}
+      Still can&apos;t reach the session.{" "}
       <button onClick={() => location.reload()} className="underline font-semibold">
         Reload to rejoin
       </button>
@@ -199,7 +199,7 @@ function useHostPromotionToasts(
     if (before === null) return; // seed silently on first known state
     if (before || !isHost) return; // only fire on a false -> true handoff
 
-    const text = "You're the host now. You can start the round.";
+    const text = "You're the host now. You can start swiping.";
     onEventRef.current?.(text);
     const toast = { id: crypto.randomUUID(), text };
     setToasts((t) => [...t, toast]);
@@ -263,7 +263,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     if (match?.kind === "match") {
       setAnnouncement(`Decided. Everyone's eating at ${match.restaurant.name}.`);
     } else if (match?.kind === "none") {
-      setAnnouncement("No match. Nobody agreed on anything.");
+      setAnnouncement("Nobody liked anything.");
     }
   }, [match]);
   // Only surface a banner once we've connected at least once: "connecting" then is a drop,
@@ -334,7 +334,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             to="/"
             className="mt-8 inline-block rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
           >
-            Start a fresh one
+            Start a fresh session
           </Link>
         </div>
       </main>

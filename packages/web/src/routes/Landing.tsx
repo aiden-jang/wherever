@@ -313,12 +313,17 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
   const [name, setName] = useState(recallName());
   const [filters, setFilters] = useState<SessionFilters>(DEFAULT_FILTERS);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [locOff, setLocOff] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Resolve location up front so we know whether to offer the NYC neighborhood shortcuts, and
-  // reuse it at submit (getLocation caches, so this won't prompt twice).
+  // reuse it at submit. If it's unavailable (denied/timeout), flag it so we can tell the user their
+  // results will use a default area instead of silently serving the wrong city.
   useEffect(() => {
-    getLocation().then(setLoc);
+    getLocation().then((l) => {
+      setLoc(l);
+      setLocOff(l === null);
+    });
   }, []);
   const showAreas = loc != null && isInNYC(loc.lat, loc.lng);
 
@@ -328,10 +333,11 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
     setBusy(true);
     try {
       rememberName(name.trim());
-      const here = loc ?? (await getLocation());
+      // Use the location resolved on mount; don't re-invoke geolocation here (it can block up to
+      // 5s again). If it's off, we already told the user results use a default area.
       const code = await createSession(name.trim(), {
         ...filters,
-        ...(here ?? {}),
+        ...(loc ?? {}),
       });
       navigate(`/s/${code}`);
     } catch (err) {
@@ -347,6 +353,11 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
       <button type="submit" disabled={!name.trim() || busy} className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition">
         {busy ? "Shuffling the deck..." : "Deal the cards"}
       </button>
+      {locOff && (
+        <p className="text-center text-sm text-ink/60">
+          location's off, so we'll use a default area. turn it on for spots near you.
+        </p>
+      )}
     </form>
   );
 }

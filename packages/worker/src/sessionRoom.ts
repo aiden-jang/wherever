@@ -220,10 +220,21 @@ export class SessionRoom extends DurableObject<Env> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "lobby") return;
 
+    // Fetch BEFORE flipping to swiping: if the Places call fails we stay in the lobby and let the
+    // host retry, rather than stranding everyone on an empty "swiping" screen. (An empty-but-ok
+    // result is distinct — that legitimately shows "nothing survived the filters".)
+    let deck: Restaurant[];
+    try {
+      deck = await this.getOrCreateDeck(meta);
+    } catch {
+      return this.send(ws, {
+        type: "error",
+        message: "couldn't load restaurants right now. give it a moment and try again.",
+      });
+    }
+
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
-
-    const deck = await this.getOrCreateDeck(meta);
     this.broadcast({ type: "deck", restaurants: deck });
     await this.broadcastState();
     await this.evaluate(meta);
@@ -336,7 +347,15 @@ export class SessionRoom extends DurableObject<Env> {
     // Fetch the fresh deck BEFORE tearing down the current result. If the area is picked clean we
     // must leave the existing winner/deck/status intact, otherwise a late joiner would arrive to a
     // null winner and be told "nobody liked anything" even though a match was reached.
-    const deck = await this.fetchFreshDeck(meta); // excludes visited; caches into "deck"
+    let deck: Restaurant[];
+    try {
+      deck = await this.fetchFreshDeck(meta); // excludes visited; caches into "deck"
+    } catch {
+      return this.send(ws, {
+        type: "error",
+        message: "couldn't load more spots right now. give it a moment and try again.",
+      });
+    }
     if (deck.length === 0) {
       return this.send(ws, {
         type: "error",

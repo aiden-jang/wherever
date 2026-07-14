@@ -13,6 +13,10 @@ crons = ["0 4 * * *"]
 # cross-origin. Must match the custom_domain route below.
 PUBLIC_API_BASE = "https://api.wherever.aidenjang.com"
 
+# Restaurant data source. "google" uses Google Places (New) and requires the GOOGLE_PLACES_API_KEY
+# secret; without that key it safely falls back to the seeded mock deck. "mock" forces the demo deck.
+RESTAURANT_SOURCE = "google"
+
 # One Durable Object per session. The instance holds live vote state and owns
 # every WebSocket for that session.
 [[durable_objects.bindings]]

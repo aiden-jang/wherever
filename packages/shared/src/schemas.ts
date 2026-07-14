@@ -63,5 +63,3 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   againSchema,
   reactSchema,
 ]);
-
-export type CreateSessionInput = z.infer<typeof createSessionSchema>;

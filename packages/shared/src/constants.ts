@@ -11,7 +11,6 @@ import type { PriceTier, RestaurantSort } from "./types.js";
  * boundary so a reaction can never carry arbitrary text.
  */
 export const REACTION_EMOJIS = ["🔥", "😍", "🤤", "😂", "👀", "🙅"] as const;
-export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
 export interface CuisineOption {
   value: string;

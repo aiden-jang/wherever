@@ -138,7 +138,7 @@ export class FoursquareRestaurantSource implements RestaurantSource {
       },
     );
     // Fail soft: an API hiccup shows "nothing nearby" rather than crashing.
-    if (!res.ok) return [];
+    if (!res.ok) throw new Error("places_fetch_failed"); // distinct from "no results" so the caller can offer a retry
 
     const data = (await res.json()) as { results?: FoursquarePlace[] };
     return (data.results ?? [])
@@ -294,7 +294,7 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
       }),
     });
     // Fail soft: an API hiccup shows "nothing nearby" rather than crashing the round.
-    if (!res.ok) return [];
+    if (!res.ok) throw new Error("places_fetch_failed"); // distinct from "no results" so the caller can offer a retry
 
     const data = (await res.json()) as { places?: GooglePlace[] };
     const places = (data.places ?? []).filter((p) => p.id && p.displayName?.text);

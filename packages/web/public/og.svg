@@ -1,6 +1,6 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
-  <!-- Social share card. Served directly as og:image; the rendering surface
-       supplies the sans-serif fallback for the wordmark. -->
+  <!-- Social share card. Content is CENTERED so consumers that crop the 1.91:1 card toward a
+       square (iOS/Safari share-sheet thumbnail) still show the mark + wordmark, not empty space. -->
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ff5e2c" />
@@ -10,15 +10,14 @@
   </defs>
   <rect width="1200" height="630" fill="#0c0a09" />
 
-  <!-- brand mark: the "W," wordmark stroke from the icon -->
-  <g transform="translate(100, 150)">
-    <rect width="150" height="150" rx="40" fill="url(#g)" />
-    <g transform="translate(15, 15) scale(0.264)">
+  <!-- mark + wordmark only (no tagline — it turns to specks in a share-sheet thumbnail), centered -->
+  <g transform="translate(507, 150)">
+    <rect width="186" height="186" rx="50" fill="url(#g)" />
+    <g transform="translate(18.6, 18.6) scale(0.327)">
       <path d="M150 176 L200 336 L256 214 L312 336 L362 176" fill="none" stroke="#f6f1e7" stroke-width="36" stroke-linejoin="round" stroke-linecap="round" />
       <circle cx="388" cy="330" r="22" fill="#f6f1e7" />
     </g>
   </g>
 
-  <text x="100" y="415" font-family="'Bricolage Grotesque', Inter, system-ui, sans-serif" font-size="104" font-weight="800" fill="#f6f1e7" letter-spacing="-4">Wherever, Honestly</text>
-  <text x="104" y="480" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="38" font-weight="500" fill="#a8a29e">Everyone swipes. Majority wins. Dinner's decided.</text>
+  <text x="600" y="485" text-anchor="middle" font-family="'Bricolage Grotesque', Inter, system-ui, sans-serif" font-size="104" font-weight="800" fill="#f6f1e7" letter-spacing="-4">Wherever, Honestly</text>
 </svg>

@@ -153,16 +153,16 @@ function WinnerScreen({
           </div>
           <div className="mt-3 flex items-center justify-center gap-3 text-sm text-muted">
             <span>{restaurant.category}</span>
-            <span className="text-white/20">|</span>
+            <span className="text-white/20">·</span>
             <span className="text-acid">
               {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
               {restaurant.rating && restaurant.reviewCount
                 ? ` (${reviewCountLabel(restaurant.reviewCount)})`
                 : ""}
             </span>
-            <span className="text-white/20">|</span>
+            <span className="text-white/20">·</span>
             <span>{priceLabel(restaurant.priceTier)}</span>
-            <span className="text-white/20">|</span>
+            <span className="text-white/20">·</span>
             <span>{distanceLabel(restaurant.distanceMeters)}</span>
           </div>
         </div>
@@ -193,7 +193,7 @@ function WinnerScreen({
             onClick={onAgain}
             className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
           >
-            Nope, again (this one&apos;s out)
+            Run it back (this one&apos;s out)
           </button>
         ) : (
           <button

@@ -24,16 +24,16 @@ function CardFace({ restaurant }: { restaurant: Restaurant }) {
         </div>
         <div className="mt-3 flex items-center gap-3 text-sm text-muted">
           <span>{restaurant.category}</span>
-          <span className="text-white/20">|</span>
+          <span className="text-white/20">·</span>
           <span className="text-acid">
             {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
             {restaurant.rating && restaurant.reviewCount
               ? ` (${reviewCountLabel(restaurant.reviewCount)})`
               : ""}
           </span>
-          <span className="text-white/20">|</span>
+          <span className="text-white/20">·</span>
           <span>{priceLabel(restaurant.priceTier)}</span>
-          <span className="text-white/20">|</span>
+          <span className="text-white/20">·</span>
           <span>{distanceLabel(restaurant.distanceMeters)}</span>
         </div>
       </div>

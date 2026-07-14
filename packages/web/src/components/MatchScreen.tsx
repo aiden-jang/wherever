@@ -148,7 +148,7 @@ function WinnerScreen({
       <div className="pop-in mt-5 rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/60 overflow-hidden">
         <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
         <div className="p-5">
-          <div className="font-display text-3xl font-extrabold leading-tight">
+          <div className="font-display text-3xl font-extrabold leading-tight line-clamp-2">
             {restaurant.name}
           </div>
           <div className="mt-3 flex items-center justify-center gap-3 text-sm text-muted">

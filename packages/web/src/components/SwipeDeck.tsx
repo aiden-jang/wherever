@@ -19,7 +19,7 @@ function CardFace({ restaurant }: { restaurant: Restaurant }) {
     <>
       <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-48" />
       <div className="p-5">
-        <div className="font-display text-2xl font-bold leading-tight">
+        <div className="font-display text-2xl font-bold leading-tight line-clamp-2">
           {restaurant.name}
         </div>
         <div className="mt-3 flex items-center gap-3 text-sm text-muted">
@@ -77,7 +77,7 @@ function TopCard({
       role="group"
       aria-roledescription="restaurant card"
       aria-label={cardDescription(restaurant)}
-      style={{ x, rotate }}
+      style={{ x, rotate, touchAction: "pan-y" }}
       drag="x"
       dragSnapToOrigin
       dragElastic={0.5}

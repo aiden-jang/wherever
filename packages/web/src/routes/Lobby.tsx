@@ -216,6 +216,8 @@ function ParticipantChip({ p }: { p: Participant }) {
         {initials(p.displayName)}
         {/* Live presence: solid green pulse when connected, hollow grey when they've dropped. */}
         <span
+          role="img"
+          aria-label={p.connected ? "connected" : "disconnected"}
           className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-ink ${
             p.connected ? "bg-acid animate-pulse" : "bg-transparent border-muted"
           }`}

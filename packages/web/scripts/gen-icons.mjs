@@ -8,15 +8,19 @@ import { dirname, join } from "node:path";
 
 const pub = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 const svg = await readFile(join(pub, "icon.svg"));
+// iOS (apple-touch-icon) and Android (maskable) apply their own rounded mask and turn any
+// transparency black, so those must be full-bleed opaque squares — drop the corner radius. The
+// plain favicon (icon-192) keeps the rounded look.
+const fullBleed = Buffer.from(svg.toString().replace('rx="112"', 'rx="0"'));
 
 const sizes = [
-  { name: "icon-192.png", size: 192 },
-  { name: "icon-512.png", size: 512 },
-  { name: "apple-touch-icon.png", size: 180 },
+  { name: "icon-192.png", size: 192, src: svg },
+  { name: "icon-512.png", size: 512, src: fullBleed },
+  { name: "apple-touch-icon.png", size: 180, src: fullBleed },
 ];
 
-for (const { name, size } of sizes) {
-  await sharp(svg).resize(size, size).png().toFile(join(pub, name));
+for (const { name, size, src } of sizes) {
+  await sharp(src).resize(size, size).png().toFile(join(pub, name));
   console.log(`wrote ${name} (${size}x${size})`);
 }
 

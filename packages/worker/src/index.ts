@@ -80,11 +80,17 @@ app.get("/api/photo", async (c) => {
   const key = c.env.GOOGLE_PLACES_API_KEY;
   if (!key) return c.json({ error: "Photos are not available." }, 404);
 
+  // Snap to a small set of widths so a valid ref can't be abused to force hundreds of distinct
+  // paid Place-Photo fetches (one per arbitrary w). Cache by the SNAPPED width so every request in
+  // a bucket shares one cache entry and one upstream fetch.
   const requested = Number(c.req.query("w")) || PHOTO_DEFAULT_WIDTH;
-  const width = Math.min(Math.max(Math.trunc(requested), 1), PHOTO_MAX_WIDTH);
+  const allowedWidths = [400, 800, PHOTO_MAX_WIDTH];
+  const width = allowedWidths.find((w) => requested <= w) ?? PHOTO_MAX_WIDTH;
 
   const cache = caches.default;
-  const cacheKey = new Request(new URL(c.req.url).toString());
+  const normalized = new URL(c.req.url);
+  normalized.searchParams.set("w", String(width));
+  const cacheKey = new Request(normalized.toString());
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 

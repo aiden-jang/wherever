@@ -103,6 +103,13 @@ export interface ErrorMessage {
   message: string;
 }
 
+/** Sent to a client right after it joins so it knows which participant it is — stable across
+ *  reconnects and independent of display name (two people can share a name). */
+export interface IdentityMessage {
+  type: "identity";
+  participantId: string;
+}
+
 /** A reaction someone threw, fanned out to the whole session. */
 export interface ReactionMessage {
   type: "reaction";
@@ -120,4 +127,5 @@ export type ServerMessage =
   | NoMatchMessage
   | HistoryMessage
   | ErrorMessage
+  | IdentityMessage
   | ReactionMessage;

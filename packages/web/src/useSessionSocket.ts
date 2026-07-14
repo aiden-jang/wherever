@@ -52,8 +52,12 @@ export function useSessionSocket(code: string, displayName: string) {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("connecting");
   const [everConnected, setEverConnected] = useState(false);
+  const [participantId, setParticipantId] = useState<string | null>(null);
   const [reactions, setReactions] = useState<FloatingReaction[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  // Messages sent while the socket is mid-reconnect are buffered here and flushed on reopen, so a
+  // vote cast during a blip isn't silently dropped (which would stall the round for everyone).
+  const outboxRef = useRef<ClientMessage[]>([]);
 
   useEffect(() => {
     if (!code || !displayName) return;
@@ -102,6 +106,8 @@ export function useSessionSocket(code: string, displayName: string) {
           setTimeout(() => setReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
           return;
         }
+        case "identity":
+          return setParticipantId(msg.participantId);
         case "error":
           return setError(msg.message);
       }
@@ -123,6 +129,11 @@ export function useSessionSocket(code: string, displayName: string) {
             clientId: clientIdFor(code),
           }),
         );
+        // Flush anything queued while we were reconnecting (votes are idempotent server-side, so
+        // re-sending is safe).
+        const queued = outboxRef.current;
+        outboxRef.current = [];
+        for (const m of queued) ws.send(JSON.stringify(m));
       };
       ws.onmessage = handleMessage;
       ws.onclose = () => {
@@ -147,8 +158,14 @@ export function useSessionSocket(code: string, displayName: string) {
   }, [code, displayName]);
 
   const send = useCallback((message: ClientMessage) => {
-    wsRef.current?.send(JSON.stringify(message));
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
+    } else {
+      // Not open (reconnecting): queue and flush on reopen instead of throwing/dropping.
+      outboxRef.current.push(message);
+    }
   }, []);
 
-  return { session, deck, alreadyVoted, progress, match, visited, error, status, everConnected, reactions, send };
+  return { session, deck, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send };
 }

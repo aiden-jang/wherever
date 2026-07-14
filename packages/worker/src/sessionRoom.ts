@@ -35,6 +35,9 @@ interface SessionMeta {
   filters: SessionFilters;
 }
 
+// Each "again" round is a paid Places fetch; cap how many a single session can trigger.
+const MAX_AGAIN_ROUNDS = 20;
+
 /** clientId -> stable identity, so a reconnecting client keeps its votes. */
 type ClientMap = Record<string, { participantId: string; isHost: boolean }>;
 /** Votes keyed by `${participantId}:${restaurantId}` for idempotency. */
@@ -109,6 +112,11 @@ export class SessionRoom extends DurableObject<Env> {
   override async webSocketClose(ws: WebSocket): Promise<void> {
     await this.reassignHostIfNeeded(ws);
     await this.broadcastState(ws);
+    // A departure drops the participant count — re-check completion (excluding the closing socket,
+    // which getWebSockets still returns here) so a finished group decides instead of stalling on
+    // the person who just left.
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (meta?.status === "swiping") await this.evaluate(meta, ws);
   }
 
   /**
@@ -180,6 +188,10 @@ export class SessionRoom extends DurableObject<Env> {
 
     const identity = await this.resolveIdentity(clientId);
     ws.serializeAttachment({ ...identity, displayName });
+
+    // Tell the client its own participantId so it identifies itself by a stable id, not by display
+    // name (two participants can share a name, which otherwise misattaches host controls).
+    this.send(ws, { type: "identity", participantId: identity.participantId });
 
     await this.broadcastState();
     this.send(ws, { type: "history", visited: await this.getVisited(meta.code) });
@@ -255,10 +267,10 @@ export class SessionRoom extends DurableObject<Env> {
   // ---- core round logic ----
 
   /** Recompute + broadcast progress, then decide if everyone connected is done. */
-  private async evaluate(meta: SessionMeta): Promise<void> {
+  private async evaluate(meta: SessionMeta, excludeWs?: WebSocket): Promise<void> {
     const deck = await this.getOrCreateDeck(meta);
     const votes = await this.getVotes();
-    const participants = this.connectedParticipants();
+    const participants = this.connectedParticipants(excludeWs);
     const total = participants.length;
     const finished = countFinished(
       votes,
@@ -310,20 +322,32 @@ export class SessionRoom extends DurableObject<Env> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "decided") return;
 
-    await this.ctx.storage.delete("deck");
-    await this.ctx.storage.delete("votes");
-    await this.ctx.storage.delete("winner");
+    // Hard server-side cap on "again" rounds: each one is a paid Places fetch, so bound how many
+    // times a single session can re-deal before it has to start fresh. (The Google daily quota is
+    // the outer hard limit; this stops one session from hammering it.)
+    const rounds = (await this.ctx.storage.get<number>("againRounds")) ?? 0;
+    if (rounds >= MAX_AGAIN_ROUNDS) {
+      return this.send(ws, {
+        type: "error",
+        message: "you've been through a lot of rounds. start a fresh session to keep going.",
+      });
+    }
 
-    const deck = await this.fetchFreshDeck(meta); // excludes visited
+    // Fetch the fresh deck BEFORE tearing down the current result. If the area is picked clean we
+    // must leave the existing winner/deck/status intact, otherwise a late joiner would arrive to a
+    // null winner and be told "nobody liked anything" even though a match was reached.
+    const deck = await this.fetchFreshDeck(meta); // excludes visited; caches into "deck"
     if (deck.length === 0) {
-      await this.ctx.storage.delete("deck");
-      return this.broadcast({
+      return this.send(ws, {
         type: "error",
         message:
           "That's everywhere nearby, picked clean. Start a new session with a wider radius to keep eating.",
       });
     }
 
+    await this.ctx.storage.delete("votes");
+    await this.ctx.storage.delete("winner");
+    await this.ctx.storage.put("againRounds", rounds + 1);
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
     this.broadcast({ type: "deck", restaurants: deck });
@@ -403,9 +427,11 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /** Unique connected participants (dedup across reconnect overlap). */
-  private connectedParticipants(): SocketAttachment[] {
+  private connectedParticipants(exclude?: WebSocket): SocketAttachment[] {
     const seen = new Map<string, SocketAttachment>();
     for (const s of this.ctx.getWebSockets()) {
+      // During webSocketClose the closing socket is still returned here, so callers can exclude it.
+      if (s === exclude) continue;
       const att = s.deserializeAttachment() as SocketAttachment | null;
       if (att) seen.set(att.participantId, att);
     }

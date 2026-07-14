@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -164,18 +164,24 @@ export function SwipeDeck({
     }
   }, []);
 
+  // Authoritative pointer, advanced synchronously in commit. Two events in one frame (e.g. arrow
+  // key auto-repeat) would otherwise both read the same `index` from the closure and net +2 — voting
+  // one card twice and skipping the next, which then never gets voted and stalls completion.
+  const indexRef = useRef(index);
   const commit = useCallback(
     (dir: SwipeDirection) => {
-      const current = restaurants[index];
+      const i = indexRef.current;
+      const current = restaurants[i];
       if (!current) return;
+      indexRef.current = i + 1;
       // A light tap on a like, a slightly firmer double-tap on a pass.
       buzz(dir === "right" ? 12 : [8, 20]);
       dismissHint();
       setExitDir(dir);
       onSwipe(current.id, dir);
-      setIndex((i) => i + 1);
+      setIndex(i + 1);
     },
-    [index, restaurants, onSwipe, dismissHint],
+    [restaurants, onSwipe, dismissHint],
   );
 
   // Don't let the hint linger if they just sit there.

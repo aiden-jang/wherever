@@ -250,7 +250,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, alreadyVoted, progress, match, visited, error, status, everConnected, reactions, send } =
+  const { session, deck, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [copied, setCopied] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -282,7 +282,11 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     document.title = "Wherever, Honestly";
   }, []);
 
-  const me = session?.participants.find((p) => p.displayName === displayName);
+  // Identify self by stable participantId, not display name (two people can share a name, which
+  // would misattach host controls). Fall back to name only until identity arrives.
+  const me = session?.participants.find((p) =>
+    participantId ? p.id === participantId : p.displayName === displayName,
+  );
   const isHost = me?.isHost ?? false;
   const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
   const allToasts = [...toasts, ...hostToasts];

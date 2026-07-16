@@ -30,6 +30,18 @@ export default function App() {
             analytics are cookieless, so there is nothing personal to collect.
           </p>
           <p className="mt-1">Place data powered by Google.</p>
+          <p className="mt-1">
+            Made by{' '}
+            <a
+              href="https://aidenjang.com"
+              target="_blank"
+              rel="noopener"
+              className="underline underline-offset-2 hover:text-cream transition-colors"
+            >
+              Aiden Jang
+            </a>
+            .
+          </p>
         </footer>
         </div>
       </BrowserRouter>

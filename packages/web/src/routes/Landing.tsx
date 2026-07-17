@@ -30,6 +30,9 @@ const DEADPAN_LINES = [
   "The vegetarian is watching. Choose wisely.",
   "No, not that place. You know why.",
   "Democracy, but for tacos.",
+  "The group chat has 47 unread messages. None decide anything.",
+  "Two of you are 'not that hungry.' You will be.",
+  "Yes, the salad place counts. Barely.",
 ];
 
 interface TeaserCard {
@@ -107,7 +110,29 @@ const segBase =
 const segOn = "bg-ember text-ink border-ember";
 const segOff = "bg-black/40 text-cream border-white/10 hover:border-white/30";
 
-/** Cuisine multi-select + distance / rating / price pickers. Empty cuisine = anything. */
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M5 8l5 5 5-5" />
+    </svg>
+  );
+}
+
+/**
+ * Cuisine multi-select + distance / price / open-now up front, with rating / min-reviews / sort
+ * tucked behind a collapsible "get picky" disclosure. The app's whole premise is that deciding is
+ * exhausting, so the create form leads with the few choices a group actually cares about and hides
+ * the power-user knobs until asked. Empty cuisine = anything.
+ */
 function FilterFields({
   filters,
   onChange,
@@ -117,6 +142,15 @@ function FilterFields({
   onChange: (next: SessionFilters) => void;
   showAreas: boolean;
 }) {
+  const [pickyOpen, setPickyOpen] = useState(false);
+
+  const popularCuisines = CUISINE_OPTIONS.filter((c) => c.popular);
+  const moreCuisines = CUISINE_OPTIONS.filter((c) => !c.popular);
+  // Auto-expand the full list if a selected cuisine lives in the hidden set, so a pick can never be
+  // silently tucked away out of view.
+  const hasHiddenSelected = moreCuisines.some((c) => filters.categories.includes(c.value));
+  const [showAllCuisines, setShowAllCuisines] = useState(hasHiddenSelected);
+
   function toggleCuisine(value: string) {
     const has = filters.categories.includes(value);
     onChange({
@@ -126,6 +160,15 @@ function FilterFields({
         : [...filters.categories, value],
     });
   }
+
+  // How many hidden knobs are set away from their defaults, so a collapsed section still tells the
+  // host something's active under there.
+  const pickyActive =
+    (filters.minRating ?? 0) > 0 ? 1 : 0;
+  const pickyCount =
+    pickyActive +
+    ((filters.minReviews ?? 0) > 0 ? 1 : 0) +
+    ((filters.sort ?? "popularity") !== "popularity" ? 1 : 0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -166,7 +209,7 @@ function FilterFields({
       <div className="flex flex-col gap-2">
         <FieldLabel>Cravings (pick some, or leave it to fate)</FieldLabel>
         <div className="flex flex-wrap gap-2">
-          {CUISINE_OPTIONS.map((c) => {
+          {(showAllCuisines ? CUISINE_OPTIONS : popularCuisines).map((c) => {
             const on = filters.categories.includes(c.value);
             return (
               <button
@@ -183,6 +226,15 @@ function FilterFields({
               </button>
             );
           })}
+          {!showAllCuisines && (
+            <button
+              type="button"
+              onClick={() => setShowAllCuisines(true)}
+              className="rounded-full border border-dashed border-white/20 px-3 py-1.5 text-sm text-muted hover:border-white/40 hover:text-cream transition-colors"
+            >
+              + {moreCuisines.length} more
+            </button>
+          )}
         </div>
       </div>
 
@@ -204,26 +256,6 @@ function FilterFields({
       </div>
 
       <div className="flex flex-col gap-2">
-        <FieldLabel>Standards</FieldLabel>
-        <div className="flex gap-2">
-          {RATING_OPTIONS.map((o) => {
-            const on = (filters.minRating ?? 0) === o.value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                aria-pressed={on}
-                onClick={() => onChange({ ...filters, minRating: o.value })}
-                className={`${segBase} ${on ? segOn : segOff}`}
-              >
-                {o.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
         <FieldLabel>Budget, realistically</FieldLabel>
         <div className="flex gap-2">
           {PRICE_OPTIONS.map((o) => (
@@ -237,46 +269,6 @@ function FilterFields({
               {o.label}
             </button>
           ))}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <FieldLabel>Enough reviews to trust it</FieldLabel>
-        <div className="flex gap-2">
-          {MIN_REVIEWS_OPTIONS.map((o) => {
-            const on = (filters.minReviews ?? 0) === o.value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                aria-pressed={on}
-                onClick={() => onChange({ ...filters, minReviews: o.value })}
-                className={`${segBase} ${on ? segOn : segOff}`}
-              >
-                {o.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <FieldLabel>Order by</FieldLabel>
-        <div className="flex gap-2">
-          {SORT_OPTIONS.map((o) => {
-            const on = (filters.sort ?? "popularity") === o.value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                aria-pressed={on}
-                onClick={() => onChange({ ...filters, sort: o.value as RestaurantSort })}
-                className={`${segBase} ${on ? segOn : segOff}`}
-              >
-                {o.label}
-              </button>
-            );
-          })}
         </div>
       </div>
 
@@ -304,6 +296,119 @@ function FilterFields({
           />
         </span>
       </button>
+
+      <button
+        type="button"
+        aria-pressed={filters.revealVoters ?? false}
+        onClick={() => onChange({ ...filters, revealVoters: !filters.revealVoters })}
+        className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
+          filters.revealVoters ? "border-ember bg-ember/10" : "border-white/10 hover:border-white/30"
+        }`}
+      >
+        <span className="flex flex-col">
+          <span className="font-semibold">Show who's voted</span>
+          <span className="text-xs text-muted">
+            {filters.revealVoters ? "Everyone sees who's finished" : "Off — votes stay anonymous"}
+          </span>
+        </span>
+        <span
+          className={`relative h-6 w-11 rounded-full transition-colors ${
+            filters.revealVoters ? "bg-ember" : "bg-white/15"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+              filters.revealVoters ? "translate-x-[22px]" : "translate-x-0.5"
+            }`}
+          />
+        </span>
+      </button>
+
+      {/* Power-user knobs most groups never touch, folded away so the form leads with the choices
+          that actually matter. A count keeps them discoverable when set. */}
+      <div className="rounded-2xl border border-white/10">
+        <button
+          type="button"
+          aria-expanded={pickyOpen}
+          onClick={() => setPickyOpen((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-left"
+        >
+          <span className="flex items-center gap-2">
+            <span className="font-semibold">Get picky</span>
+            {pickyCount > 0 && (
+              <span className="rounded-full bg-ember px-2 py-0.5 text-xs font-bold text-ink">
+                {pickyCount} on
+              </span>
+            )}
+            <span className="text-xs text-muted">rating, reviews, order</span>
+          </span>
+          <Chevron open={pickyOpen} />
+        </button>
+
+        {pickyOpen && (
+          <div className="flex flex-col gap-4 border-t border-white/10 px-4 py-4">
+            <div className="flex flex-col gap-2">
+              <FieldLabel>Standards</FieldLabel>
+              <div className="flex gap-2">
+                {RATING_OPTIONS.map((o) => {
+                  const on = (filters.minRating ?? 0) === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => onChange({ ...filters, minRating: o.value })}
+                      className={`${segBase} ${on ? segOn : segOff}`}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <FieldLabel>Enough reviews to trust it</FieldLabel>
+              <div className="flex gap-2">
+                {MIN_REVIEWS_OPTIONS.map((o) => {
+                  const on = (filters.minReviews ?? 0) === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => onChange({ ...filters, minReviews: o.value })}
+                      className={`${segBase} ${on ? segOn : segOff}`}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <FieldLabel>Order by</FieldLabel>
+              <div className="flex gap-2">
+                {SORT_OPTIONS.map((o) => {
+                  const on = (filters.sort ?? "popularity") === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => onChange({ ...filters, sort: o.value as RestaurantSort })}
+                      className={`${segBase} ${on ? segOn : segOff}`}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

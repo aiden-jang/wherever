@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 import {
   clientMessageSchema,
-  countFinished,
+  finishedParticipantIds,
   decideWinner,
   type DecisionResult,
   type Participant,
@@ -17,7 +17,7 @@ import {
   type Vote,
   type VoteMode,
 } from "@wherever/shared";
-import { createRestaurantSource } from "./restaurantSource.js";
+import { createRestaurantSource, MockRestaurantSource } from "./restaurantSource.js";
 import { visitedPlaces } from "./db/schema.js";
 import type { Env } from "./env.js";
 
@@ -202,7 +202,7 @@ export class SessionRoom extends DurableObject<Env> {
       const alreadyVoted = votes
         .filter((v) => v.participantId === identity.participantId)
         .map((v) => v.restaurantId);
-      this.send(ws, { type: "deck", restaurants: deck, alreadyVoted });
+      this.send(ws, { type: "deck", restaurants: deck, alreadyVoted, demo: await this.isDemoMode() });
       await this.evaluate(meta); // refresh progress for the new arrival
     } else if (meta.status === "decided") {
       await this.sendResult(ws);
@@ -235,7 +235,7 @@ export class SessionRoom extends DurableObject<Env> {
 
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
-    this.broadcast({ type: "deck", restaurants: deck });
+    this.broadcast({ type: "deck", restaurants: deck, demo: await this.isDemoMode() });
     await this.broadcastState();
     await this.evaluate(meta);
   }
@@ -283,7 +283,7 @@ export class SessionRoom extends DurableObject<Env> {
     const votes = await this.getVotes();
     const participants = this.connectedParticipants(excludeWs);
     const total = participants.length;
-    const finished = countFinished(
+    const finishedIds = finishedParticipantIds(
       votes,
       participants.map((p) => p.participantId),
       deck.length,
@@ -291,11 +291,14 @@ export class SessionRoom extends DurableObject<Env> {
 
     this.broadcast({
       type: "vote_progress",
-      finishedCount: finished,
+      finishedCount: finishedIds.length,
       totalParticipants: total,
+      // Only reveal identities when the host chose to; otherwise the field is omitted and the round
+      // stays anonymous on the wire, not just in the UI.
+      ...(meta.filters.revealVoters ? { finishedIds } : {}),
     });
 
-    if (total > 0 && finished >= total) {
+    if (total > 0 && finishedIds.length >= total) {
       await this.decide(meta);
     }
   }
@@ -369,7 +372,7 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.put("againRounds", rounds + 1);
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
-    this.broadcast({ type: "deck", restaurants: deck });
+    this.broadcast({ type: "deck", restaurants: deck, demo: await this.isDemoMode() });
     await this.broadcastState();
     await this.evaluate(meta);
   }
@@ -409,13 +412,36 @@ export class SessionRoom extends DurableObject<Env> {
   private async fetchFreshDeck(meta: SessionMeta): Promise<Restaurant[]> {
     const kind = this.env.RESTAURANT_SOURCE ?? "mock";
     const apiKey = kind === "google" ? this.env.GOOGLE_PLACES_API_KEY : this.env.FOURSQUARE_API_KEY;
-    const source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
+
+    // A real Google search is about to happen → charge it against the monthly budget first. If the
+    // budget is spent, don't call Google: fall back to the sample deck so the app stays playable as
+    // a demo, and flag it so the client can explain why the data is stand-in.
+    let source;
+    let demo = false;
+    if (kind === "google" && apiKey) {
+      const meter = this.env.USAGE_METER.get(this.env.USAGE_METER.idFromName("global"));
+      if (await meter.tryConsume("search")) {
+        source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
+      } else {
+        source = new MockRestaurantSource();
+        demo = true;
+      }
+    } else {
+      source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
+    }
+
     const all = await source.fetchDeck(meta.filters);
     const visited = await this.getVisited(meta.code);
     const seen = new Set(visited.map((v) => v.restaurantId));
     const deck = all.filter((r) => !seen.has(r.id));
     await this.ctx.storage.put("deck", deck);
+    await this.ctx.storage.put("demoMode", demo);
     return deck;
+  }
+
+  /** Whether the current deck is the sample fallback served because the live-data budget is spent. */
+  private async isDemoMode(): Promise<boolean> {
+    return (await this.ctx.storage.get<boolean>("demoMode")) ?? false;
   }
 
   private async getVisited(code: string): Promise<VisitedPlace[]> {

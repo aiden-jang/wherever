@@ -25,8 +25,25 @@ export interface Restaurant {
   reviewCount: number | null;
   /** Meters from the search point. */
   distanceMeters: number;
+  /** First photo, used as the card thumbnail; null when there is none. */
   imageUrl: string | null;
+  /** Up to a handful of photo URLs (proxied) for the detail gallery; imageUrl is photos[0]. */
+  photos?: string[];
   address: string | null;
+  /** "OPERATIONAL" | "CLOSED_TEMPORARILY" | "CLOSED_PERMANENTLY" — from Google; null when unknown. */
+  businessStatus?: string | null;
+  /** Formatted typical spend, e.g. "$10–30"; null when the source has no range. */
+  priceRange?: string | null;
+  /** Deep link to the place on Google Maps; null when the source doesn't provide one. */
+  googleMapsUri?: string | null;
+  /** The place's own website, when known. */
+  website?: string | null;
+  /** Local phone number, when known. */
+  phone?: string | null;
+  /** Whether the place is open at search time; null when hours are unknown. */
+  openNow?: boolean | null;
+  /** Human-readable weekly hours, one line per day (Google's weekdayDescriptions). */
+  hours?: string[] | null;
 }
 
 /** How the deck is ordered before it's dealt. */
@@ -53,6 +70,12 @@ export interface SessionFilters {
   openNow?: boolean;
   /** Deck ordering. Defaults to "popularity". */
   sort?: RestaurantSort;
+  /**
+   * When true, the round shows who has finished voting (names/avatars fill in). When unset/false the
+   * server never sends per-person progress, so votes stay anonymous — enforced server-side, not just
+   * hidden in the UI. Rides in filters to avoid a separate D1 column; it's a session preference.
+   */
+  revealVoters?: boolean;
   /** Named search area (a NEIGHBORHOODS value). Overrides lat/lng when set; unset means "near me". */
   area?: string;
   /** Search center. Optional: the mock source ignores it; real sources need it. */

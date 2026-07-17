@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Restaurant, VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
-import { distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
+import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { buzz } from "./haptics.js";
 import { renderShareCard } from "./shareCard.js";
@@ -114,6 +115,7 @@ function WinnerScreen({
 }) {
   const { restaurant, rightSwipes, totalParticipants } = match;
   const [shareState, setShareState] = useState<"idle" | "sharing" | "shared" | "copied">("idle");
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // Celebrate once when the verdict lands: confetti + a short victory buzz.
   const [celebrate, setCelebrate] = useState(true);
@@ -145,28 +147,38 @@ function WinnerScreen({
       <p className="font-display text-lg font-bold tracking-widest text-acid uppercase">
         It&apos;s decided
       </p>
-      <div className="pop-in mt-5 rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/60 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setDetailOpen(true)}
+        aria-label={`See details for ${restaurant.name}`}
+        className="pop-in relative mt-5 block w-full text-left rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/60 overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
+      >
         <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
+        <span className="pointer-events-none absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm">
+          i
+        </span>
         <div className="p-5">
           <div className="font-display text-3xl font-extrabold leading-tight line-clamp-2">
             {restaurant.name}
           </div>
-          <div className="mt-3 flex items-center justify-center gap-3 text-sm text-muted">
-            <span>{restaurant.category}</span>
-            <span className="text-white/20">·</span>
-            <span className="text-acid">
+          {/* Category on its own line, stats below with each value kept whole — same treatment as
+              the deck card so the winner never wraps mid-value on a phone. */}
+          <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted">
+            <span className="whitespace-nowrap text-acid">
               {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
               {restaurant.rating && restaurant.reviewCount
                 ? ` (${reviewCountLabel(restaurant.reviewCount)})`
                 : ""}
             </span>
             <span className="text-white/20">·</span>
-            <span>{priceLabel(restaurant.priceTier)}</span>
+            <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
             <span className="text-white/20">·</span>
-            <span>{distanceLabel(restaurant.distanceMeters)}</span>
+            <span className="whitespace-nowrap">{distanceLabel(restaurant.distanceMeters)}</span>
           </div>
+          <p className="mt-3 text-xs text-muted">Tap for hours, phone &amp; directions</p>
         </div>
-      </div>
+      </button>
 
       <p className="mt-4 text-muted">
         {rightSwipes} of {totalParticipants} wanted it. The rest will cope.
@@ -206,6 +218,10 @@ function WinnerScreen({
       </div>
 
       <History visited={visited} />
+
+      {detailOpen && (
+        <RestaurantDetail restaurant={restaurant} onClose={() => setDetailOpen(false)} />
+      )}
     </div>
   );
 }

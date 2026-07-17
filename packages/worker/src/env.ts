@@ -1,11 +1,18 @@
 import type { SessionRoom } from "./sessionRoom.js";
 import type { RateLimiter } from "./rateLimiter.js";
+import type { UsageMeter } from "./usageMeter.js";
 
 /** Bindings declared in wrangler.toml, surfaced to the Worker and DO. */
 export interface Env {
   SESSION_ROOM: DurableObjectNamespace<SessionRoom>;
   RATE_LIMITER: DurableObjectNamespace<RateLimiter>;
+  /** Global monthly counter that caps paid Google calls to keep usage in the free tier. */
+  USAGE_METER: DurableObjectNamespace<UsageMeter>;
   DB: D1Database;
+  /** Monthly cap on Google Nearby Search calls before the app stops calling Google. Default 950. */
+  SEARCH_MONTHLY_CAP?: string;
+  /** Monthly cap on Google Place Photo fetches before the app serves fallbacks. Default 950. */
+  PHOTO_MONTHLY_CAP?: string;
   /** Which RestaurantSource to use: "google" (default in prod), "foursquare", or "mock". */
   RESTAURANT_SOURCE?: string;
   /** Google Places API (New) key. Restrict it to the Places API + your domain. */

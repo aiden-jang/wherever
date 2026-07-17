@@ -66,6 +66,8 @@ export interface DeckMessage {
   restaurants: Restaurant[];
   /** Restaurant ids this client already voted on, for resume after reconnect. */
   alreadyVoted?: string[];
+  /** True when this is the sample deck served because the monthly live-data budget is spent. */
+  demo?: boolean;
 }
 
 export interface ParticipantJoinedMessage {
@@ -78,6 +80,11 @@ export interface VoteProgressMessage {
   /** How many participants have finished swiping the whole deck. */
   finishedCount: number;
   totalParticipants: number;
+  /**
+   * Participant ids that have finished, sent ONLY when the host enabled revealVoters. Omitted
+   * entirely in anonymous sessions so identities never leave the server.
+   */
+  finishedIds?: string[];
 }
 
 export interface MatchMessage {

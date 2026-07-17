@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MockRestaurantSource,
+  formatPriceRange,
   googleTypesFor,
   isValidPhotoRef,
   mapFoursquarePlace,
@@ -80,8 +81,76 @@ describe("mapGooglePlace", () => {
       distanceMeters: 0, // same point as the center
       // Photo routed through our proxy so the API key stays server-side.
       imageUrl: "https://api.example.com/api/photo?ref=places%2Fg1%2Fphotos%2Fx",
+      photos: ["https://api.example.com/api/photo?ref=places%2Fg1%2Fphotos%2Fx"],
       address: "7 Carmine St",
+      googleMapsUri: null,
+      website: null,
+      phone: null,
+      openNow: null,
+      hours: null,
+      businessStatus: null,
+      priceRange: null,
     });
+  });
+
+  it("surfaces up to five photos, with imageUrl as the first", () => {
+    const p: GooglePlace = {
+      id: "g5",
+      displayName: { text: "Snap Central" },
+      photos: [1, 2, 3, 4, 5, 6, 7].map((n) => ({ name: `places/g5/photos/p${n}` })),
+    };
+    const r = mapGooglePlace(p, center);
+    expect(r.photos).toHaveLength(5); // capped
+    expect(r.imageUrl).toBe(r.photos![0]);
+    expect(r.photos![0]).toBe("/api/photo?ref=places%2Fg5%2Fphotos%2Fp1");
+  });
+
+  it("formats partial and foreign price ranges", () => {
+    expect(formatPriceRange(undefined)).toBeNull();
+    expect(formatPriceRange({})).toBeNull();
+    expect(formatPriceRange({ startPrice: { currencyCode: "USD", units: "20" } })).toBe("$20+");
+    expect(formatPriceRange({ endPrice: { currencyCode: "USD", units: "50" } })).toBe("Up to $50");
+    expect(
+      formatPriceRange({
+        startPrice: { currencyCode: "EUR", units: "15" },
+        endPrice: { currencyCode: "EUR", units: "40" },
+      }),
+    ).toBe("€15–40");
+  });
+
+  it("maps businessStatus and formats a price range", () => {
+    const p: GooglePlace = {
+      id: "g6",
+      displayName: { text: "Pricey Place" },
+      businessStatus: "CLOSED_TEMPORARILY",
+      priceRange: {
+        startPrice: { currencyCode: "USD", units: "10" },
+        endPrice: { currencyCode: "USD", units: "30" },
+      },
+    };
+    const r = mapGooglePlace(p, center);
+    expect(r.businessStatus).toBe("CLOSED_TEMPORARILY");
+    expect(r.priceRange).toBe("$10–30");
+  });
+
+  it("maps the detail fields when Google provides them", () => {
+    const p: GooglePlace = {
+      id: "g4",
+      displayName: { text: "Late Night Diner" },
+      googleMapsUri: "https://maps.google.com/?cid=123",
+      websiteUri: "https://latenightdiner.example",
+      nationalPhoneNumber: "(212) 555-0100",
+      currentOpeningHours: {
+        openNow: true,
+        weekdayDescriptions: ["Monday: 8:00 AM – 11:00 PM", "Tuesday: 8:00 AM – 11:00 PM"],
+      },
+    };
+    const r = mapGooglePlace(p, center);
+    expect(r.googleMapsUri).toBe("https://maps.google.com/?cid=123");
+    expect(r.website).toBe("https://latenightdiner.example");
+    expect(r.phone).toBe("(212) 555-0100");
+    expect(r.openNow).toBe(true);
+    expect(r.hours).toEqual(["Monday: 8:00 AM – 11:00 PM", "Tuesday: 8:00 AM – 11:00 PM"]);
   });
 
   it("uses a relative proxy URL when no base is given (dev)", () => {

@@ -30,6 +30,21 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
+/* Interactive controls get the pointer cursor. Native <button> defaults to the arrow, which reads
+   as non-clickable; set it once here rather than per-button. Disabled controls show the blocked
+   cursor. Links (<a>) already default to pointer. */
+button,
+[role="button"],
+label[for],
+summary {
+  cursor: pointer;
+}
+button:disabled,
+button[aria-disabled="true"],
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 html,
 body,
 #root {

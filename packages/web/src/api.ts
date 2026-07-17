@@ -23,7 +23,11 @@ export async function createSession(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ displayName, filters }),
   });
-  if (!res.ok) throw new Error("Could not start a session. Try again.");
+  if (!res.ok) {
+    // Surface the server's specific reason (rate limit, bad setup) instead of a generic one.
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Couldn't start the session. Give it another shot.");
+  }
   const data = (await res.json()) as { code: string };
   return data.code;
 }

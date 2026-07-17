@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import type { PriceTier, RestaurantSort, SessionFilters } from "@wherever/shared";
 import {
@@ -33,6 +34,16 @@ const DEADPAN_LINES = [
   "The group chat has 47 unread messages. None decide anything.",
   "Two of you are 'not that hungry.' You will be.",
   "Yes, the salad place counts. Barely.",
+  "Someone's about to say 'I'm easy.' They are not easy.",
+  "'Anywhere is fine' has entered the chat. It is not fine.",
+  "Four adults, one decision, no survivors.",
+  "Whoever complains picks next time. Allegedly.",
+  "The tie-breaker is hunger.",
+  "You've walked past six of these. Tonight, commitment.",
+  "The person who picked last time has notes.",
+  "Faster than the group chat. Low bar. Still counts.",
+  "One of you is 'saving room for opinions.'",
+  "This will not become a whole thing. (It will.)",
 ];
 
 interface TeaserCard {
@@ -62,12 +73,18 @@ function StatusLine() {
   return <p className="mt-8 text-sm text-muted">{DEADPAN_LINES[i]}</p>;
 }
 
-function Card({ card, isFront }: { card: TeaserCard; isFront: boolean }) {
+/** The visual body of a teaser card. The front card also shows the working Nope/Yes controls. */
+function TeaserCardFace({
+  card,
+  front = false,
+  onVote,
+}: {
+  card: TeaserCard;
+  front?: boolean;
+  onVote?: (dir: "left" | "right") => void;
+}) {
   return (
-    <div
-      className="absolute w-64 sm:w-72 rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
-      style={{ transform: `${card.offset} rotate(${card.rotation})` }}
-    >
+    <div className="rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">
       <div className="h-36 flex items-center justify-center text-6xl" style={{ background: card.gradient }}>
         <span className="drop-shadow-lg">{card.emoji}</span>
       </div>
@@ -83,17 +100,97 @@ function Card({ card, isFront }: { card: TeaserCard; isFront: boolean }) {
           <span>{card.distance}</span>
         </div>
       </div>
-      {isFront && (
+      {front && (
         <>
           <span className="absolute top-4 left-4 rotate-[-12deg] rounded-lg border-2 border-acid px-3 py-1 text-xs font-bold tracking-widest text-acid">
             LET&apos;S EAT
           </span>
           <div className="flex gap-3 px-4 pb-4">
-            <button type="button" aria-label="Nope" className="flex-1 rounded-2xl border border-white/10 py-2 text-lg hover:border-flare hover:text-flare transition-colors">✕</button>
-            <button type="button" aria-label="Yes" className="flex-1 rounded-2xl bg-acid py-2 text-lg text-ink font-bold hover:brightness-110 transition">♥</button>
+            <button
+              type="button"
+              aria-label="Nope"
+              onClick={() => onVote?.("left")}
+              className="flex-1 rounded-2xl border border-white/10 py-2 text-lg hover:border-flare hover:text-flare active:scale-95 transition"
+            >
+              ✕
+            </button>
+            <button
+              type="button"
+              aria-label="Yes"
+              onClick={() => onVote?.("right")}
+              className="flex-1 rounded-2xl bg-acid py-2 text-lg text-ink font-bold hover:brightness-110 active:scale-95 transition"
+            >
+              ♥
+            </button>
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// Fixed slots the three cards sit in (front → back), so cycling swaps content, not positions.
+const TEASER_SLOTS = [
+  "translate(0px, 0px) rotate(-1deg)",
+  "translate(30px, 12px) rotate(5deg) scale(0.95)",
+  "translate(-38px, 26px) rotate(-8deg) scale(0.9)",
+];
+
+/**
+ * A tiny, working swipe demo on the landing page: tap ♥/✕ on the front card and it flies off, the
+ * next slides up. Shows the actual mechanic instead of faking it with dead buttons.
+ */
+function TeaserStack() {
+  const [idx, setIdx] = useState(0);
+  const [exitDir, setExitDir] = useState<"left" | "right">("right");
+  const reduce = useReducedMotion();
+
+  const vote = (dir: "left" | "right") => {
+    setExitDir(dir);
+    setIdx((i) => (i + 1) % CARDS.length);
+  };
+
+  const front = CARDS[idx]!;
+
+  return (
+    <div className="relative h-full w-full flex items-center justify-center">
+      {/* Background cards, peeking behind the front one. */}
+      {[2, 1].map((depth) => {
+        const card = CARDS[(idx + depth) % CARDS.length]!;
+        return (
+          <div
+            key={`slot-${depth}`}
+            className="absolute w-64 sm:w-72"
+            style={{ transform: TEASER_SLOTS[depth], zIndex: 3 - depth }}
+            aria-hidden
+          >
+            <TeaserCardFace card={card} />
+          </div>
+        );
+      })}
+
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={front.name}
+          className="absolute w-64 sm:w-72"
+          style={{ zIndex: 3 }}
+          initial={reduce ? { opacity: 0 } : { scale: 0.92, y: 24, opacity: 0 }}
+          animate={{ x: 0, y: 0, scale: 1, rotate: -1, opacity: 1 }}
+          exit={
+            reduce
+              ? { opacity: 0, transition: { duration: 0.12 } }
+              : {
+                  x: exitDir === "right" ? 380 : -380,
+                  rotate: exitDir === "right" ? 16 : -16,
+                  opacity: 0,
+                  transition: { duration: 0.32 },
+                }
+          }
+          transition={{ type: "spring", stiffness: 320, damping: 30 }}
+        >
+          <TeaserCardFace card={front} front onVote={vote} />
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
@@ -525,9 +622,7 @@ export default function Landing() {
 
       <section className="relative h-[420px] flex items-center justify-center">
         <div className="float relative h-full w-full flex items-center justify-center" style={{ animation: "float-soft 6s ease-in-out infinite" }}>
-          {CARDS.map((card, idx) => (
-            <Card key={card.name} card={card} isFront={idx === CARDS.length - 1} />
-          ))}
+          <TeaserStack />
         </div>
       </section>
 

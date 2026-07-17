@@ -101,8 +101,8 @@ function FilterSummary({ filters }: { filters: SessionFilters }) {
 function HowItWorks() {
   const steps = [
     { emoji: "👆", label: "Everyone swipes" },
-    { emoji: "🗳️", label: "Majority wins" },
-    { emoji: "🍽️", label: "Dinner, decided" },
+    { emoji: "🗳️", label: "Majority rules" },
+    { emoji: "🍽️", label: "Nobody's fault" },
   ];
   return (
     <div className="w-full mt-10 grid grid-cols-3 gap-2">
@@ -526,7 +526,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             session.participants.map((p) => <ParticipantChip key={p.id} p={p} />)
           ) : (
             <p className="text-muted text-sm">
-              {status === "connecting" ? "Connecting..." : "Just you so far. That code won't share itself."}
+              {status === "connecting" ? "Finding your people..." : "Just you so far. That code won't share itself."}
             </p>
           )}
         </div>

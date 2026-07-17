@@ -2,6 +2,8 @@ import { MotionConfig } from "framer-motion";
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import Landing from "./routes/Landing.js";
 import Lobby from "./routes/Lobby.js";
+import NotFound from "./routes/NotFound.js";
+import { ErrorBoundary } from "./components/ErrorBoundary.js";
 
 export default function App() {
   return (
@@ -19,10 +21,13 @@ export default function App() {
           </span>
         </header>
 
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/s/:code" element={<Lobby />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/s/:code" element={<Lobby />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ErrorBoundary>
 
         <footer className="mt-auto px-6 py-6 max-w-6xl mx-auto w-full text-center text-xs text-muted">
           <p>

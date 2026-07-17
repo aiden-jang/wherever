@@ -22,7 +22,7 @@ const app = new Hono<{ Bindings: Env }>();
 // client response generic. Without this, Hono swallows the cause as a bare "Internal Server Error".
 app.onError((err, c) => {
   console.error("Unhandled error:", err);
-  return c.json({ error: "Something broke on our end." }, 500);
+  return c.json({ error: "Something broke on our end. Not your fault." }, 500);
 });
 
 app.use("/api/*", cors());

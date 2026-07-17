@@ -165,7 +165,57 @@ export interface GooglePlace {
   priceLevel?: string;
   formattedAddress?: string;
   photos?: { name: string }[];
-  currentOpeningHours?: { openNow?: boolean };
+  currentOpeningHours?: { openNow?: boolean; weekdayDescriptions?: string[] };
+  googleMapsUri?: string;
+  websiteUri?: string;
+  nationalPhoneNumber?: string;
+  businessStatus?: string;
+  priceRange?: { startPrice?: GoogleMoney; endPrice?: GoogleMoney };
+}
+
+/** Google's Money shape: an integer amount as a string plus a currency code. */
+interface GoogleMoney {
+  currencyCode?: string;
+  units?: string;
+}
+
+/** At most this many photos are surfaced per place for the detail gallery. */
+const MAX_GALLERY_PHOTOS = 5;
+
+const CURRENCY_SYMBOL: Record<string, string> = {
+  USD: "$",
+  CAD: "$",
+  AUD: "$",
+  NZD: "$",
+  EUR: "€",
+  GBP: "£",
+  JPY: "¥",
+  CNY: "¥",
+  KRW: "₩",
+};
+
+function formatMoney(m?: GoogleMoney): string | null {
+  if (!m?.units) return null;
+  const symbol = m.currencyCode ? CURRENCY_SYMBOL[m.currencyCode] ?? `${m.currencyCode} ` : "";
+  return `${symbol}${m.units}`;
+}
+
+/** Turn Google's start/end money range into a compact label like "$10–30", "$10+", or "Up to $30". */
+export function formatPriceRange(
+  range?: { startPrice?: GoogleMoney; endPrice?: GoogleMoney },
+): string | null {
+  if (!range) return null;
+  const start = formatMoney(range.startPrice);
+  const end = formatMoney(range.endPrice);
+  // Drop the repeated symbol on the high end when both share a currency: "$10–30", not "$10–$30".
+  if (start && end) {
+    const endBare = range.endPrice?.units ?? end;
+    const sameCurrency = range.startPrice?.currencyCode === range.endPrice?.currencyCode;
+    return `${start}–${sameCurrency ? endBare : end}`;
+  }
+  if (start) return `${start}+`;
+  if (end) return `Up to ${end}`;
+  return null;
 }
 
 const GOOGLE_PRICE_TIER: Record<string, PriceTier> = {
@@ -231,7 +281,13 @@ export function mapGooglePlace(
   center: { lat: number; lng: number },
   photoBase = "",
 ): Restaurant {
-  const photoName = p.photos?.[0]?.name;
+  // Proxy the first few photo refs (already in the search response — no extra billing for the refs
+  // themselves; a photo is only paid for when its bytes are actually fetched via /api/photo).
+  const photoUrls = (p.photos ?? [])
+    .map((ph) => ph.name)
+    .filter((name): name is string => Boolean(name))
+    .slice(0, MAX_GALLERY_PHOTOS)
+    .map((name) => photoProxyUrl(name, photoBase));
   return {
     id: p.id,
     name: p.displayName?.text ?? "Unknown spot",
@@ -245,8 +301,16 @@ export function mapGooglePlace(
       : 0,
     // Route through our own /api/photo proxy so the API key never reaches the client and the
     // paid Place Photo SKU is fetched (and edge-cached) on demand.
-    imageUrl: photoName ? photoProxyUrl(photoName, photoBase) : null,
+    imageUrl: photoUrls[0] ?? null,
+    photos: photoUrls,
     address: p.formattedAddress ?? null,
+    googleMapsUri: p.googleMapsUri ?? null,
+    website: p.websiteUri ?? null,
+    phone: p.nationalPhoneNumber ?? null,
+    openNow: p.currentOpeningHours?.openNow ?? null,
+    hours: p.currentOpeningHours?.weekdayDescriptions ?? null,
+    businessStatus: p.businessStatus ?? null,
+    priceRange: formatPriceRange(p.priceRange),
   };
 }
 
@@ -279,6 +343,15 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
           "places.formattedAddress",
           "places.photos",
           "places.currentOpeningHours",
+          // All below are already within the tier this request is billed at (rating/priceLevel are
+          // the top tier), so surfacing them for the detail view adds no cost.
+          "places.googleMapsUri",
+          "places.websiteUri",
+          "places.nationalPhoneNumber",
+          // businessStatus is a lower (Pro) tier and priceRange is the same (Enterprise) tier as
+          // rating/priceLevel, so neither raises the SKU this request is already billed at.
+          "places.businessStatus",
+          "places.priceRange",
         ].join(","),
       },
       body: JSON.stringify({

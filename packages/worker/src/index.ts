@@ -10,6 +10,7 @@ import type { Env } from "./env.js";
 
 export { SessionRoom } from "./sessionRoom.js";
 export { RateLimiter } from "./rateLimiter.js";
+export { UsageMeter } from "./usageMeter.js";
 
 // At most this many session creations per IP per minute.
 const CREATE_LIMIT = 10;
@@ -29,6 +30,13 @@ app.use("/api/*", cors());
 app.get("/api/health", (c) =>
   c.json({ ok: true, source: c.env.RESTAURANT_SOURCE ?? "mock" }),
 );
+
+// This month's Google usage vs. the caps that stop the app from calling Google. Handy for keeping
+// an eye on how close you are to the free tier.
+app.get("/api/usage", async (c) => {
+  const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
+  return c.json(await meter.stats());
+});
 
 // Create a session: rate-limit, validate input, mint an unguessable code,
 // persist it. The Durable Object is created lazily on first WS connect.
@@ -94,9 +102,22 @@ app.get("/api/photo", async (c) => {
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
+  // Cache miss → this would be a paid Place Photo fetch. Gate it on the monthly budget so we never
+  // spill past Google's free tier; over budget, the client's <img> onError shows the emoji fallback.
+  const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
+  if (!(await meter.tryConsume("photo"))) {
+    return c.json({ error: "Monthly photo budget reached." }, 429);
+  }
+
   const upstream = `https://places.googleapis.com/v1/${ref}/media?maxWidthPx=${width}&key=${key}`;
   const res = await fetch(upstream);
-  if (!res.ok) return c.json({ error: "Photo unavailable." }, 502);
+  if (!res.ok) {
+    // Surface why Google rejected the photo (403 = key/restriction/billing, 404 = stale ref,
+    // etc.) instead of a bare 502. Shows in `wrangler tail` and Workers Logs.
+    const detail = await res.text().catch(() => "");
+    console.warn(`photo proxy upstream ${res.status}: ${detail.slice(0, 300)}`);
+    return c.json({ error: "Photo unavailable." }, 502);
+  }
 
   const out = new Response(res.body, {
     headers: {

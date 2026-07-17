@@ -54,15 +54,16 @@ export function decideWinner(
 }
 
 /**
- * How many of the given participants have cast a vote on every deck item.
- * Used to decide when the round is over.
+ * Which of the given participants have cast a vote on every deck item (i.e. finished the round).
+ * Order follows participantIds. Used both to decide when the round is over and, when the host opted
+ * to reveal it, to show who's already done.
  */
-export function countFinished(
+export function finishedParticipantIds(
   votes: Vote[],
   participantIds: string[],
   deckSize: number,
-): number {
-  if (deckSize === 0) return 0;
+): string[] {
+  if (deckSize === 0) return [];
   const votedByParticipant = new Map<string, Set<string>>();
   for (const v of votes) {
     let set = votedByParticipant.get(v.participantId);
@@ -72,9 +73,17 @@ export function countFinished(
     }
     set.add(v.restaurantId);
   }
-  let finished = 0;
-  for (const pid of participantIds) {
-    if ((votedByParticipant.get(pid)?.size ?? 0) >= deckSize) finished++;
-  }
-  return finished;
+  return participantIds.filter((pid) => (votedByParticipant.get(pid)?.size ?? 0) >= deckSize);
+}
+
+/**
+ * How many of the given participants have cast a vote on every deck item.
+ * Used to decide when the round is over.
+ */
+export function countFinished(
+  votes: Vote[],
+  participantIds: string[],
+  deckSize: number,
+): number {
+  return finishedParticipantIds(votes, participantIds, deckSize).length;
 }

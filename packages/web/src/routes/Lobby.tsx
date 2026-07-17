@@ -75,6 +75,7 @@ function FilterSummary({ filters }: { filters: SessionFilters }) {
   if (filters.minRating && filters.minRating > 0) chips.push(`${filters.minRating.toFixed(1)}+ stars`);
   if (filters.minReviews && filters.minReviews > 0) chips.push(`${filters.minReviews}+ reviews`);
   if (filters.openNow) chips.push("open now");
+  if (filters.revealVoters) chips.push("votes shown");
   if (filters.sort === "distance") {
     const sortLabel = SORT_OPTIONS.find((o) => o.value === "distance")?.label ?? "closest";
     chips.push(sortLabel.toLowerCase());
@@ -234,6 +235,82 @@ function ParticipantChip({ p }: { p: Participant }) {
   );
 }
 
+/**
+ * Reveal-voters mode: a row of participant avatars during the round, each lighting up with a check
+ * once that person has finished swiping. Only rendered when the host enabled it (and the server
+ * therefore sent finishedIds), so anonymous sessions never show identities.
+ */
+function VoterAvatars({
+  participants,
+  finishedIds,
+}: {
+  participants: Participant[];
+  finishedIds: string[];
+}) {
+  const done = new Set(finishedIds);
+  return (
+    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+      {participants.map((p) => {
+        const finished = done.has(p.id);
+        return (
+          <div
+            key={p.id}
+            className="relative"
+            title={`${p.displayName} — ${finished ? "done" : "still deciding"}`}
+          >
+            <span
+              className={`grid h-9 w-9 place-items-center rounded-full text-xs font-bold transition-colors ${
+                finished
+                  ? "bg-gradient-to-br from-ember to-flare text-ink"
+                  : "bg-white/10 text-muted"
+              }`}
+            >
+              {initials(p.displayName)}
+            </span>
+            {finished && (
+              <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-ink bg-acid text-[9px] font-bold text-ink">
+                ✓
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Three softly pulsing dots — a small sign of life so "waiting on the host" doesn't read as frozen. */
+function WaitingDots() {
+  return (
+    <span className="inline-flex items-center gap-1" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="h-1.5 w-1.5 rounded-full bg-muted animate-pulse"
+          style={{ animationDelay: `${i * 200}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Shown when the deck is the sample fallback: the project's monthly live-data budget (kept inside
+ * Google's free tier so the demo costs nothing) is spent, so we serve stand-in restaurants. Framed
+ * as "still totally playable" rather than an error.
+ */
+function DemoBanner() {
+  return (
+    <div className="w-full max-w-sm mx-auto mb-5 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-center text-sm">
+      <p className="font-semibold text-cream">Demo mode — sample restaurants.</p>
+      <p className="mt-0.5 text-muted">
+        This project hit its monthly Google API budget, so the live data is off. Everything still
+        works; real spots are back on the 1st.
+      </p>
+    </div>
+  );
+}
+
 export default function Lobby() {
   const { code = "" } = useParams();
   const [name, setName] = useState(recallName());
@@ -252,7 +329,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send } =
+  const { session, deck, demo, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [copied, setCopied] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -363,6 +440,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <LiveRegion message={announcement} />
         <Toasts toasts={allToasts} />
         <FloatingReactions reactions={reactions} />
+        {demo && <DemoBanner />}
         {deck && deck.length > 0 ? (
           <>
             <SwipeDeck
@@ -373,6 +451,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                 send({ type: "swipe", restaurantId, direction })
               }
             />
+            {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
+              <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
+            )}
             {progress && progress.totalParticipants > 0 && (
               <p className="mt-6 text-sm text-muted">
                 {progress.finishedCount} of {progress.totalParticipants} done
@@ -392,11 +473,18 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           </>
         ) : deck ? (
           <div className="text-center max-w-sm">
-            <h1 className="font-display text-3xl font-bold">Nothing survived the filters.</h1>
+            <div className="text-6xl">🍽️</div>
+            <h1 className="mt-4 font-display text-3xl font-bold">Nothing survived the filters.</h1>
             <p className="mt-2 text-muted">
-              Your standards met this neighborhood and won. Start a fresh session with a wider radius
-              or fewer filters.
+              Your standards met this neighborhood and won. Try again with a wider radius or fewer
+              filters.
             </p>
+            <Link
+              to="/"
+              className="mt-8 inline-block rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
+            >
+              Start a fresh session
+            </Link>
           </div>
         ) : (
           <DeckSkeleton />
@@ -438,7 +526,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             session.participants.map((p) => <ParticipantChip key={p.id} p={p} />)
           ) : (
             <p className="text-muted text-sm">
-              {status === "connecting" ? "Connecting..." : "Just you, for now."}
+              {status === "connecting" ? "Connecting..." : "Just you so far. That code won't share itself."}
             </p>
           )}
         </div>
@@ -453,7 +541,13 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             Start swiping
           </button>
         ) : (
-          <p className="text-center text-muted">The host hasn't started yet. Gentle peer pressure is an option.</p>
+          <div className="flex flex-col items-center gap-2 text-center text-muted">
+            <div className="flex items-center gap-2">
+              <WaitingDots />
+              <span className="font-medium">Waiting on the host.</span>
+            </div>
+            <p className="text-sm">Gentle peer pressure is an option.</p>
+          </div>
         )}
       </div>
 

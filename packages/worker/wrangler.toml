@@ -17,6 +17,12 @@ PUBLIC_API_BASE = "https://api.wherever.aidenjang.com"
 # secret; without that key it safely falls back to the seeded mock deck. "mock" forces the demo deck.
 RESTAURANT_SOURCE = "google"
 
+# Monthly circuit breaker: once this many paid Google calls happen in a UTC month, the app stops
+# calling Google and serves fallbacks, so usage stays inside the free tier (1,000/month each for
+# Nearby Search Enterprise and Place Photos). Set just under 1,000 for margin. See UsageMeter.
+SEARCH_MONTHLY_CAP = "950"
+PHOTO_MONTHLY_CAP = "950"
+
 # One Durable Object per session. The instance holds live vote state and owns
 # every WebSocket for that session.
 [[durable_objects.bindings]]
@@ -27,6 +33,11 @@ class_name = "SessionRoom"
 name = "RATE_LIMITER"
 class_name = "RateLimiter"
 
+# Single global instance counting paid Google calls per month (see UsageMeter).
+[[durable_objects.bindings]]
+name = "USAGE_METER"
+class_name = "UsageMeter"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["SessionRoom"]
@@ -34,6 +45,10 @@ new_sqlite_classes = ["SessionRoom"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["RateLimiter"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["UsageMeter"]
 
 # Durable cross-session data: session records + visited-places history.
 [[d1_databases]]

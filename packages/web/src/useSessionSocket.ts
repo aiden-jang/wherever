@@ -12,6 +12,8 @@ type Status = "connecting" | "open" | "closed";
 export interface Progress {
   finishedCount: number;
   totalParticipants: number;
+  /** Ids of participants who've finished; present only in reveal-voters sessions. */
+  finishedIds?: string[];
 }
 
 export type MatchState =
@@ -45,6 +47,8 @@ function clientIdFor(code: string): string {
 export function useSessionSocket(code: string, displayName: string) {
   const [session, setSession] = useState<Session | null>(null);
   const [deck, setDeck] = useState<Restaurant[] | null>(null);
+  // True when the deck is the sample fallback served because the monthly live-data budget is spent.
+  const [demo, setDemo] = useState(false);
   const [alreadyVoted, setAlreadyVoted] = useState<string[]>([]);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [match, setMatch] = useState<MatchState>(null);
@@ -82,11 +86,13 @@ export function useSessionSocket(code: string, displayName: string) {
           setMatch(null);
           setProgress(null);
           setDeck(msg.restaurants);
+          setDemo(msg.demo ?? false);
           return setAlreadyVoted(msg.alreadyVoted ?? []);
         case "vote_progress":
           return setProgress({
             finishedCount: msg.finishedCount,
             totalParticipants: msg.totalParticipants,
+            finishedIds: msg.finishedIds,
           });
         case "match":
           return setMatch({
@@ -167,5 +173,5 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return { session, deck, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send };
+  return { session, deck, demo, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send };
 }

@@ -18,31 +18,37 @@ export interface CuisineOption {
   emoji: string;
   /** Google Places (New) primary type (see Places "Table A" restaurant types). */
   googleType: string;
+  /**
+   * The common cravings a group reaches for first. The create form shows these up front and folds
+   * the rest behind a "more cuisines" reveal, so the list doesn't bury the button. Keeping the flag
+   * here (not a magic slice in the UI) means the popular set is curated in one place.
+   */
+  popular?: boolean;
 }
 
 export const CUISINE_OPTIONS: CuisineOption[] = [
-  { value: "pizza", label: "Pizza", emoji: "🍕", googleType: "pizza_restaurant" },
-  { value: "burgers", label: "Burgers", emoji: "🍔", googleType: "hamburger_restaurant" },
-  { value: "tacos", label: "Tacos", emoji: "🌮", googleType: "mexican_restaurant" },
-  { value: "sushi", label: "Sushi", emoji: "🍣", googleType: "sushi_restaurant" },
-  { value: "ramen", label: "Ramen", emoji: "🍜", googleType: "ramen_restaurant" },
-  { value: "chinese", label: "Chinese", emoji: "🥡", googleType: "chinese_restaurant" },
-  { value: "thai", label: "Thai", emoji: "🥘", googleType: "thai_restaurant" },
-  { value: "indian", label: "Indian", emoji: "🍛", googleType: "indian_restaurant" },
-  { value: "italian", label: "Italian", emoji: "🍝", googleType: "italian_restaurant" },
-  { value: "korean", label: "Korean", emoji: "🍲", googleType: "korean_restaurant" },
+  { value: "pizza", label: "Pizza", emoji: "🍕", googleType: "pizza_restaurant", popular: true },
+  { value: "burgers", label: "Burgers", emoji: "🍔", googleType: "hamburger_restaurant", popular: true },
+  { value: "tacos", label: "Tacos", emoji: "🌮", googleType: "mexican_restaurant", popular: true },
+  { value: "sushi", label: "Sushi", emoji: "🍣", googleType: "sushi_restaurant", popular: true },
+  { value: "ramen", label: "Ramen", emoji: "🍜", googleType: "ramen_restaurant", popular: true },
+  { value: "chinese", label: "Chinese", emoji: "🥡", googleType: "chinese_restaurant", popular: true },
+  { value: "thai", label: "Thai", emoji: "🥘", googleType: "thai_restaurant", popular: true },
+  { value: "indian", label: "Indian", emoji: "🍛", googleType: "indian_restaurant", popular: true },
+  { value: "italian", label: "Italian", emoji: "🍝", googleType: "italian_restaurant", popular: true },
+  { value: "korean", label: "Korean", emoji: "🍲", googleType: "korean_restaurant", popular: true },
+  { value: "mexican", label: "Mexican", emoji: "🌯", googleType: "mexican_restaurant", popular: true },
+  { value: "american", label: "American", emoji: "🍗", googleType: "american_restaurant", popular: true },
+  { value: "seafood", label: "Seafood", emoji: "🦞", googleType: "seafood_restaurant", popular: true },
   { value: "japanese", label: "Japanese", emoji: "🍱", googleType: "japanese_restaurant" },
   { value: "vietnamese", label: "Vietnamese", emoji: "🍜", googleType: "vietnamese_restaurant" },
-  { value: "mexican", label: "Mexican", emoji: "🌯", googleType: "mexican_restaurant" },
   { value: "mediterranean", label: "Mediterranean", emoji: "🫒", googleType: "mediterranean_restaurant" },
   { value: "greek", label: "Greek", emoji: "🥙", googleType: "greek_restaurant" },
   { value: "middleeastern", label: "Middle Eastern", emoji: "🧆", googleType: "middle_eastern_restaurant" },
   { value: "french", label: "French", emoji: "🥖", googleType: "french_restaurant" },
   { value: "spanish", label: "Spanish", emoji: "🥘", googleType: "spanish_restaurant" },
-  { value: "american", label: "American", emoji: "🍗", googleType: "american_restaurant" },
   { value: "bbq", label: "BBQ", emoji: "🍖", googleType: "barbecue_restaurant" },
   { value: "steak", label: "Steak", emoji: "🥩", googleType: "steak_house" },
-  { value: "seafood", label: "Seafood", emoji: "🦞", googleType: "seafood_restaurant" },
   { value: "fastfood", label: "Fast food", emoji: "🍟", googleType: "fast_food_restaurant" },
   { value: "sandwich", label: "Sandwiches", emoji: "🥪", googleType: "sandwich_shop" },
   { value: "deli", label: "Deli", emoji: "🥓", googleType: "deli" },

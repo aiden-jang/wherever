@@ -6,6 +6,7 @@ import {
   isValidPhotoRef,
   mapFoursquarePlace,
   mapGooglePlace,
+  passesAmenities,
   passesRating,
   passesReviews,
   photoProxyUrl,
@@ -90,6 +91,9 @@ describe("mapGooglePlace", () => {
       hours: null,
       businessStatus: null,
       priceRange: null,
+      editorialSummary: null,
+      wheelchairAccessible: null,
+      amenities: {},
     });
   });
 
@@ -116,6 +120,30 @@ describe("mapGooglePlace", () => {
         endPrice: { currencyCode: "EUR", units: "40" },
       }),
     ).toBe("€15–40");
+  });
+
+  it("keeps only the amenities Google reports (absent = unknown, not false)", () => {
+    const p: GooglePlace = {
+      id: "g8",
+      displayName: { text: "Patio Place" },
+      goodForGroups: true,
+      outdoorSeating: false,
+      // allowsDogs / servesVegetarianFood / reservable omitted → unknown
+    };
+    const r = mapGooglePlace(p, center);
+    expect(r.amenities).toEqual({ goodForGroups: true, outdoorSeating: false });
+  });
+
+  it("maps the editorial summary and wheelchair accessibility", () => {
+    const p: GooglePlace = {
+      id: "g7",
+      displayName: { text: "Cozy Corner" },
+      editorialSummary: { text: "Snug spot for wood-fired pizza and natural wine." },
+      accessibilityOptions: { wheelchairAccessibleEntrance: true },
+    };
+    const r = mapGooglePlace(p, center);
+    expect(r.editorialSummary).toBe("Snug spot for wood-fired pizza and natural wine.");
+    expect(r.wheelchairAccessible).toBe(true);
   });
 
   it("maps businessStatus and formats a price range", () => {
@@ -240,6 +268,22 @@ describe("passesRating", () => {
     expect(passesRating(3.9, 4)).toBe(false);
     expect(passesRating(4, 4)).toBe(true);
     expect(passesRating(4.6, 4)).toBe(true);
+  });
+});
+
+describe("passesAmenities", () => {
+  it("lets everything through with no required amenities", () => {
+    expect(passesAmenities(undefined, undefined)).toBe(true);
+    expect(passesAmenities(undefined, [])).toBe(true);
+    expect(passesAmenities({ allowsDogs: true }, [])).toBe(true);
+  });
+
+  it("requires every selected amenity to be reported true (unknown fails)", () => {
+    const a = { goodForGroups: true, outdoorSeating: false };
+    expect(passesAmenities(a, ["goodForGroups"])).toBe(true);
+    expect(passesAmenities(a, ["goodForGroups", "outdoorSeating"])).toBe(false); // false fails
+    expect(passesAmenities(a, ["allowsDogs"])).toBe(false); // unknown fails
+    expect(passesAmenities(undefined, ["goodForGroups"])).toBe(false);
   });
 });
 

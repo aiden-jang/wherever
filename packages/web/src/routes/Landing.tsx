@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import type { PriceTier, RestaurantSort, SessionFilters } from "@wherever/shared";
+import type { AmenityKey, PriceTier, RestaurantSort, SessionFilters } from "@wherever/shared";
 import {
+  AMENITY_OPTIONS,
   CUISINE_OPTIONS,
   isInNYC,
   MIN_REVIEWS_OPTIONS,
@@ -258,6 +259,15 @@ function FilterFields({
     });
   }
 
+  function toggleAmenity(key: AmenityKey) {
+    const current = filters.amenities ?? [];
+    const has = current.includes(key);
+    onChange({
+      ...filters,
+      amenities: has ? current.filter((a) => a !== key) : [...current, key],
+    });
+  }
+
   // How many hidden knobs are set away from their defaults, so a collapsed section still tells the
   // host something's active under there.
   const pickyActive =
@@ -265,7 +275,8 @@ function FilterFields({
   const pickyCount =
     pickyActive +
     ((filters.minReviews ?? 0) > 0 ? 1 : 0) +
-    ((filters.sort ?? "popularity") !== "popularity" ? 1 : 0);
+    ((filters.sort ?? "popularity") !== "popularity" ? 1 : 0) +
+    (filters.amenities?.length ?? 0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -437,13 +448,36 @@ function FilterFields({
                 {pickyCount} on
               </span>
             )}
-            <span className="text-xs text-muted">rating, reviews, order</span>
+            <span className="text-xs text-muted">amenities, rating, reviews</span>
           </span>
           <Chevron open={pickyOpen} />
         </button>
 
         {pickyOpen && (
           <div className="flex flex-col gap-4 border-t border-white/10 px-4 py-4">
+            <div className="flex flex-col gap-2">
+              <FieldLabel>Must-haves</FieldLabel>
+              <div className="flex flex-wrap gap-2">
+                {AMENITY_OPTIONS.map((a) => {
+                  const on = (filters.amenities ?? []).includes(a.key);
+                  return (
+                    <button
+                      key={a.key}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleAmenity(a.key)}
+                      className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                        on ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
+                      }`}
+                    >
+                      <span className="mr-1">{a.emoji}</span>
+                      {a.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2">
               <FieldLabel>Standards</FieldLabel>
               <div className="flex gap-2">

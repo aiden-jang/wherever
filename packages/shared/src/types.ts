@@ -13,6 +13,14 @@ export type SwipeDirection = "left" | "right";
 
 export type PriceTier = 1 | 2 | 3 | 4;
 
+/** Amenity flags we surface (field names match Google's). Used for both display chips and filters. */
+export type AmenityKey =
+  | "goodForGroups"
+  | "servesVegetarianFood"
+  | "outdoorSeating"
+  | "allowsDogs"
+  | "reservable";
+
 export interface Restaurant {
   id: string;
   name: string;
@@ -34,6 +42,12 @@ export interface Restaurant {
   businessStatus?: string | null;
   /** Formatted typical spend, e.g. "$10–30"; null when the source has no range. */
   priceRange?: string | null;
+  /** A short human blurb about the place (Google's editorial summary); null when none. */
+  editorialSummary?: string | null;
+  /** Whether the place has a wheelchair-accessible entrance; null when unknown. */
+  wheelchairAccessible?: boolean | null;
+  /** Known amenity flags, present only for amenities the source actually reports. */
+  amenities?: Partial<Record<AmenityKey, boolean>>;
   /** Deep link to the place on Google Maps; null when the source doesn't provide one. */
   googleMapsUri?: string | null;
   /** The place's own website, when known. */
@@ -76,6 +90,8 @@ export interface SessionFilters {
    * hidden in the UI. Rides in filters to avoid a separate D1 column; it's a session preference.
    */
   revealVoters?: boolean;
+  /** Required amenities; a place must report all of these to appear. Empty/unset = no filter. */
+  amenities?: AmenityKey[];
   /** Named search area (a NEIGHBORHOODS value). Overrides lat/lng when set; unset means "near me". */
   area?: string;
   /** Search center. Optional: the mock source ignores it; real sources need it. */

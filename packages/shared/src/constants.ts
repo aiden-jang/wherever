@@ -4,7 +4,7 @@
 // it case-insensitively). `googleType` is the Google Places (New) primary type the
 // Worker searches for, keeping the mapping in one place so the two can't drift.
 
-import type { PriceTier, RestaurantSort } from "./types.js";
+import type { AmenityKey, PriceTier, RestaurantSort } from "./types.js";
 
 /**
  * Emojis the group can throw at each other mid-round. Kept to a fixed set and validated at the
@@ -187,4 +187,27 @@ export const SORT_OPTIONS: SortOption[] = [
 /** Human label for a cuisine value, falling back to the raw value. */
 export function cuisineLabel(value: string): string {
   return CUISINE_OPTIONS.find((c) => c.value === value)?.label ?? value;
+}
+
+export interface AmenityOption {
+  key: AmenityKey;
+  label: string;
+  emoji: string;
+}
+
+/**
+ * Amenities offered as filters and shown as chips. `key` matches both the Google Places (New) field
+ * name and Restaurant.amenities, so the catalog is the single source of truth for the whole feature.
+ */
+export const AMENITY_OPTIONS: AmenityOption[] = [
+  { key: "goodForGroups", label: "Good for groups", emoji: "👥" },
+  { key: "servesVegetarianFood", label: "Veg-friendly", emoji: "🥗" },
+  { key: "outdoorSeating", label: "Outdoor seating", emoji: "⛱️" },
+  { key: "allowsDogs", label: "Dog-friendly", emoji: "🐶" },
+  { key: "reservable", label: "Takes reservations", emoji: "📅" },
+];
+
+/** Human label + emoji for an amenity key. */
+export function amenityLabel(key: AmenityKey): string {
+  return AMENITY_OPTIONS.find((a) => a.key === key)?.label ?? key;
 }

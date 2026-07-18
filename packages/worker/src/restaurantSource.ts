@@ -1,4 +1,4 @@
-import type { PriceTier, Restaurant, SessionFilters } from "@wherever/shared";
+import type { AmenityKey, PriceTier, Restaurant, SessionFilters } from "@wherever/shared";
 import { googleTypeFor, NEIGHBORHOODS } from "@wherever/shared";
 
 // Fallback center when the host neither picked an area nor shared a location; keeps the app
@@ -45,6 +45,18 @@ export function passesRating(rating: number | null, minRating?: number): boolean
 export function passesReviews(reviewCount: number | null, minReviews?: number): boolean {
   if (!minReviews) return true;
   return reviewCount != null && reviewCount >= minReviews;
+}
+
+/**
+ * A place passes only if it reports every required amenity as true. An unknown amenity (field
+ * absent) does NOT pass — a "dog-friendly" filter shows only confirmed dog-friendly spots.
+ */
+export function passesAmenities(
+  amenities: Partial<Record<AmenityKey, boolean>> | undefined,
+  required?: AmenityKey[],
+): boolean {
+  if (!required || required.length === 0) return true;
+  return required.every((key) => amenities?.[key] === true);
 }
 
 const MOCK_DECK: Restaurant[] = [
@@ -171,6 +183,13 @@ export interface GooglePlace {
   nationalPhoneNumber?: string;
   businessStatus?: string;
   priceRange?: { startPrice?: GoogleMoney; endPrice?: GoogleMoney };
+  editorialSummary?: { text?: string };
+  accessibilityOptions?: { wheelchairAccessibleEntrance?: boolean };
+  goodForGroups?: boolean;
+  servesVegetarianFood?: boolean;
+  outdoorSeating?: boolean;
+  allowsDogs?: boolean;
+  reservable?: boolean;
 }
 
 /** Google's Money shape: an integer amount as a string plus a currency code. */
@@ -288,6 +307,13 @@ export function mapGooglePlace(
     .filter((name): name is string => Boolean(name))
     .slice(0, MAX_GALLERY_PHOTOS)
     .map((name) => photoProxyUrl(name, photoBase));
+  // Keep only amenities Google actually reported (a missing field means "unknown", not "no").
+  const amenities: Partial<Record<AmenityKey, boolean>> = {};
+  if (typeof p.goodForGroups === "boolean") amenities.goodForGroups = p.goodForGroups;
+  if (typeof p.servesVegetarianFood === "boolean") amenities.servesVegetarianFood = p.servesVegetarianFood;
+  if (typeof p.outdoorSeating === "boolean") amenities.outdoorSeating = p.outdoorSeating;
+  if (typeof p.allowsDogs === "boolean") amenities.allowsDogs = p.allowsDogs;
+  if (typeof p.reservable === "boolean") amenities.reservable = p.reservable;
   return {
     id: p.id,
     name: p.displayName?.text ?? "Unknown spot",
@@ -311,6 +337,9 @@ export function mapGooglePlace(
     hours: p.currentOpeningHours?.weekdayDescriptions ?? null,
     businessStatus: p.businessStatus ?? null,
     priceRange: formatPriceRange(p.priceRange),
+    editorialSummary: p.editorialSummary?.text ?? null,
+    wheelchairAccessible: p.accessibilityOptions?.wheelchairAccessibleEntrance ?? null,
+    amenities,
   };
 }
 
@@ -352,6 +381,18 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
           // rating/priceLevel, so neither raises the SKU this request is already billed at.
           "places.businessStatus",
           "places.priceRange",
+          // accessibilityOptions is Pro-tier (free at our tier). editorialSummary is Atmosphere-tier,
+          // which nudges the search SKU up ($35→$40/1k) — but both tiers include 1,000 free searches
+          // and the monthly cap keeps us under that, so in practice it's $0.
+          "places.accessibilityOptions",
+          "places.editorialSummary",
+          // Amenity flags (Atmosphere tier — already our tier via editorialSummary, so no extra
+          // cost). Used for the amenity chips and the optional amenity filters.
+          "places.goodForGroups",
+          "places.servesVegetarianFood",
+          "places.outdoorSeating",
+          "places.allowsDogs",
+          "places.reservable",
         ].join(","),
       },
       body: JSON.stringify({
@@ -380,7 +421,8 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
       // Google filters by cuisine + radius server-side; the rest is filtered here.
       .filter((r) => r.priceTier <= filters.maxPriceTier)
       .filter((r) => passesRating(r.rating, filters.minRating))
-      .filter((r) => passesReviews(r.reviewCount, filters.minReviews));
+      .filter((r) => passesReviews(r.reviewCount, filters.minReviews))
+      .filter((r) => passesAmenities(r.amenities, filters.amenities));
   }
 }
 

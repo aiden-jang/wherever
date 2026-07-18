@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Participant, SessionFilters } from "@wherever/shared";
-import { cuisineLabel, neighborhoodLabel, PRICE_OPTIONS, RADIUS_OPTIONS, SORT_OPTIONS } from "@wherever/shared";
+import { amenityLabel, cuisineLabel, neighborhoodLabel, PRICE_OPTIONS, RADIUS_OPTIONS, SORT_OPTIONS } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
@@ -75,6 +75,7 @@ function FilterSummary({ filters }: { filters: SessionFilters }) {
   if (filters.minRating && filters.minRating > 0) chips.push(`${filters.minRating.toFixed(1)}+ stars`);
   if (filters.minReviews && filters.minReviews > 0) chips.push(`${filters.minReviews}+ reviews`);
   if (filters.openNow) chips.push("open now");
+  for (const a of filters.amenities ?? []) chips.push(amenityLabel(a).toLowerCase());
   if (filters.revealVoters) chips.push("votes shown");
   if (filters.sort === "distance") {
     const sortLabel = SORT_OPTIONS.find((o) => o.value === "distance")?.label ?? "closest";

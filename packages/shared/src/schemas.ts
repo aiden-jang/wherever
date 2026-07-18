@@ -21,6 +21,18 @@ export const sessionFiltersSchema = z.object({
   openNow: z.boolean().optional(),
   sort: z.enum(["popularity", "distance"]).optional(),
   revealVoters: z.boolean().optional(),
+  amenities: z
+    .array(
+      z.enum([
+        "goodForGroups",
+        "servesVegetarianFood",
+        "outdoorSeating",
+        "allowsDogs",
+        "reservable",
+      ]),
+    )
+    .max(10)
+    .optional(),
   area: z.string().min(1).max(40).optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),

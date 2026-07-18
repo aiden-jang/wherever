@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import type { Restaurant } from "@wherever/shared";
+import { AMENITY_OPTIONS } from "@wherever/shared";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
+
+const chipClass =
+  "inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs text-muted";
 
 /** Google Maps deep link: the place's own URI when we have it, else a name+address search. */
 function mapsUrlFor(r: Restaurant): string {
@@ -122,6 +126,10 @@ export function RestaurantDetail({
             <span className="whitespace-nowrap">{distanceLabel(restaurant.distanceMeters)}</span>
           </div>
 
+          {restaurant.editorialSummary && (
+            <p className="mt-3 text-sm leading-snug text-cream/90">{restaurant.editorialSummary}</p>
+          )}
+
           {closedLabel ? (
             <p className="mt-3 text-sm font-semibold text-flare">{closedLabel}</p>
           ) : (
@@ -135,6 +143,25 @@ export function RestaurantDetail({
               </p>
             )
           )}
+
+          {(() => {
+            const active = AMENITY_OPTIONS.filter((a) => restaurant.amenities?.[a.key]);
+            if (active.length === 0 && !restaurant.wheelchairAccessible) return null;
+            return (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {active.map((a) => (
+                  <span key={a.key} className={chipClass}>
+                    <span aria-hidden>{a.emoji}</span> {a.label}
+                  </span>
+                ))}
+                {restaurant.wheelchairAccessible && (
+                  <span className={chipClass}>
+                    <span aria-hidden>♿</span> Wheelchair-accessible
+                  </span>
+                )}
+              </div>
+            );
+          })()}
 
           {restaurant.address && (
             <p className="mt-3 text-sm text-muted">{restaurant.address}</p>

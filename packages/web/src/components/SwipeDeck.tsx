@@ -149,7 +149,7 @@ export function DeckSkeleton() {
           </div>
         </div>
       </div>
-      <p className="mt-8 text-center text-sm text-muted">Rounding up the options...</p>
+      <p className="mt-8 text-center text-sm text-muted">Finding places you'll still complain about...</p>
     </div>
   );
 }

@@ -387,7 +387,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       try {
         await navigator.share({
           title: "Wherever, Honestly",
-          text: "Come decide where we're eating. Swipe on it:",
+          text: "Where are we eating? Swipe, don't argue:",
           url,
         });
         return;

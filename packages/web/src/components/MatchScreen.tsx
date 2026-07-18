@@ -16,7 +16,7 @@ const APP_URL = "wherever.aidenjang.com";
  * falls back to sharing text, then to copying. Returns how it resolved so the UI can confirm.
  */
 async function shareVerdict(restaurant: Restaurant): Promise<"shared" | "copied"> {
-  const text = `We're eating at ${restaurant.name}. Decided by swipe, not by group chat. ${APP_URL}`;
+  const text = `We're eating at ${restaurant.name}. Majority ruled, the group chat lost. ${APP_URL}`;
   const blob = await renderShareCard(restaurant).catch(() => null);
   const file = blob ? new File([blob], "wherever.png", { type: "image/png" }) : null;
 

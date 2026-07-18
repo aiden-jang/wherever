@@ -45,8 +45,22 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Code deploy only. D1 schema changes are applied deliberately by hand, from
       # packages/worker: wrangler d1 migrations apply wherever --remote
-      - name: Deploy to Cloudflare
+      - name: Deploy Worker to Cloudflare
         run: pnpm run deploy
         working-directory: packages/worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      # Build the web app pointing at the API's custom domain (baked into the bundle at build time)
+      # and publish it to Cloudflare Pages, so the frontend auto-deploys alongside the Worker.
+      # NOTE: CLOUDFLARE_API_TOKEN must include Pages:Edit (not just Workers). Don't also enable a
+      # Pages "connect to Git" integration in the dashboard, or you'll get two competing deploys.
+      - name: Build + deploy web to Cloudflare Pages
+        working-directory: packages/web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_BASE: "https://api.wherever.aidenjang.com"
+          VITE_WS_BASE: "wss://api.wherever.aidenjang.com"
+        run: |
+          pnpm build
+          pnpm dlx wrangler@3 pages deploy dist --project-name wherever --branch main

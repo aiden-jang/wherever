@@ -23,28 +23,21 @@ import {
 } from "../api.js";
 
 const DEADPAN_LINES = [
-  "Nobody has typed 'idk, you pick' yet. A first.",
-  "Three people. Three opinions. Zero decisions.",
-  "Someone will suggest the place from last time. Ignore them.",
-  "Statistically, it's going to be tacos.",
-  "You could just decide. But here we are.",
-  "One of you already ate. They're still voting.",
-  "The vegetarian is watching. Choose wisely.",
-  "No, not that place. You know why.",
-  "Democracy, but for tacos.",
-  "The group chat has 47 unread messages. None decide anything.",
-  "Two of you are 'not that hungry.' You will be.",
-  "Yes, the salad place counts. Barely.",
-  "Someone's about to say 'I'm easy.' They are not easy.",
-  "'Anywhere is fine' has entered the chat. It is not fine.",
-  "Four adults, one decision, no survivors.",
-  "Whoever complains picks next time. Allegedly.",
-  "The tie-breaker is hunger.",
-  "You've walked past six of these. Tonight, commitment.",
-  "The person who picked last time has notes.",
-  "Faster than the group chat. Low bar. Still counts.",
-  "One of you is 'saving room for opinions.'",
-  "This will not become a whole thing. (It will.)",
+  "It's going to be tacos. It's always tacos. Vote anyway.",
+  "You have a favorite. Say it with a swipe.",
+  "The group chat: 200 messages, zero decisions.",
+  "Someone will say 'I'm easy.' They are lying.",
+  "Nobody's driving 40 minutes. Be honest.",
+  "'Anywhere is fine.' Cool. We'll pick for you.",
+  "You already know. Just swipe.",
+  "Democracy, for dinner. Keep up.",
+  "The vegetarian remembers last time.",
+  "You're hungry and stalling. Iconic.",
+  "Whoever picked last time doesn't get a vote. Kidding. Mostly.",
+  "Six good options. You'll still say 'idk.'",
+  "This took your group 45 minutes last time. Not tonight.",
+  "No standoff. No group chat. Just swipe.",
+  "Pick fast — the hangry one is turning.",
 ];
 
 interface TeaserCard {
@@ -630,7 +623,7 @@ export default function Landing() {
       <section className="text-center lg:text-left">
         <span className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-4 py-1.5 text-xs text-muted">
           <span className="h-2 w-2 rounded-full bg-acid animate-pulse" />
-          swipe. match. eat.
+          you're not fine with whatever
         </span>
 
         <h1 className="mt-6 font-display font-extrabold tracking-tight text-6xl sm:text-7xl leading-[0.95]">
@@ -639,7 +632,7 @@ export default function Landing() {
         </h1>
 
         <p className="mt-5 text-lg text-muted max-w-md mx-auto lg:mx-0">
-          Everyone swipes, majority wins, and the friendship survives another dinner. No "I'm fine with whatever" required.
+          Nobody's actually "fine with whatever." Swipe on it — majority wins, the group chat loses.
         </p>
 
         <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">

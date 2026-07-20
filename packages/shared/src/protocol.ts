@@ -28,6 +28,8 @@ export interface SwipeMessage {
   type: "swipe";
   restaurantId: string;
   direction: SwipeDirection;
+  /** A super-like (weighted right-swipe). Server enforces one per participant per round. */
+  super?: boolean;
 }
 
 /** Host can end the round early and let the current tally decide. */
@@ -66,6 +68,10 @@ export interface DeckMessage {
   restaurants: Restaurant[];
   /** Restaurant ids this client already voted on, for resume after reconnect. */
   alreadyVoted?: string[];
+  /** Whether this client already spent its one super-like this round (for resume after reconnect). */
+  superUsed?: boolean;
+  /** Absolute epoch-ms deadline when the round auto-decides; omitted when there's no timer. */
+  roundEndsAt?: number;
   /** True when this is the sample deck served because the monthly live-data budget is spent. */
   demo?: boolean;
 }

@@ -48,6 +48,19 @@ export function passesReviews(reviewCount: number | null, minReviews?: number): 
 }
 
 /**
+ * Exact price tiers win when set (e.g. only $$ and $$$); otherwise fall back to the legacy "up to
+ * maxPriceTier" cap. Lets a group say "mid-range only" instead of just "nothing above $$$".
+ */
+export function passesPrice(
+  tier: PriceTier,
+  priceTiers?: PriceTier[],
+  maxPriceTier?: PriceTier,
+): boolean {
+  if (priceTiers && priceTiers.length > 0) return priceTiers.includes(tier);
+  return tier <= (maxPriceTier ?? 4);
+}
+
+/**
  * A place passes only if it reports every required amenity as true. An unknown amenity (field
  * absent) does NOT pass — a "dog-friendly" filter shows only confirmed dog-friendly spots.
  */
@@ -190,6 +203,12 @@ export interface GooglePlace {
   outdoorSeating?: boolean;
   allowsDogs?: boolean;
   reservable?: boolean;
+  takeout?: boolean;
+  delivery?: boolean;
+  servesCocktails?: boolean;
+  servesBrunch?: boolean;
+  liveMusic?: boolean;
+  goodForChildren?: boolean;
 }
 
 /** Google's Money shape: an integer amount as a string plus a currency code. */
@@ -314,6 +333,12 @@ export function mapGooglePlace(
   if (typeof p.outdoorSeating === "boolean") amenities.outdoorSeating = p.outdoorSeating;
   if (typeof p.allowsDogs === "boolean") amenities.allowsDogs = p.allowsDogs;
   if (typeof p.reservable === "boolean") amenities.reservable = p.reservable;
+  if (typeof p.takeout === "boolean") amenities.takeout = p.takeout;
+  if (typeof p.delivery === "boolean") amenities.delivery = p.delivery;
+  if (typeof p.servesCocktails === "boolean") amenities.servesCocktails = p.servesCocktails;
+  if (typeof p.servesBrunch === "boolean") amenities.servesBrunch = p.servesBrunch;
+  if (typeof p.liveMusic === "boolean") amenities.liveMusic = p.liveMusic;
+  if (typeof p.goodForChildren === "boolean") amenities.goodForChildren = p.goodForChildren;
   return {
     id: p.id,
     name: p.displayName?.text ?? "Unknown spot",
@@ -351,6 +376,15 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
 
   async fetchDeck(filters: SessionFilters): Promise<Restaurant[]> {
     const center = resolveSearchCenter(filters);
+    // Map excluded cuisines to Google primary types (no "restaurant" fallback — an empty exclude
+    // list must not accidentally exclude every restaurant).
+    const excludedGoogleTypes = [
+      ...new Set(
+        (filters.excludedCategories ?? [])
+          .map((c) => googleTypeFor(c))
+          .filter((t): t is string => Boolean(t)),
+      ),
+    ];
 
     const res = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
       method: "POST",
@@ -393,10 +427,18 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
           "places.outdoorSeating",
           "places.allowsDogs",
           "places.reservable",
+          "places.takeout",
+          "places.delivery",
+          "places.servesCocktails",
+          "places.servesBrunch",
+          "places.liveMusic",
+          "places.goodForChildren",
         ].join(","),
       },
       body: JSON.stringify({
         includedPrimaryTypes: googleTypesFor(filters.categories),
+        // "Not that": exclude the cuisines the group vetoed, server-side, so they never appear.
+        ...(excludedGoogleTypes.length > 0 ? { excludedPrimaryTypes: excludedGoogleTypes } : {}),
         maxResultCount: 20,
         rankPreference: filters.sort === "distance" ? "DISTANCE" : "POPULARITY",
         locationRestriction: {
@@ -419,7 +461,7 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
     return visible
       .map((p) => mapGooglePlace(p, center, this.publicApiBase))
       // Google filters by cuisine + radius server-side; the rest is filtered here.
-      .filter((r) => r.priceTier <= filters.maxPriceTier)
+      .filter((r) => passesPrice(r.priceTier, filters.priceTiers, filters.maxPriceTier))
       .filter((r) => passesRating(r.rating, filters.minRating))
       .filter((r) => passesReviews(r.reviewCount, filters.minReviews))
       .filter((r) => passesAmenities(r.amenities, filters.amenities));

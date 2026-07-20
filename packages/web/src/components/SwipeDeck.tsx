@@ -157,11 +157,13 @@ export function DeckSkeleton() {
 export function SwipeDeck({
   restaurants,
   alreadyVoted = [],
+  superSpent = false,
   onSwipe,
 }: {
   restaurants: Restaurant[];
   alreadyVoted?: string[];
-  onSwipe: (restaurantId: string, direction: SwipeDirection) => void;
+  superSpent?: boolean;
+  onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean) => void;
 }) {
   // Resume after a reconnect: start at the first card this client has not voted.
   const [index, setIndex] = useState(() => {
@@ -170,6 +172,8 @@ export function SwipeDeck({
     return first === -1 ? restaurants.length : first;
   });
   const [exitDir, setExitDir] = useState<SwipeDirection>("right");
+  // One super-like per round; seeded from the server (survives reconnect) then set locally on use.
+  const [superUsed, setSuperUsed] = useState(superSpent);
   // The card whose full details are open in the sheet (null = closed). Tapping a card opens it;
   // it never blocks voting since a drag isn't a tap.
   const [detail, setDetail] = useState<Restaurant | null>(null);
@@ -196,16 +200,17 @@ export function SwipeDeck({
   // one card twice and skipping the next, which then never gets voted and stalls completion.
   const indexRef = useRef(index);
   const commit = useCallback(
-    (dir: SwipeDirection) => {
+    (dir: SwipeDirection, isSuper = false) => {
       const i = indexRef.current;
       const current = restaurants[i];
       if (!current) return;
       indexRef.current = i + 1;
-      // A light tap on a like, a slightly firmer double-tap on a pass.
-      buzz(dir === "right" ? 12 : [8, 20]);
+      // A firmer triple-buzz for a super-like; light on a like, double on a pass.
+      buzz(isSuper ? [12, 30, 12] : dir === "right" ? 12 : [8, 20]);
+      if (isSuper) setSuperUsed(true);
       dismissHint();
       setExitDir(dir);
-      onSwipe(current.id, dir);
+      onSwipe(current.id, dir, isSuper);
       setIndex(i + 1);
     },
     [restaurants, onSwipe, dismissHint],
@@ -225,10 +230,11 @@ export function SwipeDeck({
       if (detail) return;
       if (e.key === "ArrowLeft") commit("left");
       else if (e.key === "ArrowRight") commit("right");
+      else if (e.key === "ArrowUp" && !superUsed) commit("right", true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [commit, detail]);
+  }, [commit, detail, superUsed]);
 
   const done = index >= restaurants.length;
 
@@ -285,7 +291,7 @@ export function SwipeDeck({
         </p>
       )}
 
-      <div className="mt-8 flex items-center justify-center gap-6">
+      <div className="mt-8 flex items-center justify-center gap-5">
         <button
           type="button"
           aria-label="Hard pass"
@@ -294,9 +300,19 @@ export function SwipeDeck({
         >
           ✕
         </button>
-        <span className="text-sm text-muted tabular-nums">
-          {index + 1} / {restaurants.length}
-        </span>
+        <button
+          type="button"
+          aria-label={superUsed ? "Super-like used" : "Super-like (one per round)"}
+          disabled={superUsed}
+          onClick={() => commit("right", true)}
+          className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
+            superUsed
+              ? "border-white/10 text-white/25"
+              : "border-grape text-grape hover:scale-105 active:scale-95 hover:bg-grape/10"
+          }`}
+        >
+          ⭐
+        </button>
         <button
           type="button"
           aria-label="Let's eat"
@@ -306,6 +322,10 @@ export function SwipeDeck({
           ♥
         </button>
       </div>
+      <p className="mt-3 text-center text-sm text-muted tabular-nums">
+        {index + 1} / {restaurants.length}
+        {!superUsed && <span className="ml-2 text-grape">· ⭐ = super, once per round</span>}
+      </p>
 
       {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}
     </div>

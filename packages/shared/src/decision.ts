@@ -8,7 +8,12 @@ export interface Vote {
   participantId: string;
   restaurantId: string;
   direction: SwipeDirection;
+  /** A super-like: a right-swipe that counts extra toward winning (see SUPER_WEIGHT). */
+  super?: boolean;
 }
+
+/** A super-like counts this much toward picking the winner (a normal right-swipe counts 1). */
+export const SUPER_WEIGHT = 2;
 
 export interface DecisionResult {
   restaurant: Restaurant;
@@ -30,6 +35,20 @@ export function tallyRightSwipes(votes: Vote[]): Map<string, number> {
 }
 
 /**
+ * Weighted score per restaurant used to pick the winner: a super-like counts SUPER_WEIGHT, a normal
+ * right-swipe counts 1. Kept separate from tallyRightSwipes so the *display* stays an honest
+ * headcount ("3 of 5 wanted it") while a super-like can still tip a close race.
+ */
+export function tallyScores(votes: Vote[]): Map<string, number> {
+  const scores = new Map<string, number>();
+  for (const v of votes) {
+    if (v.direction !== "right") continue;
+    scores.set(v.restaurantId, (scores.get(v.restaurantId) ?? 0) + (v.super ? SUPER_WEIGHT : 1));
+  }
+  return scores;
+}
+
+/**
  * Majority wins: the restaurant with the most right-swipes takes it. A left
  * swipe is a downvote, never a veto. Ties are broken by deck order (the earlier
  * card wins), which keeps the result deterministic. Returns null when nobody
@@ -39,15 +58,18 @@ export function decideWinner(
   deck: Restaurant[],
   votes: Vote[],
 ): DecisionResult | null {
-  const counts = tallyRightSwipes(votes);
+  const scores = tallyScores(votes); // weighted — decides the winner
+  const counts = tallyRightSwipes(votes); // unweighted — the headcount we display
   let best: DecisionResult | null = null;
+  let bestScore = 0;
   for (const restaurant of deck) {
-    const rightSwipes = counts.get(restaurant.id) ?? 0;
-    if (rightSwipes === 0) continue;
-    // Strict greater-than means the first card seen at a given count keeps the
+    const score = scores.get(restaurant.id) ?? 0;
+    if (score === 0) continue;
+    // Strict greater-than means the first card seen at a given score keeps the
     // lead, so ties resolve to deck order.
-    if (!best || rightSwipes > best.rightSwipes) {
-      best = { restaurant, rightSwipes };
+    if (!best || score > bestScore) {
+      best = { restaurant, rightSwipes: counts.get(restaurant.id) ?? 0 };
+      bestScore = score;
     }
   }
   return best;

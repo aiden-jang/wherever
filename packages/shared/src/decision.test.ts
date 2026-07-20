@@ -3,6 +3,7 @@ import {
   countFinished,
   decideWinner,
   tallyRightSwipes,
+  tallyScores,
   type Vote,
 } from "./decision.js";
 import type { Restaurant } from "./types.js";
@@ -25,7 +26,33 @@ function vote(participantId: string, restaurantId: string, dir: "left" | "right"
   return { participantId, restaurantId, direction: dir };
 }
 
+function superVote(participantId: string, restaurantId: string): Vote {
+  return { participantId, restaurantId, direction: "right", super: true };
+}
+
 const deck = [restaurant("a"), restaurant("b"), restaurant("c")];
+
+describe("super-like weighting", () => {
+  it("tallyScores weights a super-like as 2 but tallyRightSwipes stays a headcount", () => {
+    const votes = [vote("p1", "a", "right"), superVote("p2", "a")];
+    expect(tallyScores(votes).get("a")).toBe(3); // 1 + 2
+    expect(tallyRightSwipes(votes).get("a")).toBe(2); // two people
+  });
+
+  it("a super-like tips a race the headcount would tie", () => {
+    // b has two normal rights; a has one normal + one super → a wins on weight (score 3 vs 2)...
+    const votes = [
+      vote("p1", "a", "right"),
+      superVote("p2", "a"),
+      vote("p3", "b", "right"),
+      vote("p4", "b", "right"),
+    ];
+    const result = decideWinner(deck, votes);
+    expect(result?.restaurant.id).toBe("a");
+    // ...but the reported headcount is honest: 2 people wanted a, not 3.
+    expect(result?.rightSwipes).toBe(2);
+  });
+});
 
 describe("tallyRightSwipes", () => {
   it("returns empty for no votes", () => {

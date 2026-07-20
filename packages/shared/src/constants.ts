@@ -205,9 +205,48 @@ export const AMENITY_OPTIONS: AmenityOption[] = [
   { key: "outdoorSeating", label: "Outdoor seating", emoji: "⛱️" },
   { key: "allowsDogs", label: "Dog-friendly", emoji: "🐶" },
   { key: "reservable", label: "Takes reservations", emoji: "📅" },
+  { key: "takeout", label: "Takeout", emoji: "🥡" },
+  { key: "delivery", label: "Delivery", emoji: "🛵" },
+  { key: "servesCocktails", label: "Cocktails", emoji: "🍸" },
+  { key: "servesBrunch", label: "Brunch", emoji: "🥂" },
+  { key: "liveMusic", label: "Live music", emoji: "🎶" },
+  { key: "goodForChildren", label: "Kid-friendly", emoji: "👶" },
 ];
 
 /** Human label + emoji for an amenity key. */
 export function amenityLabel(key: AmenityKey): string {
   return AMENITY_OPTIONS.find((a) => a.key === key)?.label ?? key;
 }
+
+export interface FilterPreset {
+  label: string;
+  emoji: string;
+  /** Partial filters merged onto the current selection when the preset is tapped. */
+  filters: {
+    priceTiers?: PriceTier[];
+    radiusMeters?: number;
+    openNow?: boolean;
+    amenities?: AmenityKey[];
+  };
+}
+
+export interface RoundTimerOption {
+  seconds: number;
+  label: string;
+}
+
+/** Round countdown choices. 0 = no timer (decide only when everyone's done or the host calls it). */
+export const ROUND_TIMER_OPTIONS: RoundTimerOption[] = [
+  { seconds: 0, label: "Off" },
+  { seconds: 60, label: "1 min" },
+  { seconds: 120, label: "2 min" },
+  { seconds: 300, label: "5 min" },
+];
+
+/** One-tap combos for people who don't want to fiddle with individual knobs. */
+export const FILTER_PRESETS: FilterPreset[] = [
+  { label: "Cheap & close", emoji: "🏃", filters: { priceTiers: [1, 2], radiusMeters: 1600 } },
+  { label: "Date night", emoji: "🕯️", filters: { priceTiers: [3, 4], amenities: ["reservable"] } },
+  { label: "Big group", emoji: "👥", filters: { priceTiers: [2, 3], amenities: ["goodForGroups"] } },
+  { label: "Late night", emoji: "🌙", filters: { openNow: true } },
+];

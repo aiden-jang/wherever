@@ -15,12 +15,15 @@ export const priceTierSchema = z.union([
 export const sessionFiltersSchema = z.object({
   radiusMeters: z.number().int().positive().max(50_000),
   maxPriceTier: priceTierSchema,
+  priceTiers: z.array(priceTierSchema).max(4).optional(),
   categories: z.array(z.string().min(1).max(40)).max(40),
+  excludedCategories: z.array(z.string().min(1).max(40)).max(40).optional(),
   minRating: z.number().min(0).max(5).optional(),
   minReviews: z.number().int().min(0).max(100_000).optional(),
   openNow: z.boolean().optional(),
   sort: z.enum(["popularity", "distance"]).optional(),
   revealVoters: z.boolean().optional(),
+  roundSeconds: z.number().int().min(0).max(3600).optional(),
   amenities: z
     .array(
       z.enum([
@@ -29,9 +32,15 @@ export const sessionFiltersSchema = z.object({
         "outdoorSeating",
         "allowsDogs",
         "reservable",
+        "takeout",
+        "delivery",
+        "servesCocktails",
+        "servesBrunch",
+        "liveMusic",
+        "goodForChildren",
       ]),
     )
-    .max(10)
+    .max(20)
     .optional(),
   area: z.string().min(1).max(40).optional(),
   lat: z.number().min(-90).max(90).optional(),
@@ -56,6 +65,7 @@ const swipeSchema = z.object({
   type: z.literal("swipe"),
   restaurantId: z.string().min(1),
   direction: z.union([z.literal("left"), z.literal("right")]),
+  super: z.boolean().optional(),
 });
 
 const decideNowSchema = z.object({ type: z.literal("decide_now") });

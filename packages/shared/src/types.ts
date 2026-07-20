@@ -19,7 +19,13 @@ export type AmenityKey =
   | "servesVegetarianFood"
   | "outdoorSeating"
   | "allowsDogs"
-  | "reservable";
+  | "reservable"
+  | "takeout"
+  | "delivery"
+  | "servesCocktails"
+  | "servesBrunch"
+  | "liveMusic"
+  | "goodForChildren";
 
 export interface Restaurant {
   id: string;
@@ -73,9 +79,14 @@ export interface Participant {
 export interface SessionFilters {
   /** Search radius in meters. */
   radiusMeters: number;
+  /** Legacy "up to this tier" cap. Used only when `priceTiers` is unset/empty. */
   maxPriceTier: PriceTier;
+  /** Exact price tiers to allow (e.g. [2,3]). Empty/unset falls back to maxPriceTier. */
+  priceTiers?: PriceTier[];
   /** Empty means no cuisine filter. */
   categories: string[];
+  /** Cuisines to exclude from results ("not that"); empty means no exclusions. */
+  excludedCategories?: string[];
   /** Minimum star rating (0-5). 0 or unset means no rating filter. */
   minRating?: number;
   /** Minimum number of ratings. 0 or unset means no threshold. */
@@ -92,6 +103,8 @@ export interface SessionFilters {
   revealVoters?: boolean;
   /** Required amenities; a place must report all of these to appear. Empty/unset = no filter. */
   amenities?: AmenityKey[];
+  /** Round countdown in seconds; when it elapses the tally decides. 0/unset means no timer. */
+  roundSeconds?: number;
   /** Named search area (a NEIGHBORHOODS value). Overrides lat/lng when set; unset means "near me". */
   area?: string;
   /** Search center. Optional: the mock source ignores it; real sources need it. */

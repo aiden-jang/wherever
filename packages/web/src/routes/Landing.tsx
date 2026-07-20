@@ -5,12 +5,14 @@ import type { AmenityKey, PriceTier, RestaurantSort, SessionFilters } from "@whe
 import {
   AMENITY_OPTIONS,
   CUISINE_OPTIONS,
+  FILTER_PRESETS,
   isInNYC,
   MIN_REVIEWS_OPTIONS,
   NEIGHBORHOODS,
   PRICE_OPTIONS,
   RADIUS_OPTIONS,
   RATING_OPTIONS,
+  ROUND_TIMER_OPTIONS,
   SORT_OPTIONS,
 } from "@wherever/shared";
 import { Modal } from "../components/Modal.js";
@@ -261,6 +263,24 @@ function FilterFields({
     });
   }
 
+  function togglePrice(tier: PriceTier) {
+    const current = filters.priceTiers ?? [];
+    const has = current.includes(tier);
+    onChange({
+      ...filters,
+      priceTiers: has ? current.filter((t) => t !== tier) : [...current, tier].sort(),
+    });
+  }
+
+  function toggleExclude(value: string) {
+    const current = filters.excludedCategories ?? [];
+    const has = current.includes(value);
+    onChange({
+      ...filters,
+      excludedCategories: has ? current.filter((c) => c !== value) : [...current, value],
+    });
+  }
+
   // How many hidden knobs are set away from their defaults, so a collapsed section still tells the
   // host something's active under there.
   const pickyActive =
@@ -269,10 +289,28 @@ function FilterFields({
     pickyActive +
     ((filters.minReviews ?? 0) > 0 ? 1 : 0) +
     ((filters.sort ?? "popularity") !== "popularity" ? 1 : 0) +
-    (filters.amenities?.length ?? 0);
+    (filters.amenities?.length ?? 0) +
+    (filters.excludedCategories?.length ?? 0);
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <FieldLabel>Quick picks</FieldLabel>
+        <div className="flex flex-wrap gap-2">
+          {FILTER_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => onChange({ ...filters, ...p.filters })}
+              className="rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-sm text-cream hover:border-ember hover:text-ember transition-colors"
+            >
+              <span className="mr-1">{p.emoji}</span>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {showAreas && (
         <div className="flex flex-col gap-2">
           <FieldLabel>Where, geographically</FieldLabel>
@@ -359,18 +397,26 @@ function FilterFields({
       <div className="flex flex-col gap-2">
         <FieldLabel>Budget, realistically</FieldLabel>
         <div className="flex gap-2">
-          {PRICE_OPTIONS.map((o) => (
-            <button
-              key={o.tier}
-              type="button"
-              aria-pressed={filters.maxPriceTier === o.tier}
-              onClick={() => onChange({ ...filters, maxPriceTier: o.tier as PriceTier })}
-              className={`${segBase} ${filters.maxPriceTier === o.tier ? segOn : segOff}`}
-            >
-              {o.label}
-            </button>
-          ))}
+          {PRICE_OPTIONS.map((o) => {
+            const on = (filters.priceTiers ?? []).includes(o.tier as PriceTier);
+            return (
+              <button
+                key={o.tier}
+                type="button"
+                aria-pressed={on}
+                onClick={() => togglePrice(o.tier as PriceTier)}
+                className={`${segBase} ${on ? segOn : segOff}`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
         </div>
+        <span className="text-xs text-muted">
+          {(filters.priceTiers?.length ?? 0) === 0
+            ? "Any price — tap to pick exact levels"
+            : "Only the levels you picked"}
+        </span>
       </div>
 
       <button
@@ -425,6 +471,31 @@ function FilterFields({
         </span>
       </button>
 
+      <div className="flex flex-col gap-2">
+        <FieldLabel>Round timer</FieldLabel>
+        <div className="flex gap-2">
+          {ROUND_TIMER_OPTIONS.map((o) => {
+            const on = (filters.roundSeconds ?? 0) === o.seconds;
+            return (
+              <button
+                key={o.seconds}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onChange({ ...filters, roundSeconds: o.seconds })}
+                className={`${segBase} ${on ? segOn : segOff}`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+        <span className="text-xs text-muted">
+          {(filters.roundSeconds ?? 0) === 0
+            ? "No timer — decide when everyone's done"
+            : "When time's up, the votes so far decide"}
+        </span>
+      </div>
+
       {/* Power-user knobs most groups never touch, folded away so the form leads with the choices
           that actually matter. A count keeps them discoverable when set. */}
       <div className="rounded-2xl border border-white/10">
@@ -441,7 +512,7 @@ function FilterFields({
                 {pickyCount} on
               </span>
             )}
-            <span className="text-xs text-muted">amenities, rating, reviews</span>
+            <span className="text-xs text-muted">amenities, excludes, rating</span>
           </span>
           <Chevron open={pickyOpen} />
         </button>
@@ -469,6 +540,30 @@ function FilterFields({
                   );
                 })}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <FieldLabel>Not tonight</FieldLabel>
+              <div className="flex flex-wrap gap-2">
+                {popularCuisines.map((c) => {
+                  const on = (filters.excludedCategories ?? []).includes(c.value);
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleExclude(c.value)}
+                      className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                        on ? "bg-flare text-ink border-flare font-semibold" : "border-white/10 text-cream hover:border-white/30"
+                      }`}
+                    >
+                      <span className="mr-1">{c.emoji}</span>
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-xs text-muted">Anything you tap here won't show up.</span>
             </div>
 
             <div className="flex flex-col gap-2">

@@ -97,7 +97,7 @@ export class SessionRoom extends DurableObject<Env> {
       case "start_round":
         return this.handleStartRound(ws);
       case "swipe":
-        return this.handleSwipe(ws, msg.restaurantId, msg.direction);
+        return this.handleSwipe(ws, msg.restaurantId, msg.direction, msg.super ?? false);
       case "decide_now":
         return this.handleDecideNow(ws);
       case "again":
@@ -134,10 +134,28 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /**
+   * A Durable Object has a single alarm, so both timers — host-reassign grace and the round
+   * countdown — are multiplexed through here: set the alarm to the earliest pending deadline, or
+   * clear it when neither is pending. Callers set/clear `hostGraceUntil` / `roundEndsAt` then call
+   * this.
+   */
+  private async rescheduleAlarm(): Promise<void> {
+    const times: number[] = [];
+    const grace = await this.ctx.storage.get<number>("hostGraceUntil");
+    const roundEnd = await this.ctx.storage.get<number>("roundEndsAt");
+    if (grace) times.push(grace);
+    if (roundEnd) times.push(roundEnd);
+    if (times.length === 0) {
+      await this.ctx.storage.deleteAlarm();
+      return;
+    }
+    await this.ctx.storage.setAlarm(Math.min(...times));
+  }
+
+  /**
    * When the host's last socket drops, DON'T hand off host immediately — a refresh or a brief blip
-   * would otherwise demote them. Instead start a grace timer (alarm); host is only reassigned in
-   * alarm() if they haven't reconnected by then. The host stays host (in hostId, clientMap, and
-   * their attachment) throughout, so a reconnect within the window resumes seamlessly.
+   * would otherwise demote them. Instead start a grace window; host is only reassigned in alarm() if
+   * they haven't reconnected by then. The host stays host throughout, so a reconnect resumes cleanly.
    */
   private async scheduleHostReassignIfNeeded(closing: WebSocket): Promise<void> {
     const att = closing.deserializeAttachment() as SocketAttachment | null;
@@ -146,18 +164,52 @@ export class SessionRoom extends DurableObject<Env> {
     if (hostId !== att.participantId) return;
     // Still present on another socket (second tab)? They're not gone at all.
     if (this.hasLiveSocketFor(att.participantId, closing)) return;
-    await this.ctx.storage.setAlarm(Date.now() + HOST_GRACE_MS);
+    await this.ctx.storage.put("hostGraceUntil", Date.now() + HOST_GRACE_MS);
+    await this.rescheduleAlarm();
   }
 
-  /** Grace window elapsed: if the host still hasn't reconnected, hand host off (or clear it). */
+  /** Set (or clear) the round countdown from the session's roundSeconds; returns the deadline. */
+  private async setRoundDeadline(meta: SessionMeta): Promise<number | undefined> {
+    const secs = meta.filters.roundSeconds ?? 0;
+    if (secs > 0) {
+      const deadline = Date.now() + secs * 1000;
+      await this.ctx.storage.put("roundEndsAt", deadline);
+      await this.rescheduleAlarm();
+      return deadline;
+    }
+    await this.ctx.storage.delete("roundEndsAt");
+    await this.rescheduleAlarm();
+    return undefined;
+  }
+
+  /**
+   * The multiplexed alarm: run whichever deadlines have elapsed — hand host off if the grace window
+   * passed with them still gone, and/or decide the round if its countdown ran out — then reschedule
+   * anything still pending.
+   */
   override async alarm(): Promise<void> {
-    const hostId = await this.ctx.storage.get<string>("hostId");
-    if (!hostId) return;
-    // Host reconnected during the grace window — keep them (handleJoin usually cancels the alarm
-    // first, but re-check here in case of a race).
-    if (this.hasLiveSocketFor(hostId)) return;
-    await this.reassignHostAway(hostId);
-    await this.broadcastState();
+    const now = Date.now();
+    let hostChanged = false;
+
+    const grace = await this.ctx.storage.get<number>("hostGraceUntil");
+    if (grace && now >= grace) {
+      await this.ctx.storage.delete("hostGraceUntil");
+      const hostId = await this.ctx.storage.get<string>("hostId");
+      if (hostId && !this.hasLiveSocketFor(hostId)) {
+        await this.reassignHostAway(hostId);
+        hostChanged = true;
+      }
+    }
+
+    const roundEnd = await this.ctx.storage.get<number>("roundEndsAt");
+    if (roundEnd && now >= roundEnd) {
+      await this.ctx.storage.delete("roundEndsAt");
+      const meta = await this.ctx.storage.get<SessionMeta>("meta");
+      if (meta?.status === "swiping") await this.decide(meta); // time's up → tally decides
+    }
+
+    await this.rescheduleAlarm();
+    if (hostChanged) await this.broadcastState();
   }
 
   /**
@@ -213,11 +265,12 @@ export class SessionRoom extends DurableObject<Env> {
     const identity = await this.resolveIdentity(clientId);
     ws.serializeAttachment({ ...identity, displayName });
 
-    // If the host is (back) online — this socket may be their reconnect — cancel any pending
-    // host-reassign grace timer so a refresh never hands off host.
+    // If the host is (back) online — this socket may be their reconnect — cancel the host-grace
+    // deadline so a refresh never hands off host. Keep any round timer running (rescheduleAlarm).
     const hostId = await this.ctx.storage.get<string>("hostId");
     if (hostId && this.hasLiveSocketFor(hostId)) {
-      await this.ctx.storage.deleteAlarm();
+      await this.ctx.storage.delete("hostGraceUntil");
+      await this.rescheduleAlarm();
     }
 
     // Tell the client its own participantId so it identifies itself by a stable id, not by display
@@ -230,10 +283,17 @@ export class SessionRoom extends DurableObject<Env> {
     if (meta.status === "swiping") {
       const deck = await this.getOrCreateDeck(meta);
       const votes = await this.getVotes();
-      const alreadyVoted = votes
-        .filter((v) => v.participantId === identity.participantId)
-        .map((v) => v.restaurantId);
-      this.send(ws, { type: "deck", restaurants: deck, alreadyVoted, demo: await this.isDemoMode() });
+      const mine = votes.filter((v) => v.participantId === identity.participantId);
+      const alreadyVoted = mine.map((v) => v.restaurantId);
+      const superUsed = mine.some((v) => v.super);
+      this.send(ws, {
+        type: "deck",
+        restaurants: deck,
+        alreadyVoted,
+        superUsed,
+        demo: await this.isDemoMode(),
+        roundEndsAt: (await this.ctx.storage.get<number>("roundEndsAt")) ?? undefined,
+      });
       await this.evaluate(meta); // refresh progress for the new arrival
     } else if (meta.status === "decided") {
       await this.sendResult(ws);
@@ -266,7 +326,8 @@ export class SessionRoom extends DurableObject<Env> {
 
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
-    this.broadcast({ type: "deck", restaurants: deck, demo: await this.isDemoMode() });
+    const roundEndsAt = await this.setRoundDeadline(meta);
+    this.broadcast({ type: "deck", restaurants: deck, demo: await this.isDemoMode(), roundEndsAt });
     await this.broadcastState();
     await this.evaluate(meta);
   }
@@ -275,6 +336,7 @@ export class SessionRoom extends DurableObject<Env> {
     ws: WebSocket,
     restaurantId: string,
     direction: SwipeDirection,
+    isSuper: boolean,
   ): Promise<void> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "swiping") return;
@@ -282,13 +344,27 @@ export class SessionRoom extends DurableObject<Env> {
     if (!att) return;
 
     const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
+    // One super-like per participant per round (server-enforced): a super only sticks on a right
+    // swipe, and only if they haven't already spent it on a still-standing vote. Otherwise it's a
+    // normal right-swipe.
+    let superLike = isSuper && direction === "right";
+    if (superLike) {
+      const spent = Object.values(votes).some(
+        (v) => v.participantId === att.participantId && v.super,
+      );
+      if (spent) superLike = false;
+    }
     // Keyed by participant+restaurant: a re-vote overwrites, never double-counts.
     votes[`${att.participantId}:${restaurantId}`] = {
       participantId: att.participantId,
       restaurantId,
       direction,
+      ...(superLike ? { super: true } : {}),
     };
     await this.ctx.storage.put("votes", votes);
+
+    // Let the whole room feel the super-like — reuses the floating-reaction channel.
+    if (superLike) this.broadcast({ type: "reaction", emoji: "⭐", from: att.displayName });
 
     await this.evaluate(meta);
   }
@@ -339,6 +415,9 @@ export class SessionRoom extends DurableObject<Env> {
     if (meta.status !== "swiping") return; // already decided; do nothing
     meta.status = "decided";
     await this.ctx.storage.put("meta", meta);
+    // Round's over — drop any pending countdown so its alarm can't fire on a decided round.
+    await this.ctx.storage.delete("roundEndsAt");
+    await this.rescheduleAlarm();
 
     const deck = await this.getOrCreateDeck(meta);
     const votes = await this.getVotes();
@@ -403,7 +482,8 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.put("againRounds", rounds + 1);
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
-    this.broadcast({ type: "deck", restaurants: deck, demo: await this.isDemoMode() });
+    const roundEndsAt = await this.setRoundDeadline(meta);
+    this.broadcast({ type: "deck", restaurants: deck, demo: await this.isDemoMode(), roundEndsAt });
     await this.broadcastState();
     await this.evaluate(meta);
   }

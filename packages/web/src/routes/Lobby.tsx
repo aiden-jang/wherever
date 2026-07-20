@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Participant, SessionFilters } from "@wherever/shared";
-import { amenityLabel, cuisineLabel, neighborhoodLabel, PRICE_OPTIONS, RADIUS_OPTIONS, SORT_OPTIONS } from "@wherever/shared";
+import { amenityLabel, cuisineLabel, neighborhoodLabel, PRICE_OPTIONS, RADIUS_OPTIONS, ROUND_TIMER_OPTIONS, SORT_OPTIONS } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
@@ -70,12 +70,22 @@ function FilterSummary({ filters }: { filters: SessionFilters }) {
   const area = filters.area ? neighborhoodLabel(filters.area) : undefined;
   const chips: string[] = [
     area ? `${area} · ${radiusLabel(filters.radiusMeters)}` : radiusLabel(filters.radiusMeters),
-    `up to ${PRICE_OPTIONS.find((o) => o.tier === filters.maxPriceTier)?.label ?? "$$$$"}`,
   ];
+  const priceLabelFor = (t: number) => PRICE_OPTIONS.find((o) => o.tier === t)?.label ?? "$";
+  if (filters.priceTiers && filters.priceTiers.length > 0) {
+    chips.push(filters.priceTiers.map(priceLabelFor).join(", "));
+  } else if (filters.maxPriceTier < 4) {
+    chips.push(`up to ${priceLabelFor(filters.maxPriceTier)}`);
+  }
   if (filters.minRating && filters.minRating > 0) chips.push(`${filters.minRating.toFixed(1)}+ stars`);
   if (filters.minReviews && filters.minReviews > 0) chips.push(`${filters.minReviews}+ reviews`);
   if (filters.openNow) chips.push("open now");
+  if (filters.roundSeconds) {
+    const t = ROUND_TIMER_OPTIONS.find((o) => o.seconds === filters.roundSeconds)?.label;
+    chips.push(`${(t ?? `${filters.roundSeconds}s`).toLowerCase()} timer`);
+  }
   for (const a of filters.amenities ?? []) chips.push(amenityLabel(a).toLowerCase());
+  for (const c of filters.excludedCategories ?? []) chips.push(`no ${cuisineLabel(c).toLowerCase()}`);
   if (filters.revealVoters) chips.push("votes shown");
   if (filters.sort === "distance") {
     const sortLabel = SORT_OPTIONS.find((o) => o.value === "distance")?.label ?? "closest";
@@ -280,6 +290,30 @@ function VoterAvatars({
   );
 }
 
+/** Live round countdown from an absolute deadline; goes red in the final stretch, then "Deciding…". */
+function RoundCountdown({ endsAt }: { endsAt: number }) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, endsAt - Date.now()));
+  useEffect(() => {
+    const t = setInterval(() => setRemaining(Math.max(0, endsAt - Date.now())), 500);
+    return () => clearInterval(t);
+  }, [endsAt]);
+
+  if (remaining <= 0) {
+    return <p className="mb-4 text-sm font-semibold text-flare">Time! Deciding…</p>;
+  }
+  const totalSec = Math.ceil(remaining / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  const low = totalSec <= 10;
+  return (
+    <p
+      className={`mb-4 text-sm font-semibold tabular-nums ${low ? "text-flare animate-pulse" : "text-muted"}`}
+    >
+      ⏱ {m}:{String(s).padStart(2, "0")} left
+    </p>
+  );
+}
+
 /** Three softly pulsing dots — a small sign of life so "waiting on the host" doesn't read as frozen. */
 function WaitingDots() {
   return (
@@ -330,7 +364,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, demo, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send } =
+  const { session, deck, demo, superUsed, roundEndsAt, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [copied, setCopied] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -442,14 +476,16 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <Toasts toasts={allToasts} />
         <FloatingReactions reactions={reactions} />
         {demo && <DemoBanner />}
+        {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}
         {deck && deck.length > 0 ? (
           <>
             <SwipeDeck
               key={deck.map((r) => r.id).join(",")}
               restaurants={deck}
               alreadyVoted={alreadyVoted}
-              onSwipe={(restaurantId, direction) =>
-                send({ type: "swipe", restaurantId, direction })
+              superSpent={superUsed}
+              onSwipe={(restaurantId, direction, isSuper) =>
+                send({ type: "swipe", restaurantId, direction, super: isSuper })
               }
             />
             {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (

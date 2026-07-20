@@ -7,6 +7,7 @@ import {
   mapFoursquarePlace,
   mapGooglePlace,
   passesAmenities,
+  passesPrice,
   passesRating,
   passesReviews,
   photoProxyUrl,
@@ -268,6 +269,22 @@ describe("passesRating", () => {
     expect(passesRating(3.9, 4)).toBe(false);
     expect(passesRating(4, 4)).toBe(true);
     expect(passesRating(4.6, 4)).toBe(true);
+  });
+});
+
+describe("passesPrice", () => {
+  it("falls back to the max-tier cap when no exact tiers are set", () => {
+    expect(passesPrice(2, undefined, 3)).toBe(true);
+    expect(passesPrice(4, undefined, 3)).toBe(false);
+    expect(passesPrice(4, [], 4)).toBe(true); // empty exact list = use cap
+    expect(passesPrice(3, undefined, undefined)).toBe(true); // no cap = anything
+  });
+
+  it("matches exactly against the chosen tiers when set", () => {
+    expect(passesPrice(2, [2, 3])).toBe(true);
+    expect(passesPrice(3, [2, 3])).toBe(true);
+    expect(passesPrice(1, [2, 3])).toBe(false);
+    expect(passesPrice(4, [2, 3])).toBe(false);
   });
 });
 

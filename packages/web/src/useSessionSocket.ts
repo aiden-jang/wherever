@@ -50,6 +50,10 @@ export function useSessionSocket(code: string, displayName: string) {
   // True when the deck is the sample fallback served because the monthly live-data budget is spent.
   const [demo, setDemo] = useState(false);
   const [alreadyVoted, setAlreadyVoted] = useState<string[]>([]);
+  // Whether this client already spent its super-like this round (seeded from the deck on reconnect).
+  const [superUsed, setSuperUsed] = useState(false);
+  // Absolute epoch-ms deadline when the round auto-decides (null = no timer this round).
+  const [roundEndsAt, setRoundEndsAt] = useState<number | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [match, setMatch] = useState<MatchState>(null);
   const [visited, setVisited] = useState<VisitedPlace[]>([]);
@@ -87,6 +91,8 @@ export function useSessionSocket(code: string, displayName: string) {
           setProgress(null);
           setDeck(msg.restaurants);
           setDemo(msg.demo ?? false);
+          setSuperUsed(msg.superUsed ?? false);
+          setRoundEndsAt(msg.roundEndsAt ?? null);
           return setAlreadyVoted(msg.alreadyVoted ?? []);
         case "vote_progress":
           return setProgress({
@@ -173,5 +179,5 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return { session, deck, demo, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send };
+  return { session, deck, demo, superUsed, roundEndsAt, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send };
 }

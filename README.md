@@ -6,9 +6,13 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
 
 ## What it does
 
-- **Swipe to vote.** Left or right on each restaurant. Arrow keys work on desktop.
+- **Swipe to vote.** Left or right on each restaurant. Arrow keys work on desktop; tap a card for a photo gallery, hours, price range, amenities, and a short blurb.
 - **Group matching.** Everyone in a session votes on the same deck in real time.
 - **Majority wins.** A left swipe is a downvote, not a veto. One picky person cannot tank dinner.
+- **Super-like.** One weighted pick per round that can tip a close race, with a gold flash to the whole room.
+- **Round timer (optional).** The host sets a countdown; when it's up, the votes so far decide — no more waiting on the slow one.
+- **Filter like you mean it.** Cuisines to include *or* exclude, exact price levels, amenities (outdoor seating, veg-friendly, dog-friendly, takes-reservations…), rating/review floors, and one-tap presets ("Cheap & close", "Date night").
+- **Show who's voted, or don't.** The host chooses; anonymous is the default and enforced server-side.
 - **No accounts.** Type a name, share a code, done.
 - **Remembers where you went.** Already-visited spots stop showing up.
 
@@ -51,12 +55,31 @@ app is written against a `RestaurantSource` interface with a seeded mock and a F
 That keeps the vendor at arm's length, keeps CI and offline dev fully playable with no key, and made
 the provider a one-line switch. See [ADR 0002](docs/adr/0002-restaurant-source.md).
 
-**Realtime resilience is handled, not hand-waved.** Three edge cases that decide whether a live app
+**Staying inside the free tier is enforced in code, not just hoped for.** A single global Durable
+Object (`UsageMeter`) counts paid Google calls per calendar month. Before every Nearby Search and
+every Place Photo fetch the Worker checks the budget; once the monthly cap is hit it stops calling
+Google and serves a seeded sample deck ("demo mode") and photo fallbacks instead of billing. Photos
+are proxied through the Worker and edge-cached, so each unique photo is paid for at most once. The
+result: the live demo cannot run up a bill even if it goes viral, and it degrades to a fully-playable
+demo rather than an error. See [ADR 0003](docs/adr/0003-usage-meter.md).
+
+**Privacy is enforced on the wire, not in the UI.** "Show who's voted" is off by default, and when
+it's off the server never sends per-voter identities at all — the field is omitted from the progress
+payload, so it can't be recovered from devtools. Revealing is an explicit host opt-in. The only
+thing that leaves the server is what the current mode permits.
+
+**One Durable Object alarm, multiplexed.** A DO gets a single alarm, and two features need one: the
+host hand-off grace window and the round countdown. Rather than fight over it, both write their
+deadline to storage and a small scheduler sets the alarm to the earliest pending one; the handler
+runs whichever elapsed (hand off host and/or decide the round) and reschedules the rest.
+
+**Realtime resilience is handled, not hand-waved.** These edge cases decide whether a live app
 feels solid or broken:
 
 - **Reconnect.** A dropped client reconnects and the Worker replays full session state, so a flaky
   phone connection never desyncs the deck or loses your votes.
-- **Host hand-off.** If the host leaves, another player is automatically promoted so the session
+- **Host hand-off, with a grace window.** A refresh or a brief blip does *not* demote the host — a
+  short grace timer means host only passes to another player if they're really gone, so the session
   never gets stuck with no one able to start or decide.
 - **No leaks.** Stale sessions are pruned on a daily cron and bounded by a TTL, so abandoned rooms
   do not accumulate in D1.
@@ -69,7 +92,8 @@ feels solid or broken:
   provider change or a bad upstream response cannot silently corrupt the deck.
 - **Session lifecycle.** The full join / vote / decide / reconnect flow runs against the **real
   Workers runtime** via `@cloudflare/vitest-pool-workers`, with migrations applied to an in-memory
-  D1 per file. Around 40 tests across the three layers.
+  D1 per file. Over 50 tests across the three layers, covering the decision core (including
+  super-like weighting), the filter predicates, the usage-meter cap, and the session lifecycle.
 
 ## Running locally
 

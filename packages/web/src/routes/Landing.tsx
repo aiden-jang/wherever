@@ -283,12 +283,8 @@ function FilterFields({
   }
 
   // How many hidden knobs are set away from their defaults, so a collapsed section still tells the
-  // host something's active under there.
-  const pickyActive =
-    (filters.minRating ?? 0) > 0 ? 1 : 0;
+  // host something's active under there. (Rating + review-count moved out to the main filters.)
   const pickyCount =
-    pickyActive +
-    ((filters.minReviews ?? 0) > 0 ? 1 : 0) +
     ((filters.sort ?? "popularity") !== "popularity" ? 1 : 0) +
     (filters.amenities?.length ?? 0) +
     (filters.excludedCategories?.length ?? 0);
@@ -296,22 +292,45 @@ function FilterFields({
   // "House rules" = how the round runs (reveal voters + timer), folded away from the food filters.
   const rulesCount = (filters.revealVoters ? 1 : 0) + (filters.roundSeconds ? 1 : 0);
 
+  // A quick-pick preset reads as "on" when every field it sets currently matches (it replaces each
+  // field via spread, so exact match is right, and this clears the moment you tweak one of them).
+  // Gives the preset buttons the pressed feedback they were missing — tapping felt like a no-op.
+  const presetActive = (pf: Partial<SessionFilters>): boolean =>
+    Object.entries(pf).every(([k, v]) => {
+      const cur = (filters as unknown as Record<string, unknown>)[k];
+      if (Array.isArray(v))
+        return (
+          Array.isArray(cur) &&
+          cur.length === v.length &&
+          [...cur].sort().join() === [...(v as unknown[])].sort().join()
+        );
+      return cur === v;
+    });
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <FieldLabel>Quick picks</FieldLabel>
         <div className="flex flex-wrap gap-2">
-          {FILTER_PRESETS.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              onClick={() => onChange({ ...filters, ...p.filters })}
-              className="rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-sm text-cream hover:border-ember hover:text-ember transition-colors"
-            >
-              <span className="mr-1">{p.emoji}</span>
-              {p.label}
-            </button>
-          ))}
+          {FILTER_PRESETS.map((p) => {
+            const on = presetActive(p.filters);
+            return (
+              <button
+                key={p.label}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onChange({ ...filters, ...p.filters })}
+                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                  on
+                    ? "bg-ember text-ink border-ember font-semibold"
+                    : "border-white/10 bg-black/40 text-cream hover:border-ember hover:text-ember"
+                }`}
+              >
+                <span className="mr-1">{p.emoji}</span>
+                {p.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -423,6 +442,46 @@ function FilterFields({
         </span>
       </div>
 
+      <div className="flex flex-col gap-2">
+        <FieldLabel>Standards</FieldLabel>
+        <div className="flex gap-2">
+          {RATING_OPTIONS.map((o) => {
+            const on = (filters.minRating ?? 0) === o.value;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onChange({ ...filters, minRating: o.value })}
+                className={`${segBase} ${on ? segOn : segOff}`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <FieldLabel>Enough reviews to trust it</FieldLabel>
+        <div className="flex gap-2">
+          {MIN_REVIEWS_OPTIONS.map((o) => {
+            const on = (filters.minReviews ?? 0) === o.value;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onChange({ ...filters, minReviews: o.value })}
+                className={`${segBase} ${on ? segOn : segOff}`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <button
         type="button"
         aria-pressed={filters.openNow ?? false}
@@ -457,14 +516,14 @@ function FilterFields({
           onClick={() => setPickyOpen((v) => !v)}
           className="flex w-full items-center justify-between px-4 py-3 text-left"
         >
-          <span className="flex items-center gap-2">
-            <span className="font-semibold">Get picky</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 font-semibold">Get picky</span>
             {pickyCount > 0 && (
-              <span className="rounded-full bg-ember px-2 py-0.5 text-xs font-bold text-ink">
+              <span className="shrink-0 whitespace-nowrap rounded-full bg-ember px-2 py-0.5 text-xs font-bold text-ink">
                 {pickyCount} on
               </span>
             )}
-            <span className="text-xs text-muted">amenities, excludes, rating</span>
+            <span className="hidden truncate text-xs text-muted sm:inline">amenities, excludes, sort</span>
           </span>
           <Chevron open={pickyOpen} />
         </button>
@@ -519,46 +578,6 @@ function FilterFields({
             </div>
 
             <div className="flex flex-col gap-2">
-              <FieldLabel>Standards</FieldLabel>
-              <div className="flex gap-2">
-                {RATING_OPTIONS.map((o) => {
-                  const on = (filters.minRating ?? 0) === o.value;
-                  return (
-                    <button
-                      key={o.value}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => onChange({ ...filters, minRating: o.value })}
-                      className={`${segBase} ${on ? segOn : segOff}`}
-                    >
-                      {o.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <FieldLabel>Enough reviews to trust it</FieldLabel>
-              <div className="flex gap-2">
-                {MIN_REVIEWS_OPTIONS.map((o) => {
-                  const on = (filters.minReviews ?? 0) === o.value;
-                  return (
-                    <button
-                      key={o.value}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => onChange({ ...filters, minReviews: o.value })}
-                      className={`${segBase} ${on ? segOn : segOff}`}
-                    >
-                      {o.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
               <FieldLabel>Order by</FieldLabel>
               <div className="flex gap-2">
                 {SORT_OPTIONS.map((o) => {
@@ -590,14 +609,14 @@ function FilterFields({
           onClick={() => setRulesOpen((v) => !v)}
           className="flex w-full items-center justify-between px-4 py-3 text-left"
         >
-          <span className="flex items-center gap-2">
-            <span className="font-semibold">House rules</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 font-semibold">House rules</span>
             {rulesCount > 0 && (
-              <span className="rounded-full bg-ember px-2 py-0.5 text-xs font-bold text-ink">
+              <span className="shrink-0 whitespace-nowrap rounded-full bg-ember px-2 py-0.5 text-xs font-bold text-ink">
                 {rulesCount} on
               </span>
             )}
-            <span className="text-xs text-muted">timer, who's voted</span>
+            <span className="hidden truncate text-xs text-muted sm:inline">timer, who's voted</span>
           </span>
           <Chevron open={rulesOpen} />
         </button>

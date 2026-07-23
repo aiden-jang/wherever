@@ -382,16 +382,16 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   // not the initial handshake.
   const showBanner = everConnected && status !== "open";
 
-  // Reflect the round in the tab title: the winner when decided, "Swiping" mid-round, else the
-  // code. Findable among open tabs and a tiny bit of delight when it lands.
+  // Reflect the round in the tab title: the winner when decided, "Swiping" mid-round, else just
+  // the app name. (The session code is deliberately kept out of the tab.)
   useEffect(() => {
     document.title =
       match?.kind === "match"
         ? `🍽 ${match.restaurant.name} · Wherever, Honestly`
         : session?.status === "swiping"
-          ? `Swiping · ${code}`
-          : `${code} · Wherever, Honestly`;
-  }, [code, session?.status, match]);
+          ? `Swiping · Wherever, Honestly`
+          : `Wherever, Honestly`;
+  }, [session?.status, match]);
   useEffect(() => () => {
     document.title = "Wherever, Honestly";
   }, []);

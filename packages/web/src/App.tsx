@@ -30,11 +30,7 @@ export default function App() {
         </ErrorBoundary>
 
         <footer className="mt-auto px-6 py-6 max-w-6xl mx-auto w-full text-center text-xs text-muted">
-          <p>
-            No accounts, no login. We only keep the short-lived session for your group vote, and
-            analytics are cookieless, so there is nothing personal to collect.
-          </p>
-          <p className="mt-1">Place data powered by Google.</p>
+          <p>Place data powered by Google</p>
           <p className="mt-1">
             Made by{' '}
             <a
@@ -45,7 +41,6 @@ export default function App() {
             >
               Aiden Jang
             </a>
-            .
           </p>
         </footer>
         </div>

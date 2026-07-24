@@ -51,9 +51,16 @@ body,
   height: 100%;
 }
 
+/* Ink base on <html> (not <body>) so it also fills the iOS rubber-band overscroll region below the
+   page — otherwise pulling past the footer exposes bare black. <body> stays transparent on purpose:
+   a background there would stop propagating to the canvas and instead paint over the fixed aurora,
+   which sits behind the content at a negative z-index. */
+html {
+  background: var(--color-ink);
+}
+
 body {
   margin: 0;
-  background: var(--color-ink);
   color: var(--color-cream);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;

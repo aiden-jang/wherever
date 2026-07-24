@@ -103,7 +103,7 @@ body {
   background:
     radial-gradient(40% 40% at 25% 30%, var(--color-ember) 0%, transparent 60%),
     radial-gradient(38% 38% at 75% 35%, var(--color-flare) 0%, transparent 60%),
-    radial-gradient(45% 45% at 55% 80%, var(--color-grape) 0%, transparent 65%);
+    radial-gradient(70% 55% at 50% 95%, var(--color-grape) 0%, transparent 75%);
   opacity: 0.55;
   animation: aurora-drift 18s ease-in-out infinite;
 }

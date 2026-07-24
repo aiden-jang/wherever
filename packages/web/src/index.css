@@ -51,22 +51,12 @@ body,
   height: 100%;
 }
 
-/* The ink base lives on <html> (not <body>) so it fills the whole page AND the iOS rubber-band
-   overscroll region — otherwise pulling past the footer exposes a bare black band. <body> is kept
-   transparent on purpose: a background there would stop propagating to the canvas and instead paint
-   over the fixed aurora (which sits at a negative z-index behind the content). overscroll-behavior
-   also curbs scroll-chaining where it's supported. */
-html {
-  background: var(--color-ink);
-  overscroll-behavior: none;
-}
-
 body {
   margin: 0;
+  background: var(--color-ink);
   color: var(--color-cream);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  overscroll-behavior: none;
   /* Respect notches on mobile. */
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -93,7 +83,7 @@ body {
   background:
     radial-gradient(40% 40% at 25% 30%, var(--color-ember) 0%, transparent 60%),
     radial-gradient(38% 38% at 75% 35%, var(--color-flare) 0%, transparent 60%),
-    radial-gradient(70% 55% at 50% 95%, var(--color-grape) 0%, transparent 75%);
+    radial-gradient(45% 45% at 55% 80%, var(--color-grape) 0%, transparent 65%);
   opacity: 0.55;
   animation: aurora-drift 18s ease-in-out infinite;
 }

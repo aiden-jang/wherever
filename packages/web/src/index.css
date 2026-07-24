@@ -51,17 +51,18 @@ body,
   height: 100%;
 }
 
-/* Lock overscroll so the mobile rubber-band can't drag the page past its content and expose a bare
-   black band. The body's ink background propagates to the canvas and covers the full scroll area;
-   we deliberately do NOT set a background on <html>, because that paints over the fixed aurora
-   (which sits at a negative z-index behind the content). */
+/* The ink base lives on <html> (not <body>) so it fills the whole page AND the iOS rubber-band
+   overscroll region — otherwise pulling past the footer exposes a bare black band. <body> is kept
+   transparent on purpose: a background there would stop propagating to the canvas and instead paint
+   over the fixed aurora (which sits at a negative z-index behind the content). overscroll-behavior
+   also curbs scroll-chaining where it's supported. */
 html {
+  background: var(--color-ink);
   overscroll-behavior: none;
 }
 
 body {
   margin: 0;
-  background: var(--color-ink);
   color: var(--color-cream);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;

@@ -3,6 +3,7 @@ import type { Restaurant } from "@wherever/shared";
 import { AMENITY_OPTIONS } from "@wherever/shared";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
+import { useScrollLock } from "../useScrollLock.js";
 
 const chipClass =
   "inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs text-muted";
@@ -29,6 +30,8 @@ export function RestaurantDetail({
   restaurant: Restaurant;
   onClose: () => void;
 }) {
+  useScrollLock();
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();

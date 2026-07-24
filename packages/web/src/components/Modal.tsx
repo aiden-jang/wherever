@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from "react";
+import { useScrollLock } from "../useScrollLock";
 
 interface ModalProps {
   title: string;
@@ -6,8 +7,10 @@ interface ModalProps {
   children: ReactNode;
 }
 
-/** Minimal centered modal: backdrop click and Escape both close it. */
+/** Minimal centered modal: backdrop click and Escape both close it. Background scroll is locked. */
 export function Modal({ title, onClose, children }: ModalProps) {
+  useScrollLock();
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();

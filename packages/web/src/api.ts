@@ -7,8 +7,9 @@ export const DEFAULT_FILTERS: SessionFilters = {
   categories: [],
   minRating: 0,
   minReviews: 0,
-  openNow: false,
+  openNow: true,
   sort: "popularity",
+  revealVoters: true,
 };
 
 // Empty in dev (Vite proxies /api to the Worker); set to the Worker origin in prod.

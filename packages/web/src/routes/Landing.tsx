@@ -213,11 +213,13 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Manually aim the search at a zip code or town. Geocodes on submit (Enter or the button) via the
- * Worker, then writes the center into filters.lat/lng (+ a label) and clears any picked neighborhood.
- * Lives inside the outer create <form>, so Enter here is caught and NOT allowed to submit that form.
+ * The whole "where" control in one place: "Near me" (device location) sitting next to a zip/town
+ * search, with the NYC neighborhood shortcuts tucked behind a collapsed disclosure so the form isn't
+ * a wall of chips. Geocoding runs on submit via the Worker and writes the center into
+ * filters.lat/lng (+ a label). Lives inside the outer create <form>, so Enter is caught here and NOT
+ * allowed to submit that form.
  */
-function LocationSearch({
+function LocationPicker({
   filters,
   onChange,
 }: {
@@ -227,8 +229,18 @@ function LocationSearch({
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // Start expanded only if a neighborhood is already chosen, so the active pick is visible.
+  const [nycOpen, setNycOpen] = useState(Boolean(filters.area));
 
-  async function run() {
+  const nearMe = !filters.area && filters.lat == null;
+  const activeNeighborhood = filters.area
+    ? NEIGHBORHOODS.find((n) => n.value === filters.area)
+    : undefined;
+
+  const useNearMe = () =>
+    onChange({ ...filters, area: undefined, lat: undefined, lng: undefined, locationLabel: undefined });
+
+  async function runSearch() {
     const query = q.trim();
     if (!query || busy) return;
     setBusy(true);
@@ -243,54 +255,115 @@ function LocationSearch({
     setQ("");
   }
 
-  // Once a place is chosen, show it as a chip with a way back to the search box.
-  if (filters.locationLabel) {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-acid bg-acid/10 px-3 py-1.5 text-sm text-cream">
-          <span aria-hidden>📍</span>
-          <span className="truncate">{filters.locationLabel}</span>
-        </span>
-        <button
-          type="button"
-          onClick={() =>
-            onChange({ ...filters, lat: undefined, lng: undefined, locationLabel: undefined })
-          }
-          className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-sm text-muted hover:bg-white/5"
-        >
-          Change
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault(); // don't submit the outer create form
-              run();
-            }
-          }}
-          placeholder="Zip code or town"
-          maxLength={120}
-          className={`${inputClass} flex-1 !py-2 !text-base`}
-        />
+    <div className="flex flex-col gap-2">
+      <FieldLabel>Where, geographically</FieldLabel>
+
+      {filters.locationLabel ? (
+        // A searched place is active: show it as a chip with a way back to "Near me".
+        <div className="flex items-center gap-2">
+          <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-acid bg-acid/10 px-3 py-2 text-sm text-cream">
+            <span aria-hidden>📍</span>
+            <span className="truncate">{filters.locationLabel}</span>
+          </span>
+          <button
+            type="button"
+            onClick={useNearMe}
+            className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm text-muted hover:bg-white/5"
+          >
+            Change
+          </button>
+        </div>
+      ) : (
+        // Consolidated row: "Near me" beside the zip/town search.
+        <div className="flex gap-2">
+          <button
+            type="button"
+            aria-pressed={nearMe}
+            onClick={useNearMe}
+            className={`shrink-0 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors ${
+              nearMe ? "bg-acid text-ink border-acid" : "border-white/15 text-cream hover:border-white/30"
+            }`}
+          >
+            📍 Near me
+          </button>
+          <input
+            type="text"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault(); // don't submit the outer create form
+                runSearch();
+              }
+            }}
+            placeholder="Zip or town"
+            maxLength={120}
+            className={`${inputClass} min-w-0 flex-1 !py-2 !text-base`}
+          />
+          {q.trim() && (
+            <button
+              type="button"
+              onClick={runSearch}
+              disabled={busy}
+              className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50 transition"
+            >
+              {busy ? "..." : "Go"}
+            </button>
+          )}
+        </div>
+      )}
+      {err && <p className="text-xs text-flare">{err}</p>}
+
+      {/* NYC neighborhood shortcuts, collapsed by default. */}
+      <div>
         <button
           type="button"
-          onClick={run}
-          disabled={!q.trim() || busy}
-          className="shrink-0 rounded-2xl border border-white/15 px-4 text-sm font-semibold hover:bg-white/5 disabled:opacity-50 transition"
+          aria-expanded={nycOpen}
+          onClick={() => setNycOpen((o) => !o)}
+          className="flex w-full items-center justify-between rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
         >
-          {busy ? "..." : "Search"}
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="text-muted">NYC neighborhoods</span>
+            {activeNeighborhood && (
+              <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
+                {activeNeighborhood.label}
+              </span>
+            )}
+          </span>
+          <span className="shrink-0 text-muted">
+            <Chevron open={nycOpen} />
+          </span>
         </button>
+        {nycOpen && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {NEIGHBORHOODS.map((n) => {
+              const on = filters.area === n.value;
+              return (
+                <button
+                  key={n.value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    onChange({
+                      ...filters,
+                      area: n.value,
+                      lat: undefined,
+                      lng: undefined,
+                      locationLabel: undefined,
+                    })
+                  }
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    on ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
+                  }`}
+                >
+                  {n.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
-      {err && <p className="text-xs text-flare">{err}</p>}
     </div>
   );
 }
@@ -441,63 +514,7 @@ function FilterFields({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <FieldLabel>Where, geographically</FieldLabel>
-        {/* The predefined NYC areas + "Near me" always show (this app is NYC-first). */}
-        <div className="flex flex-wrap gap-2">
-          {/* "Near me" is active only when nothing more specific is set (no neighborhood, no
-              manually-searched center). */}
-          {(() => {
-            const nearMe = !filters.area && filters.lat == null;
-            return (
-              <button
-                type="button"
-                aria-pressed={nearMe}
-                onClick={() =>
-                  onChange({
-                    ...filters,
-                    area: undefined,
-                    lat: undefined,
-                    lng: undefined,
-                    locationLabel: undefined,
-                  })
-                }
-                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                  nearMe ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
-                }`}
-              >
-                📍 Near me
-              </button>
-            );
-          })()}
-          {NEIGHBORHOODS.map((n) => {
-            const on = filters.area === n.value;
-            return (
-              <button
-                key={n.value}
-                type="button"
-                aria-pressed={on}
-                onClick={() =>
-                  onChange({
-                    ...filters,
-                    area: n.value,
-                    lat: undefined,
-                    lng: undefined,
-                    locationLabel: undefined,
-                  })
-                }
-                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                  on ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
-                }`}
-              >
-                {n.label}
-              </button>
-            );
-          })}
-        </div>
-        {/* ...or aim it somewhere else entirely (outside NYC, or when location is off). */}
-        <LocationSearch filters={filters} onChange={onChange} />
-      </div>
+      <LocationPicker filters={filters} onChange={onChange} />
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Cravings (pick some, or leave it to fate)</FieldLabel>

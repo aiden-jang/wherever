@@ -145,7 +145,7 @@ function Toasts({ toasts }: { toasts: Toast[] }) {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="pop-in rounded-full bg-ink-soft/95 border border-white/10 px-4 py-2 text-sm font-medium shadow-lg"
+          className="pop-in max-w-xs select-all break-all rounded-2xl bg-ink-soft/95 border border-white/10 px-4 py-2 text-center text-sm font-medium shadow-lg"
         >
           {t.text}
         </div>
@@ -366,7 +366,7 @@ export default function Lobby() {
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
   const { session, deck, demo, superUsed, roundEndsAt, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
-  const [linkShown, setLinkShown] = useState(false);
+  const [inviteToasts, setInviteToasts] = useState<Toast[]>([]);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
 
@@ -403,7 +403,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   );
   const isHost = me?.isHost ?? false;
   const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
-  const allToasts = [...toasts, ...hostToasts];
+  const allToasts = [...toasts, ...hostToasts, ...inviteToasts];
   const count = session?.participants.length ?? 0;
 
   const [codeCopied, setCodeCopied] = useState(false);
@@ -414,12 +414,14 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setTimeout(() => setCodeCopied(false), 1200);
   }
 
-  // Reveal the invite link for manual copy. Deliberately NO clipboard write and NO native share
-  // sheet — the big code above is the primary share; this just surfaces the full link on demand.
+  // Surface the invite link as a toast for manual copy. Deliberately NO clipboard write and NO
+  // native share sheet: the big code above is the primary share; this just pops the full link at
+  // the top (select-all, so a tap grabs the whole thing) for a few seconds.
   function shareInvite() {
     buzz(8);
-    setLinkShown(true);
-    setTimeout(() => setLinkShown(false), 6000);
+    const toast = { id: crypto.randomUUID(), text: location.href };
+    setInviteToasts((t) => [...t, toast]);
+    setTimeout(() => setInviteToasts((t) => t.filter((x) => x.id !== toast.id)), 6000);
   }
 
   // An error before any session state means a bad or expired code.
@@ -536,11 +538,6 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <button onClick={shareInvite} className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm font-medium hover:bg-white/5 active:scale-95 transition">
           Invite the group
         </button>
-        {linkShown && (
-          <p className="mx-auto mt-3 max-w-xs select-all break-all rounded-2xl border border-white/15 bg-ink px-4 py-2 text-xs text-cream">
-            {location.href}
-          </p>
-        )}
         {session?.filters && <FilterSummary filters={session.filters} />}
       </div>
 

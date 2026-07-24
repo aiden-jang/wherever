@@ -8,33 +8,14 @@ import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { buzz } from "./haptics.js";
 
-/** The place's own Google Maps URI when we have it, else a name+address search on Maps. */
-function directionsUrl(r: Restaurant): string {
-  return (
-    r.googleMapsUri ??
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address ?? ""}`.trim())}`
-  );
-}
-
 /**
- * Combined action: share the winning place as a Google Maps link through the native share sheet, so
- * one button both tells the group it's settled AND gives everyone the way there. No image is
- * generated and nothing is downloaded; if there's no share sheet we copy the text + link instead.
+ * A Google Maps directions deep link to the winning place, so tapping the button opens navigation
+ * straight away (no share sheet). Includes the address in the destination so it resolves to the
+ * right spot even for chains.
  */
-async function shareVerdict(restaurant: Restaurant): Promise<"shared" | "copied"> {
-  const text = `We're eating at ${restaurant.name}. Majority ruled, the group chat lost.`;
-  const url = directionsUrl(restaurant);
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: "Wherever, Honestly", text, url });
-      return "shared";
-    } catch {
-      // User dismissed the sheet or it failed; fall through to copy.
-    }
-  }
-  await navigator.clipboard.writeText(`${text} ${url}`).catch(() => {});
-  return "copied";
+function directionsUrl(r: Restaurant): string {
+  const destination = encodeURIComponent(`${r.name} ${r.address ?? ""}`.trim());
+  return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
 }
 
 function History({ visited }: { visited: VisitedPlace[] }) {
@@ -111,7 +92,6 @@ function WinnerScreen({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const { restaurant, rightSwipes, totalParticipants } = match;
-  const [shareState, setShareState] = useState<"idle" | "sharing" | "shared" | "copied">("idle");
   const [detailOpen, setDetailOpen] = useState(false);
 
   // Celebrate once when the verdict lands: confetti + a short victory buzz.
@@ -121,22 +101,6 @@ function WinnerScreen({
     const t = setTimeout(() => setCelebrate(false), 4000);
     return () => clearTimeout(t);
   }, []);
-
-  async function share() {
-    setShareState("sharing");
-    const how = await shareVerdict(restaurant);
-    setShareState(how);
-    if (how === "copied") setTimeout(() => setShareState("idle"), 1800);
-  }
-
-  const shareLabel =
-    shareState === "sharing"
-      ? "Rounding everyone up..."
-      : shareState === "copied"
-        ? "Copied. Go gloat."
-        : shareState === "shared"
-          ? "Sent. It's official."
-          : "Tell the group + directions ↗";
 
   return (
     <div className="relative text-center max-w-sm mx-auto w-full">
@@ -182,13 +146,14 @@ function WinnerScreen({
       </p>
 
       <div className="mt-8 flex flex-col gap-3">
-        <button
-          onClick={share}
-          disabled={shareState === "sharing"}
-          className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] disabled:opacity-70 transition"
+        <a
+          href={directionsUrl(restaurant)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
         >
-          {shareLabel}
-        </button>
+          Get directions ↗
+        </a>
         {isHost ? (
           <button
             onClick={onAgain}

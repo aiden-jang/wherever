@@ -15,8 +15,17 @@ const APP_URL = "wherever.aidenjang.com";
  * Share the verdict. Prefers the native share sheet with a generated image (the viral bit);
  * falls back to sharing text, then to copying. Returns how it resolved so the UI can confirm.
  */
+function directionsUrl(r: Restaurant): string {
+  return (
+    r.googleMapsUri ??
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address ?? ""}`.trim())}`
+  );
+}
+
 async function shareVerdict(restaurant: Restaurant): Promise<"shared" | "copied"> {
-  const text = `We're eating at ${restaurant.name}. Majority ruled, the group chat lost. ${APP_URL}`;
+  // Combined action: the share now carries the directions link too, so one button both tells the
+  // group it's settled AND gives everyone the way there (the separate "Get directions" button is gone).
+  const text = `We're eating at ${restaurant.name}. Majority ruled, the group chat lost. Directions: ${directionsUrl(restaurant)} · ${APP_URL}`;
   const blob = await renderShareCard(restaurant).catch(() => null);
   const file = blob ? new File([blob], "wherever.png", { type: "image/png" }) : null;
 
@@ -139,7 +148,7 @@ function WinnerScreen({
         ? "Copied. Go gloat."
         : shareState === "shared"
           ? "Sent. It's official."
-          : "Tell the group it's settled";
+          : "Tell the group + directions ↗";
 
   return (
     <div className="relative text-center max-w-sm mx-auto w-full">
@@ -192,14 +201,6 @@ function WinnerScreen({
         >
           {shareLabel}
         </button>
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${restaurant.name} ${restaurant.address ?? ""}`.trim())}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition"
-        >
-          Get directions ↗
-        </a>
         {isHost ? (
           <button
             onClick={onAgain}

@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="text-6xl">🤕</div>
           <h1 className="mt-4 font-display text-4xl font-bold">Well, that broke.</h1>
           <p className="mt-3 text-muted">
-            Something went sideways on our end — not your fault, and definitely not the vegetarian's.
+            Something went sideways on our end. Not your fault, and definitely not the vegetarian's.
             A reload usually sorts it.
           </p>
           <button

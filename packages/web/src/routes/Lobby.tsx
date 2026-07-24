@@ -414,12 +414,25 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setTimeout(() => setCodeCopied(false), 1200);
   }
 
-  // Surface the invite link as a toast for manual copy. Deliberately NO clipboard write and NO
-  // native share sheet: the big code above is the primary share; this just pops the full link at
-  // the top (select-all, so a tap grabs the whole thing) for a few seconds.
-  function shareInvite() {
+  // Open the phone's native share sheet with the invite link (the natural way to fire it into a
+  // group chat). On desktop, where there's no share sheet, fall back to popping the link as a toast
+  // for manual copy. No clipboard write either way.
+  async function shareInvite() {
     buzz(8);
-    const toast = { id: crypto.randomUUID(), text: location.href };
+    const url = location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Wherever, Honestly",
+          text: "Come help pick where we're eating.",
+          url,
+        });
+        return;
+      } catch {
+        // Sheet dismissed or unavailable; fall through to the toast.
+      }
+    }
+    const toast = { id: crypto.randomUUID(), text: url };
     setInviteToasts((t) => [...t, toast]);
     setTimeout(() => setInviteToasts((t) => t.filter((x) => x.id !== toast.id)), 6000);
   }

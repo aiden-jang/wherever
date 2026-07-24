@@ -314,12 +314,24 @@ function FilterFields({
         <div className="flex flex-wrap gap-2">
           {FILTER_PRESETS.map((p) => {
             const on = presetActive(p.filters);
+            // Quick picks are single-select toggles. Every field a preset can touch is reset first,
+            // so applying one can't leave another still "on" (the old multi-select bug), and tapping
+            // the active one clears back to defaults (unselect). Cuisines/rating/reviews aren't
+            // preset-managed, so they're left untouched.
+            const presetReset = {
+              priceTiers: [],
+              radiusMeters: DEFAULT_FILTERS.radiusMeters,
+              amenities: [],
+              openNow: false,
+            };
             return (
               <button
                 key={p.label}
                 type="button"
                 aria-pressed={on}
-                onClick={() => onChange({ ...filters, ...p.filters })}
+                onClick={() =>
+                  onChange(on ? { ...filters, ...presetReset } : { ...filters, ...presetReset, ...p.filters })
+                }
                 className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
                   on
                     ? "bg-ember text-ink border-ember font-semibold"

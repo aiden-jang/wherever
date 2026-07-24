@@ -110,6 +110,8 @@ export interface SessionFilters {
   /** Search center. Optional: the mock source ignores it; real sources need it. */
   lat?: number;
   lng?: number;
+  /** Human label for a manually-entered center (a geocoded zip/town), for display only. */
+  locationLabel?: string;
 }
 
 export interface Session {

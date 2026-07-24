@@ -67,9 +67,10 @@ function radiusLabel(meters: number): string {
 
 /** Read-only recap of the filters the host chose, so joiners know the game. */
 function FilterSummary({ filters }: { filters: SessionFilters }) {
-  const area = filters.area ? neighborhoodLabel(filters.area) : undefined;
+  // A manually-searched place wins the label, then a picked neighborhood, else just the radius.
+  const place = filters.locationLabel ?? (filters.area ? neighborhoodLabel(filters.area) : undefined);
   const chips: string[] = [
-    area ? `${area} · ${radiusLabel(filters.radiusMeters)}` : radiusLabel(filters.radiusMeters),
+    place ? `${place} · ${radiusLabel(filters.radiusMeters)}` : radiusLabel(filters.radiusMeters),
   ];
   const priceLabelFor = (t: number) => PRICE_OPTIONS.find((o) => o.tier === t)?.label ?? "$";
   if (filters.priceTiers && filters.priceTiers.length > 0) {
@@ -145,7 +146,7 @@ function Toasts({ toasts }: { toasts: Toast[] }) {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="pop-in max-w-xs select-all break-all rounded-2xl bg-ink-soft/95 border border-white/10 px-4 py-2 text-center text-sm font-medium shadow-lg"
+          className="pop-in rounded-full bg-ink-soft/95 border border-white/10 px-4 py-2 text-sm font-medium shadow-lg"
         >
           {t.text}
         </div>
@@ -366,7 +367,6 @@ export default function Lobby() {
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
   const { session, deck, demo, superUsed, roundEndsAt, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
-  const [inviteToasts, setInviteToasts] = useState<Toast[]>([]);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
 
@@ -403,7 +403,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   );
   const isHost = me?.isHost ?? false;
   const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
-  const allToasts = [...toasts, ...hostToasts, ...inviteToasts];
+  const allToasts = [...toasts, ...hostToasts];
   const count = session?.participants.length ?? 0;
 
   const [codeCopied, setCodeCopied] = useState(false);
@@ -415,8 +415,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   }
 
   // Open the phone's native share sheet with the invite link (the natural way to fire it into a
-  // group chat). On desktop, where there's no share sheet, fall back to popping the link as a toast
-  // for manual copy. No clipboard write either way.
+  // group chat). If the user cancels the sheet we do nothing — no toast, no fallback popup. On
+  // desktop (no share sheet at all) we silently copy the link so the button still does something.
   async function shareInvite() {
     buzz(8);
     const url = location.href;
@@ -427,14 +427,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           text: "Come help pick where we're eating.",
           url,
         });
-        return;
       } catch {
-        // Sheet dismissed or unavailable; fall through to the toast.
+        // Sheet dismissed/failed: leave it be, per "only the share modal".
       }
+      return;
     }
-    const toast = { id: crypto.randomUUID(), text: url };
-    setInviteToasts((t) => [...t, toast]);
-    setTimeout(() => setInviteToasts((t) => t.filter((x) => x.id !== toast.id)), 6000);
+    await navigator.clipboard.writeText(url).catch(() => {});
   }
 
   // An error before any session state means a bad or expired code.

@@ -48,6 +48,25 @@ export function getLocation(): Promise<{ lat: number; lng: number } | null> {
   });
 }
 
+/**
+ * Geocode a manually-entered zip/town to a search center via the Worker (which holds the Google
+ * key). Returns null on a bad/empty query or no match, so the caller can show a friendly message
+ * without a throw. `label` is Google's formatted address, for display.
+ */
+export async function geocode(
+  query: string,
+): Promise<{ lat: number; lng: number; label: string } | null> {
+  const q = query.trim();
+  if (q.length < 2) return null;
+  const res = await fetch(`${API_BASE}/api/geocode?q=${encodeURIComponent(q)}`);
+  if (!res.ok) return null;
+  return (await res.json().catch(() => null)) as {
+    lat: number;
+    lng: number;
+    label: string;
+  } | null;
+}
+
 /** displayName is kept per-tab so a refresh in the lobby does not lose it. */
 export function rememberName(name: string): void {
   sessionStorage.setItem("displayName", name);

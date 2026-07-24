@@ -6,7 +6,6 @@ import {
   AMENITY_OPTIONS,
   CUISINE_OPTIONS,
   FILTER_PRESETS,
-  isInNYC,
   MIN_REVIEWS_OPTIONS,
   NEIGHBORHOODS,
   PRICE_OPTIONS,
@@ -18,6 +17,7 @@ import {
 import { Modal } from "../components/Modal.js";
 import {
   createSession,
+  geocode,
   getLocation,
   rememberName,
   recallName,
@@ -81,7 +81,7 @@ function TeaserCardFace({
   onVote?: (dir: "left" | "right") => void;
 }) {
   return (
-    <div className="rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">
+    <div className="rounded-[28px] bg-ink-soft border border-white/10 shadow-xl shadow-black/25 overflow-hidden">
       {/* Real (CC0) food photo over the gradient. If the image fails to load, it hides itself and
           the gradient + emoji underneath show through. */}
       <div className="relative h-36" style={{ background: card.gradient }}>
@@ -212,6 +212,89 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="text-xs font-semibold uppercase tracking-wider text-muted">{children}</span>;
 }
 
+/**
+ * Manually aim the search at a zip code or town. Geocodes on submit (Enter or the button) via the
+ * Worker, then writes the center into filters.lat/lng (+ a label) and clears any picked neighborhood.
+ * Lives inside the outer create <form>, so Enter here is caught and NOT allowed to submit that form.
+ */
+function LocationSearch({
+  filters,
+  onChange,
+}: {
+  filters: SessionFilters;
+  onChange: (f: SessionFilters) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function run() {
+    const query = q.trim();
+    if (!query || busy) return;
+    setBusy(true);
+    setErr("");
+    const hit = await geocode(query);
+    setBusy(false);
+    if (!hit) {
+      setErr("Couldn't find that. Try a zip, or \"Town, State\".");
+      return;
+    }
+    onChange({ ...filters, lat: hit.lat, lng: hit.lng, locationLabel: hit.label, area: undefined });
+    setQ("");
+  }
+
+  // Once a place is chosen, show it as a chip with a way back to the search box.
+  if (filters.locationLabel) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-acid bg-acid/10 px-3 py-1.5 text-sm text-cream">
+          <span aria-hidden>📍</span>
+          <span className="truncate">{filters.locationLabel}</span>
+        </span>
+        <button
+          type="button"
+          onClick={() =>
+            onChange({ ...filters, lat: undefined, lng: undefined, locationLabel: undefined })
+          }
+          className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-sm text-muted hover:bg-white/5"
+        >
+          Change
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault(); // don't submit the outer create form
+              run();
+            }
+          }}
+          placeholder="Zip code or town"
+          maxLength={120}
+          className={`${inputClass} flex-1 !py-2 !text-base`}
+        />
+        <button
+          type="button"
+          onClick={run}
+          disabled={!q.trim() || busy}
+          className="shrink-0 rounded-2xl border border-white/15 px-4 text-sm font-semibold hover:bg-white/5 disabled:opacity-50 transition"
+        >
+          {busy ? "..." : "Search"}
+        </button>
+      </div>
+      {err && <p className="text-xs text-flare">{err}</p>}
+    </div>
+  );
+}
+
 const segBase =
   "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors border";
 const segOn = "bg-ember text-ink border-ember";
@@ -243,11 +326,9 @@ function Chevron({ open }: { open: boolean }) {
 function FilterFields({
   filters,
   onChange,
-  showAreas,
 }: {
   filters: SessionFilters;
   onChange: (next: SessionFilters) => void;
-  showAreas: boolean;
 }) {
   const [pickyOpen, setPickyOpen] = useState(false);
 
@@ -360,39 +441,63 @@ function FilterFields({
         </div>
       </div>
 
-      {showAreas && (
-        <div className="flex flex-col gap-2">
-          <FieldLabel>Where, geographically</FieldLabel>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              aria-pressed={!filters.area}
-              onClick={() => onChange({ ...filters, area: undefined })}
-              className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                !filters.area ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
-              }`}
-            >
-              📍 Near me
-            </button>
-            {NEIGHBORHOODS.map((n) => {
-              const on = filters.area === n.value;
-              return (
-                <button
-                  key={n.value}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => onChange({ ...filters, area: n.value })}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    on ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
-                  }`}
-                >
-                  {n.label}
-                </button>
-              );
-            })}
-          </div>
+      <div className="flex flex-col gap-2">
+        <FieldLabel>Where, geographically</FieldLabel>
+        {/* The predefined NYC areas + "Near me" always show (this app is NYC-first). */}
+        <div className="flex flex-wrap gap-2">
+          {/* "Near me" is active only when nothing more specific is set (no neighborhood, no
+              manually-searched center). */}
+          {(() => {
+            const nearMe = !filters.area && filters.lat == null;
+            return (
+              <button
+                type="button"
+                aria-pressed={nearMe}
+                onClick={() =>
+                  onChange({
+                    ...filters,
+                    area: undefined,
+                    lat: undefined,
+                    lng: undefined,
+                    locationLabel: undefined,
+                  })
+                }
+                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                  nearMe ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
+                }`}
+              >
+                📍 Near me
+              </button>
+            );
+          })()}
+          {NEIGHBORHOODS.map((n) => {
+            const on = filters.area === n.value;
+            return (
+              <button
+                key={n.value}
+                type="button"
+                aria-pressed={on}
+                onClick={() =>
+                  onChange({
+                    ...filters,
+                    area: n.value,
+                    lat: undefined,
+                    lng: undefined,
+                    locationLabel: undefined,
+                  })
+                }
+                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                  on ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
+                }`}
+              >
+                {n.label}
+              </button>
+            );
+          })}
         </div>
-      )}
+        {/* ...or aim it somewhere else entirely (outside NYC, or when location is off). */}
+        <LocationSearch filters={filters} onChange={onChange} />
+      </div>
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Cravings (pick some, or leave it to fate)</FieldLabel>
@@ -724,7 +829,6 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
       setLocOff(l === null);
     });
   }, []);
-  const showAreas = loc != null && isInNYC(loc.lat, loc.lng);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -732,11 +836,14 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
     setBusy(true);
     try {
       rememberName(name.trim());
-      // Use the location resolved on mount; don't re-invoke geolocation here (it can block up to
-      // 5s again). If it's off, we already told the user results use a default area.
+      // Apply browser geolocation only in the pure "near me" case. If the host picked a neighborhood
+      // (area) or searched a zip/town (lat/lng already in filters), that explicit center wins and we
+      // must NOT overlay the device location on top of it. Don't re-invoke geolocation here either.
+      const usingExplicitCenter =
+        Boolean(filters.area) || (filters.lat != null && filters.lng != null);
       const code = await createSession(name.trim(), {
         ...filters,
-        ...(loc ?? {}),
+        ...(usingExplicitCenter ? {} : (loc ?? {})),
       });
       navigate(`/s/${code}`);
     } catch (err) {
@@ -748,13 +855,13 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <input className={inputClass} placeholder="Your name" value={name} maxLength={24} onChange={(e) => setName(e.target.value)} autoFocus />
-      <FilterFields filters={filters} onChange={setFilters} showAreas={showAreas} />
+      <FilterFields filters={filters} onChange={setFilters} />
       <button type="submit" disabled={!name.trim() || busy} className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition">
         {busy ? "Shuffling the deck..." : "Deal the cards"}
       </button>
       {locOff && (
         <p className="text-center text-sm text-ink/60">
-          location's off, so we'll use a default area. turn it on for spots near you.
+          location's off. search a zip or town above, or you'll get a default area.
         </p>
       )}
     </form>

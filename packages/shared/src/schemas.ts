@@ -45,6 +45,7 @@ export const sessionFiltersSchema = z.object({
   area: z.string().min(1).max(40).optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
+  locationLabel: z.string().min(1).max(80).optional(),
 });
 
 export const createSessionSchema = z.object({

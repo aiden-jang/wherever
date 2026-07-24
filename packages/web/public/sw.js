@@ -3,7 +3,7 @@
 
 // Bump this on any sw.js change: the activate handler deletes every cache that isn't the current
 // one, so a version bump purges stale entries on update.
-const CACHE = "wherever-v2";
+const CACHE = "wherever-v3";
 const SHELL = "/";
 
 self.addEventListener("install", (event) => {

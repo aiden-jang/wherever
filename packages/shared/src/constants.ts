@@ -248,5 +248,5 @@ export const FILTER_PRESETS: FilterPreset[] = [
   { label: "Cheap & close", emoji: "🏃", filters: { priceTiers: [1, 2], radiusMeters: 1600 } },
   { label: "Date night", emoji: "🕯️", filters: { priceTiers: [3, 4], amenities: ["reservable"] } },
   { label: "Big group", emoji: "👥", filters: { priceTiers: [2, 3], amenities: ["goodForGroups"] } },
-  { label: "Late night", emoji: "🌙", filters: { openNow: true } },
+  { label: "Late night", emoji: "🌙", filters: { openNow: true, amenities: ["servesCocktails"] } },
 ];

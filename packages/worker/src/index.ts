@@ -75,6 +75,63 @@ app.post("/api/sessions", async (c) => {
   return c.json({ code }, 201);
 });
 
+// Geocode a zip/town to a search center, keeping the Google key server-side. Rate-limited per IP
+// and edge-cached (geocodes are stable), so "search another area" costs at most one paid Geocoding
+// call per distinct query per cache window. Requires the Geocoding API enabled on the key.
+const GEOCODE_LIMIT = 20;
+const GEOCODE_WINDOW_MS = 60_000;
+const GEOCODE_CACHE_SECONDS = 86_400; // 1 day
+
+app.get("/api/geocode", async (c) => {
+  const q = (c.req.query("q") ?? "").trim();
+  if (q.length < 2 || q.length > 120) {
+    return c.json({ error: "Enter a zip code or town." }, 400);
+  }
+
+  const key = c.env.GOOGLE_PLACES_API_KEY;
+  if (!key) return c.json({ error: "Location search is not available." }, 404);
+
+  const ip = c.req.header("cf-connecting-ip") ?? "local";
+  const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(`geocode:${ip}`));
+  if (!(await limiter.hit(GEOCODE_LIMIT, GEOCODE_WINDOW_MS))) {
+    return c.json({ error: "Slow down on the location search." }, 429);
+  }
+
+  // Edge-cache by the normalized query so repeats don't re-bill Google.
+  const cache = caches.default;
+  const cacheUrl = new URL(c.req.url);
+  cacheUrl.searchParams.set("q", q.toLowerCase());
+  const cacheKey = new Request(cacheUrl.toString());
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
+  const upstream = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${key}`;
+  const res = await fetch(upstream);
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.warn(`geocode upstream ${res.status}: ${detail.slice(0, 300)}`);
+    return c.json({ error: "Location search failed." }, 502);
+  }
+  const data = (await res.json().catch(() => null)) as {
+    status?: string;
+    results?: {
+      formatted_address?: string;
+      geometry?: { location?: { lat: number; lng: number } };
+    }[];
+  } | null;
+
+  const top = data?.results?.[0];
+  const loc = top?.geometry?.location;
+  if (data?.status !== "OK" || !loc) {
+    return c.json({ error: "Couldn't find that place." }, 404);
+  }
+
+  const out = c.json({ lat: loc.lat, lng: loc.lng, label: top?.formatted_address ?? q });
+  out.headers.set("Cache-Control", `public, max-age=${GEOCODE_CACHE_SECONDS}`);
+  c.executionCtx.waitUntil(cache.put(cacheKey, out.clone()));
+  return out;
+});
+
 // Proxy a Google Place photo, keeping the API key server-side. The deck's imageUrl points here.
 // Edge-cached so the paid Place Photo SKU is fetched at most once per (photo, width).
 const PHOTO_MAX_WIDTH = 1600;

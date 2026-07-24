@@ -9,13 +9,15 @@ import { Confetti } from "./Confetti.js";
 import { buzz } from "./haptics.js";
 
 /**
- * A Google Maps directions deep link to the winning place, so tapping the button opens navigation
- * straight away (no share sheet). Includes the address in the destination so it resolves to the
- * right spot even for chains.
+ * A Google Maps link to the winning place itself (the place page, not turn-by-turn navigation), so
+ * tapping the button just opens the spot in Maps. Prefers the place's canonical Maps URI; otherwise
+ * a name+address search, with the address included so it resolves to the right spot even for chains.
  */
-function directionsUrl(r: Restaurant): string {
-  const destination = encodeURIComponent(`${r.name} ${r.address ?? ""}`.trim());
-  return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+function mapsUrl(r: Restaurant): string {
+  return (
+    r.googleMapsUri ??
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address ?? ""}`.trim())}`
+  );
 }
 
 function History({ visited }: { visited: VisitedPlace[] }) {
@@ -147,12 +149,12 @@ function WinnerScreen({
 
       <div className="mt-8 flex flex-col gap-3">
         <a
-          href={directionsUrl(restaurant)}
+          href={mapsUrl(restaurant)}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
         >
-          Get directions ↗
+          Open in Google Maps ↗
         </a>
         {isHost ? (
           <button

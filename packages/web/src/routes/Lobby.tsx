@@ -267,7 +267,7 @@ function VoterAvatars({
           <div
             key={p.id}
             className="relative"
-            title={`${p.displayName} — ${finished ? "done" : "still deciding"}`}
+            title={`${p.displayName}: ${finished ? "done" : "still deciding"}`}
           >
             <span
               className={`grid h-9 w-9 place-items-center rounded-full text-xs font-bold transition-colors ${
@@ -337,7 +337,7 @@ function WaitingDots() {
 function DemoBanner() {
   return (
     <div className="w-full max-w-sm mx-auto mb-5 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-center text-sm">
-      <p className="font-semibold text-cream">Demo mode — sample restaurants.</p>
+      <p className="font-semibold text-cream">Demo mode: sample restaurants.</p>
       <p className="mt-0.5 text-muted">
         This project hit its monthly Google API budget, so the live data is off. Everything still
         works; real spots are back on the 1st.
@@ -366,7 +366,7 @@ export default function Lobby() {
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
   const { session, deck, demo, superUsed, roundEndsAt, alreadyVoted, progress, match, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
-  const [copied, setCopied] = useState(false);
+  const [linkShown, setLinkShown] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
 
@@ -414,24 +414,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setTimeout(() => setCodeCopied(false), 1200);
   }
 
-  // Prefer the native share sheet (one tap to Messages/WhatsApp on mobile); fall back to copy.
-  async function shareInvite() {
-    const url = location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Wherever, Honestly",
-          text: "Where are we eating? Swipe, don't argue:",
-          url,
-        });
-        return;
-      } catch {
-        // User dismissed the sheet; fall through to copy.
-      }
-    }
-    await navigator.clipboard.writeText(url).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  // Reveal the invite link for manual copy. Deliberately NO clipboard write and NO native share
+  // sheet — the big code above is the primary share; this just surfaces the full link on demand.
+  function shareInvite() {
+    buzz(8);
+    setLinkShown(true);
+    setTimeout(() => setLinkShown(false), 6000);
   }
 
   // An error before any session state means a bad or expired code.
@@ -546,8 +534,13 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         </button>
         <p className="mt-1 text-xs text-muted">{codeCopied ? "Copied the code." : "Tap the code to copy it"}</p>
         <button onClick={shareInvite} className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm font-medium hover:bg-white/5 active:scale-95 transition">
-          {copied ? "Copied. Go paste it." : "Invite the group"}
+          Invite the group
         </button>
+        {linkShown && (
+          <p className="mx-auto mt-3 max-w-xs select-all break-all rounded-2xl border border-white/15 bg-ink px-4 py-2 text-xs text-cream">
+            {location.href}
+          </p>
+        )}
         {session?.filters && <FilterSummary filters={session.filters} />}
       </div>
 

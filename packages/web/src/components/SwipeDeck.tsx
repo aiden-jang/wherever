@@ -15,10 +15,34 @@ import { buzz } from "./haptics.js";
 const SWIPE_THRESHOLD = 110;
 const HINT_KEY = "wherever:swipe-hint-seen";
 
-function CardFace({ restaurant }: { restaurant: Restaurant }) {
+function CardFace({
+  restaurant,
+  photoUrl,
+  photoCount,
+  photoIdx,
+}: {
+  restaurant: Restaurant;
+  photoUrl: string | null | undefined;
+  photoCount: number;
+  photoIdx: number;
+}) {
   return (
     <>
-      <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-48" />
+      {/* data-card-photo marks the photo zone: TopCard's tap handler cycles photos here and opens
+          details everywhere else. */}
+      <div data-card-photo className="relative">
+        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="h-48" />
+        {photoCount > 1 && (
+          <div className="pointer-events-none absolute inset-x-3 top-2 flex gap-1">
+            {Array.from({ length: photoCount }).map((_, i) => (
+              <span
+                key={i}
+                className={`h-1 flex-1 rounded-full ${i === photoIdx ? "bg-white" : "bg-white/35"}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
       <div className="p-5">
         <div className="font-display text-2xl font-bold leading-tight line-clamp-2">
           {restaurant.name}
@@ -77,9 +101,22 @@ function TopCard({
   const rotate = useTransform(x, [-220, 220], reduce ? [0, 0] : [-16, 16]);
   const yes = useTransform(x, [30, 130], [0, 1]);
   const nope = useTransform(x, [-130, -30], [1, 0]);
-  // Distinguish a tap (open details) from a drag (a vote) by how far the pointer travelled between
-  // down and up, so opening details never fights the swipe gesture.
+  // Distinguish a tap from a drag (a vote) by how far the pointer travelled between down and up,
+  // so tapping never fights the swipe gesture.
   const pressStart = useRef<{ x: number; y: number } | null>(null);
+
+  // Photos: tapping the photo cycles through them; tapping the "i" badge or the text area opens
+  // details. Fall back to the single imageUrl when there's no gallery.
+  const photos =
+    restaurant.photos && restaurant.photos.length > 0
+      ? restaurant.photos
+      : restaurant.imageUrl
+        ? [restaurant.imageUrl]
+        : [];
+  const [photoIdx, setPhotoIdx] = useState(0);
+  useEffect(() => {
+    setPhotoIdx(0);
+  }, [restaurant.id]);
 
   return (
     <motion.div
@@ -97,7 +134,19 @@ function TopCard({
       onPointerUp={(e) => {
         const start = pressStart.current;
         pressStart.current = null;
-        if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) < TAP_MOVE_TOLERANCE) {
+        if (!start || Math.hypot(e.clientX - start.x, e.clientY - start.y) >= TAP_MOVE_TOLERANCE) {
+          return;
+        }
+        const target = e.target as HTMLElement;
+        // Tapping the photo (but not the "i" badge sitting on it) cycles photos; everywhere else
+        // — the badge and the text area below — opens details.
+        if (
+          photos.length > 1 &&
+          target.closest?.("[data-card-photo]") &&
+          !target.closest?.("[data-card-info]")
+        ) {
+          setPhotoIdx((i) => (i + 1) % photos.length);
+        } else {
           onOpenDetail(restaurant);
         }
       }}
@@ -111,9 +160,18 @@ function TopCard({
           : { x: exitDir === "right" ? 700 : -700, opacity: 0, transition: { duration: 0.28 } }
       }
     >
-      <CardFace restaurant={restaurant} />
-      {/* Signifier that the card opens details on tap; visual only, so taps pass through to the card. */}
-      <span className="pointer-events-none absolute bottom-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm">
+      <CardFace
+        restaurant={restaurant}
+        photoUrl={photos[photoIdx] ?? restaurant.imageUrl}
+        photoCount={photos.length}
+        photoIdx={photoIdx}
+      />
+      {/* The details affordance: a real hit target (data-card-info) so the tap handler opens details
+          when it's tapped, even though the surrounding photo cycles. */}
+      <span
+        data-card-info
+        className="absolute bottom-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm"
+      >
         i
       </span>
       <motion.span
@@ -267,7 +325,7 @@ export function SwipeDeck({
                 zIndex: -i - 1,
               }}
             >
-              <CardFace restaurant={r} />
+              <CardFace restaurant={r} photoUrl={r.imageUrl} photoCount={0} photoIdx={0} />
             </div>
           ))
           .reverse()}

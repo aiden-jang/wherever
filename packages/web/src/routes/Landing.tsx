@@ -39,13 +39,14 @@ const DEADPAN_LINES = [
   "Six good options. You'll still say 'idk.'",
   "This took your group 45 minutes last time. Not tonight.",
   "No standoff. No group chat. Just swipe.",
-  "Pick fast — the hangry one is turning.",
+  "Pick fast. The hangry one is turning.",
 ];
 
 interface TeaserCard {
   name: string;
   category: string;
   emoji: string;
+  image: string;
   price: string;
   rating: string;
   distance: string;
@@ -55,9 +56,9 @@ interface TeaserCard {
 }
 
 const CARDS: TeaserCard[] = [
-  { name: "Late Night Pizza Decisions", category: "Pizza", emoji: "🍕", price: "$", rating: "4.4", distance: "0.9 mi", gradient: "linear-gradient(135deg, #ff5e2c, #ff2d78)", rotation: "-8deg", offset: "translate(-38px, 26px)" },
-  { name: "Noodle Situation", category: "Ramen", emoji: "🍜", price: "$$", rating: "4.1", distance: "1.1 mi", gradient: "linear-gradient(135deg, #7c3aed, #ff2d78)", rotation: "5deg", offset: "translate(30px, 12px)" },
-  { name: "Probably Fine Tacos", category: "Tacos", emoji: "🌮", price: "$", rating: "4.6", distance: "0.5 mi", gradient: "linear-gradient(135deg, #ff8a3d, #ff5e2c)", rotation: "-1deg", offset: "translate(0, 0)" },
+  { name: "Late Night Pizza Decisions", category: "Pizza", emoji: "🍕", image: "/teaser-pizza.jpg", price: "$", rating: "4.4", distance: "0.9 mi", gradient: "linear-gradient(135deg, #ff5e2c, #ff2d78)", rotation: "-8deg", offset: "translate(-38px, 26px)" },
+  { name: "Noodle Situation", category: "Ramen", emoji: "🍜", image: "/teaser-ramen.jpg", price: "$$", rating: "4.1", distance: "1.1 mi", gradient: "linear-gradient(135deg, #7c3aed, #ff2d78)", rotation: "5deg", offset: "translate(30px, 12px)" },
+  { name: "Probably Fine Tacos", category: "Tacos", emoji: "🌮", image: "/teaser-tacos.jpg", price: "$", rating: "4.6", distance: "0.5 mi", gradient: "linear-gradient(135deg, #ff8a3d, #ff5e2c)", rotation: "-1deg", offset: "translate(0, 0)" },
 ];
 
 function StatusLine() {
@@ -81,8 +82,21 @@ function TeaserCardFace({
 }) {
   return (
     <div className="rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">
-      <div className="h-36 flex items-center justify-center text-6xl" style={{ background: card.gradient }}>
-        <span className="drop-shadow-lg">{card.emoji}</span>
+      {/* Real (CC0) food photo over the gradient. If the image fails to load, it hides itself and
+          the gradient + emoji underneath show through. */}
+      <div className="relative h-36" style={{ background: card.gradient }}>
+        <span className="absolute inset-0 flex items-center justify-center text-6xl">
+          <span className="drop-shadow-lg">{card.emoji}</span>
+        </span>
+        <img
+          src={card.image}
+          alt=""
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+          className="relative h-full w-full object-cover"
+        />
       </div>
       <div className="p-4">
         <div className="font-display text-lg font-semibold leading-tight">{card.name}</div>
@@ -449,7 +463,7 @@ function FilterFields({
         </div>
         <span className="text-xs text-muted">
           {(filters.priceTiers?.length ?? 0) === 0
-            ? "Any price — tap to pick exact levels"
+            ? "Any price. Tap to pick exact levels"
             : "Only the levels you picked"}
         </span>
       </div>
@@ -646,7 +660,7 @@ function FilterFields({
               <span className="flex flex-col">
                 <span className="font-semibold">Show who's voted</span>
                 <span className="text-xs text-muted">
-                  {filters.revealVoters ? "Everyone sees who's finished" : "Off — votes stay anonymous"}
+                  {filters.revealVoters ? "Everyone sees who's finished" : "Off. Votes stay anonymous"}
                 </span>
               </span>
               <span
@@ -682,7 +696,7 @@ function FilterFields({
               </div>
               <span className="text-xs text-muted">
                 {(filters.roundSeconds ?? 0) === 0
-                  ? "No timer — decide when everyone's done"
+                  ? "No timer. Decide when everyone's done"
                   : "When time's up, the votes so far decide"}
               </span>
             </div>
@@ -788,7 +802,7 @@ export default function Landing() {
         </h1>
 
         <p className="mt-5 text-lg text-muted max-w-md mx-auto lg:mx-0">
-          Nobody's actually "fine with whatever." Swipe on it — majority wins, the group chat loses.
+          Nobody's actually "fine with whatever." Swipe on it. Majority wins, the group chat loses.
         </p>
 
         <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">

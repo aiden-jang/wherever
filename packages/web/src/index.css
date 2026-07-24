@@ -82,6 +82,19 @@ body {
   }
 }
 
+/* Solid ink backdrop pinned to the viewport, behind the aurora. Because it's fixed it always fills
+   the visible screen no matter the scroll position, so any phantom scroll space a mobile browser
+   adds below the content (from its dynamic toolbar) shows ink, never a bare black band. It sits at a
+   lower z-index than the aurora so it never paints over the glow. */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background: var(--color-ink);
+  pointer-events: none;
+}
+
 .aurora {
   position: fixed;
   inset: -25%;

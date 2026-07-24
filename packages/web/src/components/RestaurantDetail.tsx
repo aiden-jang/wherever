@@ -4,6 +4,7 @@ import { AMENITY_OPTIONS } from "@wherever/shared";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { useScrollLock } from "../useScrollLock.js";
+import { useSwipeToDismiss } from "../useSwipeToDismiss.js";
 
 const chipClass =
   "inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs text-muted";
@@ -31,6 +32,12 @@ export function RestaurantDetail({
   onClose: () => void;
 }) {
   useScrollLock();
+  const { dragY, scrollRef, handlers } = useSwipeToDismiss(onClose);
+
+  // Hours: on phones, show only today's line by default and let the user expand to the full week
+  // (desktop always shows all — see the responsive classes below).
+  const [hoursExpanded, setHoursExpanded] = useState(false);
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -64,11 +71,27 @@ export function RestaurantDetail({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm max-h-[88dvh] overflow-y-auto rounded-t-3xl border border-white/10 bg-ink-soft shadow-2xl sm:rounded-3xl"
+        ref={(el) => {
+          scrollRef.current = el;
+        }}
+        className="relative w-full max-w-sm max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 bg-ink-soft shadow-2xl sm:rounded-3xl"
+        style={{
+          transform: dragY ? `translateY(${dragY}px)` : undefined,
+          transition: dragY ? "none" : "transform 0.2s ease",
+        }}
         onClick={(e) => e.stopPropagation()}
+        {...handlers}
         role="dialog"
         aria-label={`${restaurant.name} details`}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/45 text-lg text-white/90 backdrop-blur-sm hover:bg-black/65 transition-colors"
+        >
+          ✕
+        </button>
         {gallery.length > 1 ? (
           <div className="relative h-44 select-none bg-ink-soft">
             <img
@@ -170,16 +193,36 @@ export function RestaurantDetail({
             <p className="mt-3 text-sm text-muted">{restaurant.address}</p>
           )}
 
-          {restaurant.hours && restaurant.hours.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Hours</h3>
-              <ul className="mt-1 space-y-0.5 text-sm text-muted">
-                {restaurant.hours.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {restaurant.hours && restaurant.hours.length > 0 && (() => {
+            const hours = restaurant.hours!;
+            const hasToday = hours.some((l) => l.startsWith(today));
+            return (
+              <div className="mt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Hours</h3>
+                <ul className="mt-1 space-y-0.5 text-sm text-muted">
+                  {hours.map((line) => {
+                    // Collapsed on mobile = today only. Non-today lines hide on mobile but stay on
+                    // desktop (sm:list-item). If we can't spot today's line, don't hide anything.
+                    const hideOnMobile = hasToday && !hoursExpanded && !line.startsWith(today);
+                    return (
+                      <li key={line} className={hideOnMobile ? "hidden sm:list-item" : ""}>
+                        {line}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {hasToday && !hoursExpanded && (
+                  <button
+                    type="button"
+                    onClick={() => setHoursExpanded(true)}
+                    className="mt-1 text-xs font-semibold text-ember sm:hidden"
+                  >
+                    See all hours
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="mt-5 flex flex-col gap-2">
             <a
@@ -209,9 +252,6 @@ export function RestaurantDetail({
                 )}
               </div>
             )}
-            <button type="button" onClick={onClose} className={actionClass}>
-              Close
-            </button>
           </div>
         </div>
       </div>

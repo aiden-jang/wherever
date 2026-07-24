@@ -896,7 +896,7 @@ export default function Landing() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <main className="flex-1 grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto w-full px-6 pb-16">
+    <main className="flex-1 grid lg:grid-cols-2 gap-4 lg:gap-12 items-center max-w-6xl mx-auto w-full px-6 pb-8 lg:pb-16">
       <section className="text-center lg:text-left">
         <span className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-4 py-1.5 text-xs text-muted">
           <span className="h-2 w-2 rounded-full bg-acid animate-pulse" />
@@ -924,7 +924,7 @@ export default function Landing() {
         <StatusLine />
       </section>
 
-      <section className="relative h-[420px] flex items-center justify-center">
+      <section className="relative h-[340px] lg:h-[420px] flex items-center justify-center">
         <div className="float relative h-full w-full flex items-center justify-center" style={{ animation: "float-soft 6s ease-in-out infinite" }}>
           <TeaserStack />
         </div>

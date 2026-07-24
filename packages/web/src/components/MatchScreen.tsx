@@ -7,14 +7,8 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { buzz } from "./haptics.js";
-import { renderShareCard } from "./shareCard.js";
 
-const APP_URL = "wherever.aidenjang.com";
-
-/**
- * Share the verdict. Prefers the native share sheet with a generated image (the viral bit);
- * falls back to sharing text, then to copying. Returns how it resolved so the UI can confirm.
- */
+/** The place's own Google Maps URI when we have it, else a name+address search on Maps. */
 function directionsUrl(r: Restaurant): string {
   return (
     r.googleMapsUri ??
@@ -22,30 +16,24 @@ function directionsUrl(r: Restaurant): string {
   );
 }
 
+/**
+ * Combined action: share the winning place as a Google Maps link through the native share sheet, so
+ * one button both tells the group it's settled AND gives everyone the way there. No image is
+ * generated and nothing is downloaded; if there's no share sheet we copy the text + link instead.
+ */
 async function shareVerdict(restaurant: Restaurant): Promise<"shared" | "copied"> {
-  // Combined action: the share now carries the directions link too, so one button both tells the
-  // group it's settled AND gives everyone the way there (the separate "Get directions" button is gone).
-  const text = `We're eating at ${restaurant.name}. Majority ruled, the group chat lost. Directions: ${directionsUrl(restaurant)} · ${APP_URL}`;
-  const blob = await renderShareCard(restaurant).catch(() => null);
-  const file = blob ? new File([blob], "wherever.png", { type: "image/png" }) : null;
+  const text = `We're eating at ${restaurant.name}. Majority ruled, the group chat lost.`;
+  const url = directionsUrl(restaurant);
 
-  if (file && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ title: "Wherever, Honestly", text, files: [file] });
-      return "shared";
-    } catch {
-      // User dismissed the sheet or it failed; fall through to text/copy.
-    }
-  }
   if (navigator.share) {
     try {
-      await navigator.share({ title: "Wherever, Honestly", text });
+      await navigator.share({ title: "Wherever, Honestly", text, url });
       return "shared";
     } catch {
-      /* fall through */
+      // User dismissed the sheet or it failed; fall through to copy.
     }
   }
-  await navigator.clipboard.writeText(text).catch(() => {});
+  await navigator.clipboard.writeText(`${text} ${url}`).catch(() => {});
   return "copied";
 }
 

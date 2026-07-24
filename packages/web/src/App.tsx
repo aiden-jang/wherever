@@ -9,7 +9,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <BrowserRouter>
-        <div className="grain min-h-full flex flex-col">
+        <div className="grain min-h-dvh flex flex-col">
         <div className="aurora" aria-hidden />
 
         <header className="flex items-center justify-between px-6 py-5 max-w-6xl mx-auto w-full">

@@ -139,6 +139,28 @@ function WinnerScreen({
             <span className="text-white/20">·</span>
             <span className="whitespace-nowrap">{distanceLabel(restaurant.distanceMeters)}</span>
           </div>
+          {/*
+            Whether it is open, on the winner itself.
+            The detail sheet has said this all along, but only after a tap, and this is the one fact
+            that can undo the decision the group just made: a closed door after everyone has agreed
+            and started walking is the failure this screen exists to prevent. Permanent closure
+            outranks today's hours, same order the detail sheet uses.
+          */}
+          {(() => {
+            const shut =
+              restaurant.businessStatus === "CLOSED_PERMANENTLY"
+                ? "Permanently closed"
+                : restaurant.businessStatus === "CLOSED_TEMPORARILY"
+                  ? "Temporarily closed"
+                  : null;
+            if (shut) return <p className="mt-2 text-sm font-semibold text-flare">{shut}</p>;
+            if (restaurant.openNow == null) return null;
+            return (
+              <p className={`mt-2 text-sm font-semibold ${restaurant.openNow ? "text-acid" : "text-flare"}`}>
+                {restaurant.openNow ? "Open now" : "Closed right now"}
+              </p>
+            );
+          })()}
           <p className="mt-3 text-xs text-muted">Tap for hours, phone &amp; directions</p>
         </div>
       </button>

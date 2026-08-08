@@ -10,6 +10,15 @@ export interface Vote {
   direction: SwipeDirection;
   /** A super-like: a right-swipe that counts extra toward winning (see SUPER_WEIGHT). */
   super?: boolean;
+  /**
+   * A veto: a left-swipe that removes the place from contention outright, however many people
+   * wanted it. The mirror of a super-like, and the one thing majority rule can't express — "I will
+   * not eat there" is a different statement from "I'd rather not", and a group that can't say it
+   * ends up back in the group chat, which is the one thing this app is against.
+   *
+   * Still a vote, so the person counts as having answered that card.
+   */
+  veto?: boolean;
 }
 
 /** A super-like counts this much toward picking the winner (a normal right-swipe counts 1). */
@@ -49,10 +58,24 @@ export function tallyScores(votes: Vote[]): Map<string, number> {
 }
 
 /**
- * Majority wins: the restaurant with the most right-swipes takes it. A left
- * swipe is a downvote, never a veto. Ties are broken by deck order (the earlier
- * card wins), which keeps the result deterministic. Returns null when nobody
- * swiped right on anything.
+ * Restaurants somebody vetoed. One is enough — that is what makes it a veto rather than a vote.
+ */
+export function vetoedRestaurantIds(votes: Vote[]): Set<string> {
+  const out = new Set<string>();
+  for (const v of votes) {
+    if (v.veto) out.add(v.restaurantId);
+  }
+  return out;
+}
+
+/**
+ * Majority wins: the restaurant with the most right-swipes takes it. Ties are broken by deck order
+ * (the earlier card wins), which keeps the result deterministic. Returns null when nobody swiped
+ * right on anything, or when every place that got a right-swipe was also vetoed.
+ *
+ * A plain left swipe is still only a downvote. A veto is the exception, and it is absolute: it wins
+ * over any number of right-swipes, including super-likes, because a veto that a big enough majority
+ * could overrule would not be a veto.
  */
 export function decideWinner(
   deck: Restaurant[],
@@ -60,9 +83,11 @@ export function decideWinner(
 ): DecisionResult | null {
   const scores = tallyScores(votes); // weighted — decides the winner
   const counts = tallyRightSwipes(votes); // unweighted — the headcount we display
+  const vetoed = vetoedRestaurantIds(votes);
   let best: DecisionResult | null = null;
   let bestScore = 0;
   for (const restaurant of deck) {
+    if (vetoed.has(restaurant.id)) continue;
     const score = scores.get(restaurant.id) ?? 0;
     if (score === 0) continue;
     // Strict greater-than means the first card seen at a given score keeps the

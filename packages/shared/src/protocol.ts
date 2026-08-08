@@ -30,6 +30,11 @@ export interface SwipeMessage {
   direction: SwipeDirection;
   /** A super-like (weighted right-swipe). Server enforces one per participant per round. */
   super?: boolean;
+  /**
+   * A veto (absolute left-swipe): removes the place from contention whatever the majority wanted.
+   * Server enforces one per participant per round — the client hiding a spent button is not a rule.
+   */
+  veto?: boolean;
 }
 
 /** Host can end the round early and let the current tally decide. */
@@ -70,6 +75,8 @@ export interface DeckMessage {
   alreadyVoted?: string[];
   /** Whether this client already spent its one super-like this round (for resume after reconnect). */
   superUsed?: boolean;
+  /** Whether this client already spent its one veto this round (for resume after reconnect). */
+  vetoUsed?: boolean;
   /** Absolute epoch-ms deadline when the round auto-decides; omitted when there's no timer. */
   roundEndsAt?: number;
   /** True when this is the sample deck served because the monthly live-data budget is spent. */

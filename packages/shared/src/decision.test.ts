@@ -4,6 +4,7 @@ import {
   decideWinner,
   tallyRightSwipes,
   tallyScores,
+  vetoedRestaurantIds,
   type Vote,
 } from "./decision.js";
 import type { Restaurant } from "./types.js";
@@ -162,5 +163,51 @@ describe("countFinished", () => {
 
   it("returns 0 for an empty deck", () => {
     expect(countFinished([], ["p1"], 0)).toBe(0);
+  });
+});
+
+describe("veto", () => {
+  const yes = (participantId: string, restaurantId: string, sup = false): Vote => ({
+    participantId,
+    restaurantId,
+    direction: "right",
+    ...(sup ? { super: true } : {}),
+  });
+  const veto = (participantId: string, restaurantId: string): Vote => ({
+    participantId,
+    restaurantId,
+    direction: "left",
+    veto: true,
+  });
+
+  it("removes a place from contention no matter how many wanted it", () => {
+    const votes = [yes("p1", "a"), yes("p2", "a"), yes("p3", "a"), veto("p4", "a"), yes("p1", "b")];
+    // "a" has three right-swipes to "b"'s one, and still loses.
+    expect(decideWinner(deck, votes)?.restaurant.id).toBe("b");
+  });
+
+  it("beats super-likes too, or it would not be a veto", () => {
+    const votes = [yes("p1", "a", true), yes("p2", "a", true), veto("p3", "a"), yes("p1", "c")];
+    expect(decideWinner(deck, votes)?.restaurant.id).toBe("c");
+  });
+
+  it("one veto is enough", () => {
+    expect(vetoedRestaurantIds([veto("p1", "a")])).toEqual(new Set(["a"]));
+  });
+
+  it("leaves no winner when every wanted place was vetoed", () => {
+    const votes = [yes("p1", "a"), veto("p2", "a"), yes("p1", "b"), veto("p3", "b")];
+    expect(decideWinner(deck, votes)).toBeNull();
+  });
+
+  it("still counts as that person answering the card", () => {
+    // Three-card deck: a veto plus two plain swipes means they are done, not stuck on two of three.
+    const votes = [veto("p1", "a"), { participantId: "p1", restaurantId: "b", direction: "left" as const }, yes("p1", "c")];
+    expect(countFinished(votes, ["p1"], deck.length)).toBe(1);
+  });
+
+  it("does not count toward the winner's headcount", () => {
+    const votes = [yes("p1", "b"), yes("p2", "b"), veto("p3", "a")];
+    expect(decideWinner(deck, votes)).toEqual({ restaurant: deck[1], rightSwipes: 2 });
   });
 });

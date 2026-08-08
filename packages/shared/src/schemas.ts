@@ -67,6 +67,7 @@ const swipeSchema = z.object({
   restaurantId: z.string().min(1),
   direction: z.union([z.literal("left"), z.literal("right")]),
   super: z.boolean().optional(),
+  veto: z.boolean().optional(),
 });
 
 const decideNowSchema = z.object({ type: z.literal("decide_now") });

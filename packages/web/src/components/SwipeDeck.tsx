@@ -216,12 +216,15 @@ export function SwipeDeck({
   restaurants,
   alreadyVoted = [],
   superSpent = false,
+  vetoSpent = false,
   onSwipe,
 }: {
   restaurants: Restaurant[];
   alreadyVoted?: string[];
   superSpent?: boolean;
-  onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean) => void;
+  /** Seeded from the server so a reconnect can't hand back a spent veto. */
+  vetoSpent?: boolean;
+  onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean, isVeto?: boolean) => void;
 }) {
   // Resume after a reconnect: start at the first card this client has not voted.
   const [index, setIndex] = useState(() => {
@@ -232,6 +235,7 @@ export function SwipeDeck({
   const [exitDir, setExitDir] = useState<SwipeDirection>("right");
   // One super-like per round; seeded from the server (survives reconnect) then set locally on use.
   const [superUsed, setSuperUsed] = useState(superSpent);
+  const [vetoUsed, setVetoUsed] = useState(vetoSpent);
   // The card whose full details are open in the sheet (null = closed). Tapping a card opens it;
   // it never blocks voting since a drag isn't a tap.
   const [detail, setDetail] = useState<Restaurant | null>(null);
@@ -258,17 +262,18 @@ export function SwipeDeck({
   // one card twice and skipping the next, which then never gets voted and stalls completion.
   const indexRef = useRef(index);
   const commit = useCallback(
-    (dir: SwipeDirection, isSuper = false) => {
+    (dir: SwipeDirection, isSuper = false, isVeto = false) => {
       const i = indexRef.current;
       const current = restaurants[i];
       if (!current) return;
       indexRef.current = i + 1;
       // A firmer triple-buzz for a super-like; light on a like, double on a pass.
-      buzz(isSuper ? [12, 30, 12] : dir === "right" ? 12 : [8, 20]);
+      buzz(isVeto ? [20, 40, 20, 40] : isSuper ? [12, 30, 12] : dir === "right" ? 12 : [8, 20]);
       if (isSuper) setSuperUsed(true);
+      if (isVeto) setVetoUsed(true);
       dismissHint();
       setExitDir(dir);
-      onSwipe(current.id, dir, isSuper);
+      onSwipe(current.id, dir, isSuper, isVeto);
       setIndex(i + 1);
     },
     [restaurants, onSwipe, dismissHint],
@@ -362,6 +367,19 @@ export function SwipeDeck({
         </button>
         <button
           type="button"
+          aria-label={vetoUsed ? "Veto used" : "Veto (one per round, kills it outright)"}
+          disabled={vetoUsed}
+          onClick={() => commit("left", false, true)}
+          className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
+            vetoUsed
+              ? "border-white/10 text-white/25"
+              : "border-flare text-flare hover:scale-105 active:scale-95 hover:bg-flare/10"
+          }`}
+        >
+          🚫
+        </button>
+        <button
+          type="button"
           aria-label={superUsed ? "Super-like used" : "Super-like (one per round)"}
           disabled={superUsed}
           onClick={() => commit("right", true)}
@@ -384,7 +402,8 @@ export function SwipeDeck({
       </div>
       <p className="mt-3 text-center text-sm text-muted tabular-nums">
         {index + 1} / {restaurants.length}
-        {!superUsed && <span className="ml-2 text-grape">· ⭐ = super, once per round</span>}
+        {!superUsed && <span className="ml-2 text-grape">· ⭐ super</span>}
+        {!vetoUsed && <span className="ml-2 text-flare">· 🚫 veto, kills it</span>}
       </p>
 
       {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}

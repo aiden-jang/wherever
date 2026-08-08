@@ -97,7 +97,7 @@ export class SessionRoom extends DurableObject<Env> {
       case "start_round":
         return this.handleStartRound(ws);
       case "swipe":
-        return this.handleSwipe(ws, msg.restaurantId, msg.direction, msg.super ?? false);
+        return this.handleSwipe(ws, msg.restaurantId, msg.direction, msg.super ?? false, msg.veto ?? false);
       case "decide_now":
         return this.handleDecideNow(ws);
       case "again":
@@ -286,11 +286,13 @@ export class SessionRoom extends DurableObject<Env> {
       const mine = votes.filter((v) => v.participantId === identity.participantId);
       const alreadyVoted = mine.map((v) => v.restaurantId);
       const superUsed = mine.some((v) => v.super);
+      const vetoUsed = mine.some((v) => v.veto);
       this.send(ws, {
         type: "deck",
         restaurants: deck,
         alreadyVoted,
         superUsed,
+        vetoUsed,
         demo: await this.isDemoMode(),
         roundEndsAt: (await this.ctx.storage.get<number>("roundEndsAt")) ?? undefined,
       });
@@ -337,6 +339,7 @@ export class SessionRoom extends DurableObject<Env> {
     restaurantId: string,
     direction: SwipeDirection,
     isSuper: boolean,
+    isVeto: boolean,
   ): Promise<void> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "swiping") return;
@@ -354,17 +357,32 @@ export class SessionRoom extends DurableObject<Env> {
       );
       if (spent) superLike = false;
     }
+    // One veto per participant per round, enforced here for the same reason as the super-like: the
+    // client hides a spent button, and a hidden button is not a rule. A veto removes a place from
+    // contention outright, so a client that simply sent the flag twice could quietly clear the deck.
+    let vetoing = isVeto && direction === "left";
+    if (vetoing) {
+      const spent = Object.values(votes).some(
+        (v) => v.participantId === att.participantId && v.veto,
+      );
+      if (spent) vetoing = false;
+    }
     // Keyed by participant+restaurant: a re-vote overwrites, never double-counts.
     votes[`${att.participantId}:${restaurantId}`] = {
       participantId: att.participantId,
       restaurantId,
       direction,
       ...(superLike ? { super: true } : {}),
+      ...(vetoing ? { veto: true } : {}),
     };
     await this.ctx.storage.put("votes", votes);
 
     // Let the whole room feel the super-like — reuses the floating-reaction channel.
     if (superLike) this.broadcast({ type: "reaction", emoji: "⭐", from: att.displayName });
+    // A veto is anonymous, like every other vote in a round: the room learns that one landed, never
+    // who spent it or on what. Naming it would turn "I can't eat there" into an argument, which is
+    // the conversation this app exists to avoid.
+    if (vetoing) this.broadcast({ type: "reaction", emoji: "🚫", from: "" });
 
     await this.evaluate(meta);
   }

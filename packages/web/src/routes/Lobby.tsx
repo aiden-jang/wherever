@@ -261,7 +261,7 @@ function VoterAvatars({
 }) {
   const done = new Set(finishedIds);
   return (
-    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
       {participants.map((p) => {
         const finished = done.has(p.id);
         return (
@@ -470,8 +470,17 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   }
 
   if (session?.status === "swiping") {
+    /*
+     * Tighter vertical rhythm here than on the other screens, because this one has to fit.
+     *
+     * The swiping column ran 68px to 768px, and a 1280x720 laptop cut it off at 720 — so the
+     * reaction bar, the only signal during a round that anyone else is in the session at all, was
+     * below the fold and effectively did not exist. On a phone the 80px of overflow lands exactly
+     * where the browser chrome does. The card itself stays at 360: CardFace needs about 340 for the
+     * photo plus two lines of name, so the space had to come out of the gaps instead.
+     */
     return (
-      <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
+      <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-4">
         {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
         <LiveRegion message={announcement} />
         <Toasts toasts={allToasts} />
@@ -493,7 +502,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
             )}
             {progress && progress.totalParticipants > 0 && (
-              <p className="mt-6 text-sm text-muted">
+              <p className="mt-3 text-sm text-muted">
                 {progress.finishedCount} of {progress.totalParticipants} done
                 {isHost && progress.finishedCount < progress.totalParticipants && (
                   <button
@@ -505,7 +514,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                 )}
               </p>
             )}
-            <div className="mt-6">
+            <div className="mt-3">
               <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
             </div>
           </>

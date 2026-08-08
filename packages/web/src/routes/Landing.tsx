@@ -112,7 +112,10 @@ function TeaserCardFace({
       </div>
       {front && (
         <>
-          <span className="absolute top-4 left-4 rotate-[-12deg] rounded-lg border-2 border-acid px-3 py-1 text-xs font-bold tracking-widest text-acid">
+          {/* Backed, not bare. Acid green on a bright pizza photo at 12px reads as a scribble across
+              the crust rather than as a stamp — the one bit of the hero card that says what the app
+              does. The swipe stamps get the same treatment for the same reason. */}
+          <span className="absolute top-4 left-4 rotate-[-12deg] rounded-lg border-2 border-acid bg-ink/70 px-3 py-1 text-xs font-bold tracking-widest text-acid backdrop-blur-[2px]">
             LET&apos;S EAT
           </span>
           <div className="flex gap-3 px-4 pb-4">

@@ -31,7 +31,7 @@ function CardFace({
       {/* data-card-photo marks the photo zone: TopCard's tap handler cycles photos here and opens
           details everywhere else. */}
       <div data-card-photo className="relative">
-        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="h-48" />
+        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="h-[clamp(132px,24dvh,192px)]" />
         {photoCount > 1 && (
           <div className="pointer-events-none absolute inset-x-3 top-2 flex gap-1">
             {Array.from({ length: photoCount }).map((_, i) => (
@@ -175,13 +175,13 @@ function TopCard({
         i
       </span>
       <motion.span
-        className="absolute top-6 left-6 rotate-[-14deg] rounded-xl border-2 border-acid px-4 py-1.5 text-lg font-extrabold tracking-widest text-acid"
+        className="absolute top-6 left-6 rotate-[-14deg] rounded-xl border-2 border-acid bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-acid backdrop-blur-[2px]"
         style={{ opacity: yes }}
       >
         LET&apos;S EAT
       </motion.span>
       <motion.span
-        className="absolute top-6 right-6 rotate-[14deg] rounded-xl border-2 border-flare px-4 py-1.5 text-lg font-extrabold tracking-widest text-flare"
+        className="absolute top-6 right-6 rotate-[14deg] rounded-xl border-2 border-flare bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-flare backdrop-blur-[2px]"
         style={{ opacity: nope }}
       >
         HARD PASS
@@ -194,13 +194,13 @@ function TopCard({
 export function DeckSkeleton() {
   return (
     <div className="w-full max-w-sm mx-auto">
-      <div className="relative h-[360px]">
+      <div className="relative h-[clamp(288px,48dvh,360px)]">
         <div
           className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden animate-pulse"
           style={{ transform: "scale(0.95) translateY(14px)" }}
         />
         <div className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden animate-pulse">
-          <div className="h-48 bg-white/5" />
+          <div className="h-[clamp(132px,24dvh,192px)] bg-white/5" />
           <div className="p-5 space-y-3">
             <div className="h-6 w-2/3 rounded bg-white/10" />
             <div className="h-4 w-1/2 rounded bg-white/5" />
@@ -313,7 +313,7 @@ export function SwipeDeck({
 
   return (
     <div className="w-full max-w-sm mx-auto">
-      <div className="relative h-[360px]">
+      <div className="relative h-[clamp(288px,48dvh,360px)]">
         {/* Background cards, peeking behind the top one. */}
         {upcoming
           .map((r, i) => (
@@ -349,7 +349,9 @@ export function SwipeDeck({
         </p>
       )}
 
-      <div className="mt-8 flex items-center justify-center gap-5">
+      {/* mt-4, not mt-8: the whole swiping column has to clear a 720px laptop, and the buttons stay
+          at 64px because they are the primary target on a phone. See the main in Lobby. */}
+      <div className="mt-4 flex items-center justify-center gap-5">
         <button
           type="button"
           aria-label="Hard pass"

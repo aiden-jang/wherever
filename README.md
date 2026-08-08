@@ -92,8 +92,10 @@ feels solid or broken:
   provider change or a bad upstream response cannot silently corrupt the deck.
 - **Session lifecycle.** The full join / vote / decide / reconnect flow runs against the **real
   Workers runtime** via `@cloudflare/vitest-pool-workers`, with migrations applied to an in-memory
-  D1 per file. Over 50 tests across the three layers, covering the decision core (including
-  super-like weighting), the filter predicates, the usage-meter cap, and the session lifecycle.
+  D1 per file. 54 tests in all — 16 in `shared`, 38 in the Worker — covering the decision core
+  (including super-like weighting), the filter predicates, the usage-meter cap, and the session
+  lifecycle. The web package has none: everything worth asserting was pushed down into `shared` and
+  the Worker so it could be tested without a browser, which is why the split is lopsided.
 
 ## Running locally
 

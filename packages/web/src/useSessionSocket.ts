@@ -17,8 +17,8 @@ export interface Progress {
 }
 
 export type MatchState =
-  | { kind: "match"; restaurant: Restaurant; rightSwipes: number; totalParticipants: number }
-  | { kind: "none" }
+  | { kind: "match"; restaurant: Restaurant; rightSwipes: number; totalParticipants: number; vetoedCount: number }
+  | { kind: "none"; vetoedCount: number }
   | null;
 
 /** A reaction floating on screen; auto-removed after its animation. */
@@ -108,9 +108,10 @@ export function useSessionSocket(code: string, displayName: string) {
             restaurant: msg.restaurant,
             rightSwipes: msg.rightSwipes,
             totalParticipants: msg.totalParticipants,
+            vetoedCount: msg.vetoedCount ?? 0,
           });
         case "no_match":
-          return setMatch({ kind: "none" });
+          return setMatch({ kind: "none", vetoedCount: msg.vetoedCount ?? 0 });
         case "history":
           return setVisited(msg.visited);
         case "reaction": {

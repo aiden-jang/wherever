@@ -105,11 +105,21 @@ export interface MatchMessage {
   restaurant: Restaurant;
   rightSwipes: number;
   totalParticipants: number;
+  /** How many places somebody vetoed, so the winner doesn't look arbitrary. */
+  vetoedCount?: number;
 }
 
-/** Round ended with nobody swiping right on anything. */
+/**
+ * Round ended with no winner.
+ *
+ * `vetoedCount` separates the two ways that happens, which read completely differently to the group:
+ * nobody wanted anything, or people wanted things and every one of them got vetoed. Saying "nobody
+ * liked anything" in the second case is simply false, and it is the case where somebody most wants
+ * to know what happened.
+ */
 export interface NoMatchMessage {
   type: "no_match";
+  vetoedCount?: number;
 }
 
 /** Places this group has already landed on, excluded from future decks. */

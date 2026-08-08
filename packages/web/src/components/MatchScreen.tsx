@@ -55,12 +55,20 @@ export function MatchScreen({
   const navigate = useNavigate();
 
   if (match.kind === "none") {
+    // Two very different rounds end here, and saying "nobody liked anything" about the second one
+    // is just false — people wanted things, and every one of them got vetoed. That is also the
+    // case where somebody most wants to know what actually happened to their pick.
+    const allVetoed = match.vetoedCount > 0;
     return (
       <div className="text-center max-w-sm mx-auto">
-        <div className="text-6xl">🤷</div>
-        <h1 className="mt-4 font-display text-4xl font-bold">Nobody liked anything.</h1>
+        <div className="text-6xl">{allVetoed ? "🚫" : "🤷"}</div>
+        <h1 className="mt-4 font-display text-4xl font-bold">
+          {allVetoed ? "Everything got vetoed." : "Nobody liked anything."}
+        </h1>
         <p className="mt-3 text-muted">
-          A clean sweep of nos. Genuinely impressive. Cereal is still on the table, spiritually.
+          {allVetoed
+            ? `${match.vetoedCount} place${match.vetoedCount === 1 ? "" : "s"} struck off, and whatever survived, nobody wanted. Run it back with a wider net.`
+            : "A clean sweep of nos. Genuinely impressive. Cereal is still on the table, spiritually."}
         </p>
         {isHost ? (
           <button
@@ -93,7 +101,7 @@ function WinnerScreen({
   onAgain: () => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
-  const { restaurant, rightSwipes, totalParticipants } = match;
+  const { restaurant, rightSwipes, totalParticipants, vetoedCount } = match;
   const [detailOpen, setDetailOpen] = useState(false);
 
   // Celebrate once when the verdict lands: confetti + a short victory buzz.
@@ -168,6 +176,14 @@ function WinnerScreen({
       <p className="mt-4 text-muted">
         {rightSwipes} of {totalParticipants} wanted it. The rest will cope.
       </p>
+      {/* Without this a vetoed favourite just silently isn't here, which reads as the tally being
+          wrong rather than as somebody having used their one no. Count only — who spent it stays
+          private, the same as every other vote in a round. */}
+      {vetoedCount > 0 && (
+        <p className="mt-1 text-sm text-muted/70">
+          🚫 {vetoedCount} {vetoedCount === 1 ? "place was" : "places were"} vetoed out of the running.
+        </p>
+      )}
 
       <div className="mt-8 flex flex-col gap-3">
         <a

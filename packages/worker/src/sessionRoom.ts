@@ -5,6 +5,7 @@ import {
   clientMessageSchema,
   finishedParticipantIds,
   decideWinner,
+  vetoedRestaurantIds,
   type DecisionResult,
   type Participant,
   type Restaurant,
@@ -447,7 +448,7 @@ export class SessionRoom extends DurableObject<Env> {
       await this.recordVisit(meta.code, result.restaurant.id, result.restaurant.name);
     }
 
-    this.broadcastResult(result, this.connectedParticipants().length);
+    this.broadcastResult(result, this.connectedParticipants().length, vetoedRestaurantIds(votes).size);
     await this.broadcastHistory(meta.code);
     await this.broadcastState();
   }
@@ -628,15 +629,18 @@ export class SessionRoom extends DurableObject<Env> {
   private async sendResult(ws: WebSocket): Promise<void> {
     const result = await this.ctx.storage.get<DecisionResult | null>("winner");
     const total = this.connectedParticipants().length;
+    const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
+    const vetoedCount = vetoedRestaurantIds(Object.values(votes)).size;
     if (result) {
       this.send(ws, {
         type: "match",
         restaurant: result.restaurant,
         rightSwipes: result.rightSwipes,
         totalParticipants: total,
+        vetoedCount,
       });
     } else {
-      this.send(ws, { type: "no_match" });
+      this.send(ws, { type: "no_match", vetoedCount });
     }
   }
 
@@ -647,6 +651,7 @@ export class SessionRoom extends DurableObject<Env> {
   private broadcastResult(
     result: DecisionResult | null,
     total: number,
+    vetoedCount: number,
   ): void {
     if (result) {
       this.broadcast({
@@ -654,9 +659,10 @@ export class SessionRoom extends DurableObject<Env> {
         restaurant: result.restaurant,
         rightSwipes: result.rightSwipes,
         totalParticipants: total,
+        vetoedCount,
       });
     } else {
-      this.broadcast({ type: "no_match" });
+      this.broadcast({ type: "no_match", vetoedCount });
     }
   }
 

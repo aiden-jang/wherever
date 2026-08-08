@@ -375,7 +375,14 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     if (match?.kind === "match") {
       setAnnouncement(`Decided. Everyone's eating at ${match.restaurant.name}.`);
     } else if (match?.kind === "none") {
-      setAnnouncement("Nobody liked anything.");
+      // Has to say the same thing the screen does. Announcing "nobody liked anything" after a round
+      // decided by vetoes tells a screen-reader user the one wrong reason, and they have no picture
+      // to correct it against.
+      setAnnouncement(
+        match.vetoedCount > 0
+          ? `Everything got vetoed. ${match.vetoedCount} ${match.vetoedCount === 1 ? "place" : "places"} struck off.`
+          : "Nobody liked anything.",
+      );
     }
   }, [match]);
   // Only surface a banner once we've connected at least once: "connecting" then is a drop,

@@ -109,7 +109,14 @@ function FilterSummary({ filters }: { filters: SessionFilters }) {
   );
 }
 
-/** Three-beat explainer for people who land here from a shared link and don't know the rules. */
+/**
+ * Three-beat explainer for people who land here from a shared link and don't know the rules.
+ *
+ * The veto gets its own line rather than a fourth card. "Majority rules" is no longer the whole
+ * truth, and somebody who never learns the exception either never spends their veto or watches
+ * their pick vanish without knowing why — but three beats is the joke, and a fourth column would
+ * squeeze all of them on a phone.
+ */
 function HowItWorks() {
   const steps = [
     { emoji: "👆", label: "Everyone swipes" },
@@ -129,6 +136,9 @@ function HowItWorks() {
           </span>
         </div>
       ))}
+      <p className="col-span-3 mt-3 text-center text-xs text-muted">
+        🚫 One veto each. It kills a place outright, however many people wanted it.
+      </p>
     </div>
   );
 }

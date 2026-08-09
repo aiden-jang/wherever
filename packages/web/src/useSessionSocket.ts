@@ -17,7 +17,7 @@ export interface Progress {
 }
 
 export type MatchState =
-  | { kind: "match"; restaurant: Restaurant; rightSwipes: number; totalParticipants: number; vetoedCount: number }
+  | { kind: "match"; restaurant: Restaurant; rightSwipes: number; totalParticipants: number; vetoedCount: number; round: number }
   | { kind: "none"; vetoedCount: number }
   | null;
 
@@ -109,6 +109,7 @@ export function useSessionSocket(code: string, displayName: string) {
             rightSwipes: msg.rightSwipes,
             totalParticipants: msg.totalParticipants,
             vetoedCount: msg.vetoedCount ?? 0,
+            round: msg.round ?? 1,
           });
         case "no_match":
           return setMatch({ kind: "none", vetoedCount: msg.vetoedCount ?? 0 });

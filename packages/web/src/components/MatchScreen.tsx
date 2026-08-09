@@ -78,7 +78,7 @@ export function MatchScreen({
             Run it back
           </button>
         ) : (
-          <p className="mt-8 text-muted">Waiting for the host to run it back.</p>
+          <p className="mt-8 text-muted">Round two is the host&rsquo;s call.</p>
         )}
         <History visited={visited} />
       </div>

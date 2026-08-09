@@ -448,7 +448,8 @@ export class SessionRoom extends DurableObject<Env> {
       await this.recordVisit(meta.code, result.restaurant.id, result.restaurant.name);
     }
 
-    this.broadcastResult(result, this.connectedParticipants().length, vetoedRestaurantIds(votes).size);
+    const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
+    this.broadcastResult(result, this.connectedParticipants().length, vetoedRestaurantIds(votes).size, round);
     await this.broadcastHistory(meta.code);
     await this.broadcastState();
   }
@@ -631,6 +632,8 @@ export class SessionRoom extends DurableObject<Env> {
     const total = this.connectedParticipants().length;
     const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
     const vetoedCount = vetoedRestaurantIds(Object.values(votes)).size;
+    // againRounds counts the re-deals, so the round that decided it is one more than that.
+    const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
     if (result) {
       this.send(ws, {
         type: "match",
@@ -638,6 +641,7 @@ export class SessionRoom extends DurableObject<Env> {
         rightSwipes: result.rightSwipes,
         totalParticipants: total,
         vetoedCount,
+        round,
       });
     } else {
       this.send(ws, { type: "no_match", vetoedCount });
@@ -652,6 +656,7 @@ export class SessionRoom extends DurableObject<Env> {
     result: DecisionResult | null,
     total: number,
     vetoedCount: number,
+    round: number,
   ): void {
     if (result) {
       this.broadcast({
@@ -660,6 +665,7 @@ export class SessionRoom extends DurableObject<Env> {
         rightSwipes: result.rightSwipes,
         totalParticipants: total,
         vetoedCount,
+        round,
       });
     } else {
       this.broadcast({ type: "no_match", vetoedCount });

@@ -101,7 +101,7 @@ function WinnerScreen({
   onAgain: () => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
-  const { restaurant, rightSwipes, totalParticipants, vetoedCount } = match;
+  const { restaurant, rightSwipes, totalParticipants, vetoedCount, round } = match;
   const [detailOpen, setDetailOpen] = useState(false);
 
   // Celebrate once when the verdict lands: confetti + a short victory buzz.
@@ -182,6 +182,15 @@ function WinnerScreen({
       {vetoedCount > 0 && (
         <p className="mt-1 text-sm text-muted/70">
           🚫 {vetoedCount} {vetoedCount === 1 ? "place was" : "places were"} vetoed out of the running.
+        </p>
+      )}
+      {/* Only once the group has genuinely laboured. Round 1 is just dinner; saying "round 1" about
+          it would be noise, and the joke below only earns itself if the number is real. */}
+      {round >= 2 && (
+        <p className="mt-1 text-sm italic text-muted/70">
+          {round >= 4
+            ? `${round} rounds to pick one place. The group chat would have been faster.`
+            : `Round ${round}. Worth the wait, presumably.`}
         </p>
       )}
 

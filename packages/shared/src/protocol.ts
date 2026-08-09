@@ -107,6 +107,11 @@ export interface MatchMessage {
   totalParticipants: number;
   /** How many places somebody vetoed, so the winner doesn't look arbitrary. */
   vetoedCount?: number;
+  /**
+   * Which round finally decided it, 1-based. The group's indecision is the thing this app exists
+   * to end, so the number of attempts it took is worth saying out loud.
+   */
+  round?: number;
 }
 
 /**

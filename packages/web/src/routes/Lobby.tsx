@@ -247,9 +247,14 @@ function ParticipantChip({ p }: { p: Participant }) {
           title={p.connected ? "here" : "disconnected"}
         />
       </span>
-      <span className={`font-medium ${p.connected ? "" : "text-muted"}`}>{p.displayName}</span>
+      {/* min-w-0 + break so the name is what gives on a narrow screen. Without it a 24-character
+          unbroken name refuses to shrink and shoves the host badge past the right edge of the
+          phone — the row looked fine, and the whole page scrolled sideways. */}
+      <span className={`min-w-0 break-words font-medium ${p.connected ? "" : "text-muted"}`}>
+        {p.displayName}
+      </span>
       {p.isHost && (
-        <span className="ml-auto rounded-full bg-acid/15 text-acid text-xs font-semibold px-2 py-0.5">
+        <span className="ml-auto shrink-0 rounded-full bg-acid/15 text-acid text-xs font-semibold px-2 py-0.5">
           host
         </span>
       )}

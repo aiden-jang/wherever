@@ -13,10 +13,35 @@
 
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Spring easing, sampled from a damped harmonic oscillator rather than eyeballed as a bezier.
+     A cubic-bezier physically cannot overshoot and come back, so "springy" UI built from one is
+     always a fast-out curve pretending. linear() can, because it's a lookup table.
+
+     Both are normalized, so duration stays a separate decision. --ease-spring overshoots 1.1% and
+     is the default for anything arriving; --ease-bounce overshoots 12% and is for the payoff.
+     Living in @theme means Tailwind also generates ease-spring / ease-bounce utilities for any
+     class that actually appears in the markup, so the same curve is reachable from both sides. */
+  --ease-spring: linear(0, 0.038, 0.13, 0.248, 0.373, 0.494, 0.604, 0.699, 0.778, 0.842, 0.893, 0.931, 0.959, 0.98, 0.993, 1.002, 1.008, 1.01, 1.011, 1.011, 1.01, 1.009, 1.007, 1.006, 1.005, 1.004, 1.003, 1.002, 1);
+  --ease-bounce: linear(0, 0.084, 0.277, 0.507, 0.724, 0.899, 1.022, 1.093, 1.122, 1.121, 1.102, 1.074, 1.046, 1.021, 1.003, 0.991, 0.986, 0.984, 0.986, 0.989, 0.993, 0.996, 0.999, 1.001, 1.002, 1.002, 1.002, 1.002, 1);
 }
 
 :root {
   color-scheme: dark;
+}
+
+/* Headings break evenly instead of stranding one word on the last line; body copy avoids orphans.
+   Balance is capped by browsers at a handful of lines, which is why it's scoped to headings, where
+   the ragged-last-line problem actually shows. Both no-op where unsupported. */
+h1,
+h2,
+h3,
+.font-display {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 /* Keyboard focus indicator across every interactive control (mouse clicks stay ring-free via
@@ -155,7 +180,7 @@ body {
 }
 
 .pop-in {
-  animation: pop-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: pop-in 0.5s var(--ease-bounce);
 }
 
 /* Emoji reactions floating up during a round. */

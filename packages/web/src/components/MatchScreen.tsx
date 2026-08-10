@@ -30,9 +30,9 @@ function consensusLine(rightSwipes: number, totalParticipants: number): string {
 }
 
 /** A share should read like a plan someone can act on, not an app notification. */
-function planText(r: Restaurant): string {
+function planText(r: Restaurant, rightSwipes: number, totalParticipants: number): string {
   const where = r.address ? `\n${r.address}` : "";
-  return `Dinner plan: ${r.name}${where}\nThe group has spoken.`;
+  return `Dinner plan: ${r.name}${where}\nPicked by ${rightSwipes} of ${totalParticipants}.`;
 }
 
 function History({ visited }: { visited: VisitedPlace[] }) {
@@ -132,7 +132,7 @@ function WinnerScreen({
 
   const sharePlan = async () => {
     const url = mapsUrl(restaurant);
-    const text = planText(restaurant);
+    const text = planText(restaurant, rightSwipes, totalParticipants);
     const finish = (result: "copied" | "shared") => {
       setShareResult(result);
       setTimeout(() => setShareResult(null), 1800);

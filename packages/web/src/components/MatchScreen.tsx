@@ -21,6 +21,14 @@ function mapsUrl(r: Restaurant): string {
   );
 }
 
+/** The tally is useful evidence; this is the human version of what it means. */
+function consensusLine(rightSwipes: number, totalParticipants: number): string {
+  if (totalParticipants <= 1) return 'Your call. No committee required.';
+  if (rightSwipes === totalParticipants) return 'Unanimous. This never happens.';
+  if (rightSwipes / totalParticipants >= 0.75) return 'A clear majority. Easy.';
+  return 'It got through the committee.';
+}
+
 function History({ visited }: { visited: VisitedPlace[] }) {
   if (visited.length === 0) return null;
   return (
@@ -203,7 +211,10 @@ function WinnerScreen({
       </button>
 
       <p className="mt-4 text-muted">
-        {rightSwipes} of {totalParticipants} wanted it. The rest will cope.
+        {rightSwipes} of {totalParticipants} wanted it.
+      </p>
+      <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
+        {consensusLine(rightSwipes, totalParticipants)}
       </p>
       {/* Without this a vetoed favourite just silently isn't here, which reads as the tally being
           wrong rather than as somebody having used their one no. Count only — who spent it stays

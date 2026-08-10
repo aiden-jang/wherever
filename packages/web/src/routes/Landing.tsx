@@ -125,7 +125,7 @@ function TeaserCardFace({
               type="button"
               aria-label="Nope"
               onClick={() => onVote?.("left")}
-              className="flex-1 rounded-2xl border border-white/10 py-2 text-lg hover:border-flare hover:text-flare active:scale-95 transition"
+              className="flex-1 rounded-2xl border border-white/10 py-2 text-lg hover:border-flare hover:text-flare active:scale-95 transition duration-300 ease-spring"
             >
               ✕
             </button>
@@ -133,7 +133,7 @@ function TeaserCardFace({
               type="button"
               aria-label="Yes"
               onClick={() => onVote?.("right")}
-              className="flex-1 rounded-2xl bg-acid py-2 text-lg text-ink font-bold hover:brightness-110 active:scale-95 transition"
+              className="flex-1 rounded-2xl bg-acid py-2 text-lg text-ink font-bold hover:brightness-110 active:scale-95 transition duration-300 ease-spring"
             >
               ♥
             </button>

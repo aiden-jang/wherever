@@ -29,6 +29,12 @@ function consensusLine(rightSwipes: number, totalParticipants: number): string {
   return 'It got through the committee.';
 }
 
+/** A share should read like a plan someone can act on, not an app notification. */
+function planText(r: Restaurant): string {
+  const where = r.address ? `\n${r.address}` : "";
+  return `Dinner plan: ${r.name}${where}\nThe group has spoken.`;
+}
+
 function History({ visited }: { visited: VisitedPlace[] }) {
   if (visited.length === 0) return null;
   return (
@@ -125,7 +131,7 @@ function WinnerScreen({
 
   const sharePlan = async () => {
     const url = mapsUrl(restaurant);
-    const text = `${restaurant.name} won dinner. The group has spoken.`;
+    const text = planText(restaurant);
     const finish = (result: "copied" | "shared") => {
       setShareResult(result);
       setTimeout(() => setShareResult(null), 1800);

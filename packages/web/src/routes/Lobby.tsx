@@ -432,6 +432,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
   const [codeCopied, setCodeCopied] = useState(false);
   const [codeCopyFailed, setCodeCopyFailed] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<'sharing' | 'shared' | 'copied' | 'failed' | null>(null);
   async function copyCode() {
     try {
       await navigator.clipboard.writeText(code);
@@ -446,13 +447,34 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setTimeout(() => setCodeCopied(false), 1200);
   }
 
+  const finishInvite = (status: 'shared' | 'copied'): void => {
+    setInviteStatus(status);
+    window.setTimeout(() => setInviteStatus(null), 2200);
+  };
+
+  async function copyInviteLink(): Promise<void> {
+    if (inviteStatus) return;
+    setInviteStatus('sharing');
+    try {
+      await navigator.clipboard.writeText(location.href);
+      buzz(8);
+      play('tap');
+      finishInvite('copied');
+    } catch {
+      setInviteStatus('failed');
+      window.setTimeout(() => setInviteStatus(null), 2600);
+    }
+  }
+
   // Open the phone's native share sheet with the invite link (the natural way to fire it into a
-  // group chat). If the user cancels the sheet we do nothing — no toast, no fallback popup. On
-  // desktop (no share sheet at all) we silently copy the link so the button still does something.
+  // group chat). A browser without it falls back to the clipboard; closing the native sheet is a
+  // deliberate choice and returns the lobby to its idle state without an alarming error.
   async function shareInvite() {
+    if (inviteStatus) return;
     buzz(8);
     play("tap");
     const url = location.href;
+    setInviteStatus('sharing');
     if (navigator.share) {
       try {
         await navigator.share({
@@ -460,12 +482,22 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           text: "Come help pick where we're eating.",
           url,
         });
-      } catch {
-        // Sheet dismissed/failed: leave it be, per "only the share modal".
+        finishInvite('shared');
+        return;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          setInviteStatus(null);
+          return;
+        }
       }
-      return;
     }
-    await navigator.clipboard.writeText(url).catch(() => {});
+    try {
+      await navigator.clipboard.writeText(url);
+      finishInvite('copied');
+    } catch {
+      setInviteStatus('failed');
+      window.setTimeout(() => setInviteStatus(null), 2600);
+    }
   }
 
   // An error before any session state means a bad or expired code.
@@ -591,9 +623,33 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <p className="mt-1 text-xs text-muted">
           {codeCopied ? "Copied the code." : codeCopyFailed ? "Couldn’t copy it — select the code instead." : "Tap the code to copy it"}
         </p>
-        <button onClick={shareInvite} className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm font-medium hover:bg-white/5 active:scale-95 transition">
-          Invite the group
-        </button>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => void shareInvite()}
+            disabled={inviteStatus !== null}
+            aria-live="polite"
+            className="rounded-full border border-white/15 px-5 py-2 text-sm font-medium hover:bg-white/5 active:scale-95 transition disabled:cursor-default disabled:opacity-60"
+          >
+            {inviteStatus === 'sharing'
+              ? 'Opening…'
+              : inviteStatus === 'shared'
+                ? 'Invite sent'
+                : inviteStatus === 'copied'
+                  ? 'Link copied'
+                  : inviteStatus === 'failed'
+                    ? 'Couldn’t copy link'
+                    : 'Invite the group'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void copyInviteLink()}
+            disabled={inviteStatus !== null}
+            className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-muted hover:border-white/20 hover:text-cream transition disabled:cursor-default disabled:opacity-60"
+          >
+            Copy link
+          </button>
+        </div>
         {session?.filters && <FilterSummary filters={session.filters} />}
       </div>
 

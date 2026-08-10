@@ -232,7 +232,7 @@ function WinnerScreen({
               </p>
             );
           })()}
-          <p className="mt-3 text-xs text-muted">Tap for hours, phone &amp; directions</p>
+        <p className="mt-3 text-xs text-muted">Tap for hours, contact details &amp; directions</p>
         </div>
       </button>
 
@@ -298,7 +298,7 @@ function WinnerScreen({
           }
           className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
         >
-          {shareResult === "sharing" ? "Opening…" : shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Share the plan"}
+          {shareResult === "sharing" ? "Opening…" : shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Send the plan"}
         </button>
         {isHost ? (
           <button

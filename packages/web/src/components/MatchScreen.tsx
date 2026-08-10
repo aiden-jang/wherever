@@ -104,6 +104,7 @@ function WinnerScreen({
 }) {
   const { restaurant, rightSwipes, totalParticipants, vetoedCount, round } = match;
   const [detailOpen, setDetailOpen] = useState(false);
+  const [shareResult, setShareResult] = useState<"copied" | "shared" | null>(null);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -113,6 +114,32 @@ function WinnerScreen({
     const t = setTimeout(() => setCelebrate(false), 4000);
     return () => clearTimeout(t);
   }, []);
+
+  const sharePlan = async () => {
+    const url = mapsUrl(restaurant);
+    const text = `${restaurant.name} won dinner. The group has spoken.`;
+    const finish = (result: "copied" | "shared") => {
+      setShareResult(result);
+      setTimeout(() => setShareResult(null), 1800);
+    };
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: restaurant.name, text, url });
+        finish("shared");
+        return;
+      } catch (error) {
+        // Closing the sheet is deliberate. Only a genuine share failure falls
+        // through to copying the finished plan.
+        if (error instanceof Error && error.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      finish("copied");
+    } catch {
+      // The Maps button remains the no-fail way to act on the result.
+    }
+  };
 
   return (
     <div className="relative text-center max-w-sm mx-auto w-full">
@@ -205,6 +232,13 @@ function WinnerScreen({
         >
           Open in Google Maps ↗
         </a>
+        <button
+          type="button"
+          onClick={() => void sharePlan()}
+          className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition"
+        >
+          {shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Share the plan"}
+        </button>
         {isHost ? (
           <button
             onClick={onAgain}

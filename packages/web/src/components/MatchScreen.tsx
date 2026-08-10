@@ -119,7 +119,7 @@ function WinnerScreen({
   const { restaurant, rightSwipes, totalParticipants, vetoedCount, round } = match;
   const mapsAction = restaurant.openNow === false ? 'See it in Google Maps ↗' : 'Open in Google Maps ↗';
   const [detailOpen, setDetailOpen] = useState(false);
-  const [shareResult, setShareResult] = useState<"copied" | "shared" | null>(null);
+  const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -137,6 +137,7 @@ function WinnerScreen({
       setShareResult(result);
       setTimeout(() => setShareResult(null), 1800);
     };
+    setShareResult("sharing");
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ title: restaurant.name, text, url });
@@ -145,7 +146,10 @@ function WinnerScreen({
       } catch (error) {
         // Closing the sheet is deliberate. Only a genuine share failure falls
         // through to copying the finished plan.
-        if (error instanceof Error && error.name === "AbortError") return;
+        if (error instanceof Error && error.name === "AbortError") {
+          setShareResult(null);
+          return;
+        }
       }
     }
     try {
@@ -153,6 +157,7 @@ function WinnerScreen({
       finish("copied");
     } catch {
       // The Maps button remains the no-fail way to act on the result.
+      setShareResult(null);
     }
   };
 
@@ -266,9 +271,10 @@ function WinnerScreen({
         <button
           type="button"
           onClick={() => void sharePlan()}
-          className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition"
+          disabled={shareResult !== null}
+          className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
         >
-          {shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Share the plan"}
+          {shareResult === "sharing" ? "Opening…" : shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Share the plan"}
         </button>
         {isHost ? (
           <button

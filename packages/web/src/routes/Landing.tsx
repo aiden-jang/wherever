@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { buzz } from "../components/haptics.js";
+import { play } from "../components/sound.js";
 import type { AmenityKey, PriceTier, RestaurantSort, SessionFilters } from "@wherever/shared";
 import {
   AMENITY_OPTIONS,
@@ -158,7 +160,11 @@ function TeaserStack() {
   const [exitDir, setExitDir] = useState<"left" | "right">("right");
   const reduce = useReducedMotion();
 
+  // The teaser is the only thing on this page you can actually swipe, so it's also where the app
+  // gets to show that swiping makes a noise. Same cues as the real deck.
   const vote = (dir: "left" | "right") => {
+    buzz(dir === "right" ? 12 : [8, 20]);
+    play(dir === "right" ? "like" : "pass");
     setExitDir(dir);
     setIdx((i) => (i + 1) % CARDS.length);
   };

@@ -7,6 +7,7 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { buzz } from "./haptics.js";
+import { play } from "./sound.js";
 
 /**
  * A Google Maps link to the winning place itself (the place page, not turn-by-turn navigation), so
@@ -104,10 +105,11 @@ function WinnerScreen({
   const { restaurant, rightSwipes, totalParticipants, vetoedCount, round } = match;
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Celebrate once when the verdict lands: confetti + a short victory buzz.
+  // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
   useEffect(() => {
     buzz([18, 40, 18]);
+    play("match");
     const t = setTimeout(() => setCelebrate(false), 4000);
     return () => clearTimeout(t);
   }, []);

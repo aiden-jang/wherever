@@ -9,6 +9,7 @@ import { MatchScreen } from "../components/MatchScreen.js";
 import { ReactionBar, FloatingReactions } from "../components/Reactions.js";
 import { LiveRegion } from "../components/LiveRegion.js";
 import { buzz } from "../components/haptics.js";
+import { play } from "../components/sound.js";
 
 function initials(name: string): string {
   return name.trim().slice(0, 2).toUpperCase();
@@ -192,6 +193,7 @@ function useJoinLeaveToasts(
     if (events.length === 0) return;
 
     onEventRef.current?.(events.join(". "));
+    if (curr.size > before.size) play("join");
     const added = events.map((text) => ({ id: crypto.randomUUID(), text }));
     setToasts((t) => [...t, ...added]);
     const ids = new Set<string>(added.map((a) => a.id));
@@ -432,6 +434,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   async function copyCode() {
     await navigator.clipboard.writeText(code).catch(() => {});
     buzz(8);
+    play("tap");
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 1200);
   }
@@ -441,6 +444,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   // desktop (no share sheet at all) we silently copy the link so the button still does something.
   async function shareInvite() {
     buzz(8);
+    play("tap");
     const url = location.href;
     if (navigator.share) {
       try {

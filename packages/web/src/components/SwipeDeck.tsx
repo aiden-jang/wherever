@@ -11,6 +11,7 @@ import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./ca
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
+import { play } from "./sound.js";
 
 const SWIPE_THRESHOLD = 110;
 const HINT_KEY = "wherever:swipe-hint-seen";
@@ -269,6 +270,7 @@ export function SwipeDeck({
       indexRef.current = i + 1;
       // A firmer triple-buzz for a super-like; light on a like, double on a pass.
       buzz(isVeto ? [20, 40, 20, 40] : isSuper ? [12, 30, 12] : dir === "right" ? 12 : [8, 20]);
+      play(isVeto ? "veto" : isSuper ? "superLike" : dir === "right" ? "like" : "pass");
       if (isSuper) setSuperUsed(true);
       if (isVeto) setVetoUsed(true);
       dismissHint();

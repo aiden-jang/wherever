@@ -32,7 +32,16 @@ function consensusLine(rightSwipes: number, totalParticipants: number): string {
 /** A share should read like a plan someone can act on, not an app notification. */
 function planText(r: Restaurant, rightSwipes: number, totalParticipants: number): string {
   const where = r.address ? `\n${r.address}` : "";
-  const availability = r.openNow == null ? "" : r.openNow ? " Open now." : " Closed right now.";
+  const availability =
+    r.businessStatus === "CLOSED_PERMANENTLY"
+      ? " Permanently closed."
+      : r.businessStatus === "CLOSED_TEMPORARILY"
+        ? " Temporarily closed."
+        : r.openNow == null
+          ? ""
+          : r.openNow
+            ? " Open now."
+            : " Closed right now.";
   return `Dinner plan: ${r.name}${where}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}`;
 }
 

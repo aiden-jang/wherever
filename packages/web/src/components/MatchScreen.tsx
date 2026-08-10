@@ -222,6 +222,19 @@ function WinnerScreen({
       <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
         {consensusLine(rightSwipes, totalParticipants)}
       </p>
+      <div
+        className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10"
+        role="progressbar"
+        aria-label="Group agreement"
+        aria-valuemin={0}
+        aria-valuemax={totalParticipants}
+        aria-valuenow={rightSwipes}
+      >
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-ember to-acid transition-[width] duration-500"
+          style={{ width: `${Math.max(0, Math.min(100, (rightSwipes / Math.max(1, totalParticipants)) * 100))}%` }}
+        />
+      </div>
       {/* Without this a vetoed favourite just silently isn't here, which reads as the tally being
           wrong rather than as somebody having used their one no. Count only — who spent it stays
           private, the same as every other vote in a round. */}

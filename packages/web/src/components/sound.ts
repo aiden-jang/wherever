@@ -157,13 +157,23 @@ export type Cue = keyof typeof CUES;
 const MIN_GAP_SECONDS = 0.05;
 const lastPlayed = new Map<string, number>();
 
+/*
+ * Schedule slightly ahead of now, never at now.
+ *
+ * The audio thread has already rendered up to currentTime by the time this runs, so a note booked
+ * for exactly currentTime lands in the past and the hardware skips whatever it missed. It doesn't
+ * silence the cue, which is why it's easy to miss: it eats the attack and leaves the tail. 20ms is
+ * under the threshold where a delay is perceptible and comfortably clears one render quantum.
+ */
+const LOOKAHEAD_SECONDS = 0.02;
+
 export function play(cue: Cue): void {
   const g = graph();
   if (!g) return;
   const voices = CUES[cue];
   if (!voices) return;
 
-  const now = g.ctx.currentTime;
+  const now = g.ctx.currentTime + LOOKAHEAD_SECONDS;
   if (now - (lastPlayed.get(cue) ?? -Infinity) < MIN_GAP_SECONDS) return;
   lastPlayed.set(cue, now);
 

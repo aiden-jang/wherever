@@ -287,6 +287,15 @@ function WinnerScreen({
           type="button"
           onClick={() => void sharePlan()}
           disabled={shareResult !== null}
+          aria-label={
+            shareResult === "sharing"
+              ? "Opening dinner plan sharing"
+              : shareResult === "shared"
+                ? "Dinner plan shared"
+                : shareResult === "copied"
+                  ? "Dinner plan copied"
+                  : "Share dinner plan"
+          }
           className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
         >
           {shareResult === "sharing" ? "Opening…" : shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Share the plan"}

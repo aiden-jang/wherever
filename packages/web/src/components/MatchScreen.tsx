@@ -118,7 +118,11 @@ function WinnerScreen({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const { restaurant, rightSwipes, totalParticipants, vetoedCount, round } = match;
-  const mapsAction = restaurant.openNow === false ? 'See it in Google Maps ↗' : 'Open in Google Maps ↗';
+  const unavailable =
+    restaurant.openNow === false ||
+    restaurant.businessStatus === 'CLOSED_PERMANENTLY' ||
+    restaurant.businessStatus === 'CLOSED_TEMPORARILY';
+  const mapsAction = unavailable ? 'See it in Google Maps ↗' : 'Open in Google Maps ↗';
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
 

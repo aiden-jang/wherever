@@ -23,7 +23,7 @@ function mapsUrl(r: Restaurant): string {
 
 /** The tally is useful evidence; this is the human version of what it means. */
 function consensusLine(rightSwipes: number, totalParticipants: number): string {
-  if (totalParticipants <= 1) return 'Your call. No committee required.';
+  if (totalParticipants <= 1) return 'Your call. Dinner is handled.';
   if (rightSwipes === totalParticipants) return 'Unanimous. Put it in the group chat.';
   if (rightSwipes / totalParticipants >= 0.75) return 'A clear majority. Dinner is handled.';
   return 'The committee picked a winner.';
@@ -237,7 +237,7 @@ function WinnerScreen({
       </button>
 
       <p className="mt-4 text-muted">
-        {rightSwipes} of {totalParticipants} wanted it.
+        {rightSwipes} of {totalParticipants} picked it.
       </p>
       <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
         {consensusLine(rightSwipes, totalParticipants)}

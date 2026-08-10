@@ -4,6 +4,7 @@ import Landing from "./routes/Landing.js";
 import Lobby from "./routes/Lobby.js";
 import NotFound from "./routes/NotFound.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
+import { SoundToggle } from "./components/SoundToggle.js";
 
 export default function App() {
   return (
@@ -16,9 +17,12 @@ export default function App() {
           <Link to="/" className="font-display text-lg font-extrabold tracking-tight">
             Wherever<span className="text-ember">,</span> Honestly
           </Link>
-          <span className="hidden sm:inline-block rounded-full border border-white/15 px-3 py-1 text-xs text-muted">
-            no group chat. ever.
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline-block rounded-full border border-white/15 px-3 py-1 text-xs text-muted">
+              no group chat. ever.
+            </span>
+            <SoundToggle />
+          </div>
         </header>
 
         <ErrorBoundary>

@@ -431,8 +431,15 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   const count = session?.participants.length ?? 0;
 
   const [codeCopied, setCodeCopied] = useState(false);
+  const [codeCopyFailed, setCodeCopyFailed] = useState(false);
   async function copyCode() {
-    await navigator.clipboard.writeText(code).catch(() => {});
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      setCodeCopyFailed(true);
+      setTimeout(() => setCodeCopyFailed(false), 2200);
+      return;
+    }
     buzz(8);
     play("tap");
     setCodeCopied(true);
@@ -581,7 +588,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         >
           {code}
         </button>
-        <p className="mt-1 text-xs text-muted">{codeCopied ? "Copied the code." : "Tap the code to copy it"}</p>
+        <p className="mt-1 text-xs text-muted">
+          {codeCopied ? "Copied the code." : codeCopyFailed ? "Couldn’t copy it — select the code instead." : "Tap the code to copy it"}
+        </p>
         <button onClick={shareInvite} className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm font-medium hover:bg-white/5 active:scale-95 transition">
           Invite the group
         </button>

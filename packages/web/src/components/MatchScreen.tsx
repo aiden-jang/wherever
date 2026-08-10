@@ -21,6 +21,12 @@ function mapsUrl(r: Restaurant): string {
   );
 }
 
+/** The result screen is the moment people leave, so an operational winner should open navigation—not just a listing. */
+function directionsUrl(r: Restaurant): string {
+  const destination = `${r.name} ${r.address ?? ""}`.trim();
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}
+
 /** The tally is useful evidence; this is the human version of what it means. */
 function consensusLine(rightSwipes: number, totalParticipants: number): string {
   if (totalParticipants <= 1) return 'Your call. Dinner is handled.';
@@ -131,7 +137,7 @@ function WinnerScreen({
     restaurant.openNow === false ||
     restaurant.businessStatus === 'CLOSED_PERMANENTLY' ||
     restaurant.businessStatus === 'CLOSED_TEMPORARILY';
-  const mapsAction = unavailable ? 'See it in Google Maps ↗' : 'Open in Google Maps ↗';
+  const mapsAction = unavailable ? 'See it in Google Maps ↗' : 'Get directions ↗';
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
 
@@ -276,13 +282,35 @@ function WinnerScreen({
 
       <div className="mt-8 flex flex-col gap-3">
         <a
-          href={mapsUrl(restaurant)}
+          href={unavailable ? mapsUrl(restaurant) : directionsUrl(restaurant)}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
         >
           {mapsAction}
         </a>
+        {(restaurant.phone || restaurant.website) && (
+          <div className={`grid gap-3 ${restaurant.phone && restaurant.website ? "grid-cols-2" : "grid-cols-1"}`}>
+            {restaurant.phone && (
+              <a
+                href={`tel:${restaurant.phone}`}
+                className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold hover:bg-white/5 active:scale-[0.98] transition"
+              >
+                Call the place
+              </a>
+            )}
+            {restaurant.website && (
+              <a
+                href={restaurant.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold hover:bg-white/5 active:scale-[0.98] transition"
+              >
+                Website ↗
+              </a>
+            )}
+          </div>
+        )}
         <button
           type="button"
           onClick={() => void sharePlan()}

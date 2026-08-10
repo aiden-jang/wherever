@@ -117,6 +117,7 @@ function WinnerScreen({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const { restaurant, rightSwipes, totalParticipants, vetoedCount, round } = match;
+  const mapsAction = restaurant.openNow === false ? 'See it in Google Maps ↗' : 'Open in Google Maps ↗';
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"copied" | "shared" | null>(null);
 
@@ -260,7 +261,7 @@ function WinnerScreen({
           rel="noopener noreferrer"
           className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
         >
-          Open in Google Maps ↗
+          {mapsAction}
         </a>
         <button
           type="button"

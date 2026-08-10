@@ -24,9 +24,9 @@ function mapsUrl(r: Restaurant): string {
 /** The tally is useful evidence; this is the human version of what it means. */
 function consensusLine(rightSwipes: number, totalParticipants: number): string {
   if (totalParticipants <= 1) return 'Your call. No committee required.';
-  if (rightSwipes === totalParticipants) return 'Unanimous. This never happens.';
-  if (rightSwipes / totalParticipants >= 0.75) return 'A clear majority. Easy.';
-  return 'It got through the committee.';
+  if (rightSwipes === totalParticipants) return 'Unanimous. Put it in the group chat.';
+  if (rightSwipes / totalParticipants >= 0.75) return 'A clear majority. Dinner is handled.';
+  return 'The committee picked a winner.';
 }
 
 /** A share should read like a plan someone can act on, not an app notification. */

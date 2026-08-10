@@ -140,6 +140,7 @@ function WinnerScreen({
   const mapsAction = unavailable ? 'See it in Google Maps ↗' : 'Get directions ↗';
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
+  const [addressCopied, setAddressCopied] = useState(false);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -178,6 +179,17 @@ function WinnerScreen({
     } catch {
       // The Maps button remains the no-fail way to act on the result.
       setShareResult(null);
+    }
+  };
+
+  const copyAddress = async () => {
+    if (!restaurant.address || addressCopied) return;
+    try {
+      await navigator.clipboard.writeText(`${restaurant.name}\n${restaurant.address}`);
+      setAddressCopied(true);
+      setTimeout(() => setAddressCopied(false), 2000);
+    } catch {
+      // Directions is still the primary, no-fail way to get there.
     }
   };
 
@@ -238,6 +250,11 @@ function WinnerScreen({
               </p>
             );
           })()}
+          {restaurant.address && (
+            <p className="mt-3 truncate text-sm text-muted" title={restaurant.address}>
+              {restaurant.address}
+            </p>
+          )}
         <p className="mt-3 text-xs text-muted">Tap for hours, contact details &amp; directions</p>
         </div>
       </button>
@@ -310,6 +327,16 @@ function WinnerScreen({
               </a>
             )}
           </div>
+        )}
+        {restaurant.address && (
+          <button
+            type="button"
+            onClick={() => void copyAddress()}
+            disabled={addressCopied}
+            className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-muted hover:border-white/20 hover:text-cream transition disabled:cursor-default disabled:opacity-70"
+          >
+            {addressCopied ? 'Address copied' : 'Copy address'}
+          </button>
         )}
         <button
           type="button"

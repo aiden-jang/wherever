@@ -249,6 +249,7 @@ function WinnerScreen({
         aria-valuemin={0}
         aria-valuemax={totalParticipants}
         aria-valuenow={rightSwipes}
+        aria-valuetext={`${rightSwipes} of ${totalParticipants} people picked this place`}
       >
         <div
           className="h-full rounded-full bg-gradient-to-r from-ember to-acid transition-[width] duration-500"

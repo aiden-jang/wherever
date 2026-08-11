@@ -7,6 +7,7 @@ import type {
   Restaurant,
   Session,
   SwipeDirection,
+  TastePulse,
   VisitedPlace,
 } from "./types.js";
 
@@ -105,6 +106,8 @@ export interface VoteProgressMessage {
    * entirely in anonymous sessions so identities never leave the server.
    */
   finishedIds?: string[];
+  /** Anonymous aggregate only: no restaurant, category, participant, or individual ballot. */
+  tastePulse?: TastePulse;
 }
 
 export interface MatchMessage {

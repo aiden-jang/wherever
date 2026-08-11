@@ -2,7 +2,7 @@
 // out. This is the heart of the app and the part that must be provably correct,
 // so it lives here and is exhaustively unit-tested (see decision.test.ts).
 
-import type { Restaurant, SwipeDirection } from "./types.js";
+import type { Restaurant, SwipeDirection, TastePulse } from "./types.js";
 
 export interface Vote {
   participantId: string;
@@ -23,6 +23,37 @@ export interface Vote {
 
 /** A super-like counts this much toward picking the winner (a normal right-swipe counts 1). */
 export const SUPER_WEIGHT = 2;
+
+/**
+ * Anonymous round texture without a leaderboard. No restaurant id, category, participant id, or
+ * individual vote leaves this function, so the group can feel alignment without seeing the winner.
+ */
+export function tastePulse(deck: Restaurant[], votes: Vote[]): TastePulse | null {
+  const restaurantById = new Map(deck.map((restaurant) => [restaurant.id, restaurant]));
+  const valid = votes.filter((vote) => restaurantById.has(vote.restaurantId));
+  // A couple of swipes is noise and, in a small room, can read like one person's live ballot.
+  const activeVoters = new Set(valid.map((vote) => vote.participantId)).size;
+  if (valid.length < 4 || activeVoters < 2) return null;
+
+  const right = valid.filter((vote) => vote.direction === "right");
+  const supporters = new Map<string, Set<string>>();
+  for (const vote of right) {
+    const people = supporters.get(vote.restaurantId) ?? new Set<string>();
+    people.add(vote.participantId);
+    supporters.set(vote.restaurantId, people);
+  }
+  const priceTotal = right.reduce(
+    (sum, vote) => sum + (restaurantById.get(vote.restaurantId)?.priceTier ?? 0),
+    0,
+  );
+
+  return {
+    rightRate: Math.round((right.length / valid.length) * 100),
+    activeVoters,
+    strongestOverlap: Math.max(0, ...[...supporters.values()].map((people) => people.size)),
+    averagePriceTier: right.length > 0 ? Math.round((priceTotal / right.length) * 10) / 10 : null,
+  };
+}
 
 export interface DecisionResult {
   restaurant: Restaurant;

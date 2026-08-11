@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { Participant } from "@wherever/shared";
+import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
@@ -257,6 +257,31 @@ function VoterAvatars({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Anonymous live texture for the round. It deliberately cannot name a person or restaurant. */
+function GroupTasteMap({ pulse }: { pulse: TastePulse }) {
+  const appetite = pulse.rightRate < 30 ? "selective" : pulse.rightRate < 60 ? "curious" : "easy crowd";
+  const aligned = pulse.strongestOverlap >= Math.max(2, Math.ceil(pulse.activeVoters * 0.6));
+  const overlap = aligned ? "same wavelength" : pulse.strongestOverlap >= 2 ? "a little spark" : "still exploring";
+  const price = pulse.averagePriceTier === null
+    ? "no yeses yet"
+    : "$".repeat(Math.max(1, Math.min(4, Math.round(pulse.averagePriceTier))));
+
+  return (
+    <div
+      className="mt-3 flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs"
+      aria-label={`Anonymous group pulse: ${appetite}, ${overlap}, leaning ${price}`}
+      title="Built from anonymous totals. No names or restaurants are revealed."
+    >
+      <span className="font-semibold text-ember">group pulse</span>
+      <span className="text-muted">{appetite}</span>
+      <span aria-hidden className="text-white/20">·</span>
+      <span className="text-muted">{overlap}</span>
+      <span aria-hidden className="text-white/20">·</span>
+      <span className="font-semibold tracking-wide text-cream">{price}</span>
     </div>
   );
 }
@@ -519,6 +544,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               }
               onUndo={(restaurantId) => send({ type: "undo_swipe", restaurantId })}
             />
+            {progress?.tastePulse && <GroupTasteMap pulse={progress.tastePulse} />}
             {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
               <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
             )}

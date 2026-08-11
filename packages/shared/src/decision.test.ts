@@ -4,6 +4,7 @@ import {
   decideWinner,
   tallyRightSwipes,
   tallyScores,
+  tastePulse,
   vetoedRestaurantIds,
   type Vote,
 } from "./decision.js";
@@ -32,6 +33,38 @@ function superVote(participantId: string, restaurantId: string): Vote {
 }
 
 const deck = [restaurant("a"), restaurant("b"), restaurant("c")];
+
+describe("taste pulse", () => {
+  it("stays hidden until enough anonymous group activity exists", () => {
+    expect(tastePulse(deck, [
+      vote("p1", "a", "right"),
+      vote("p1", "b", "left"),
+      vote("p1", "c", "right"),
+      vote("p1", "a", "right"),
+    ])).toBeNull();
+    expect(tastePulse(deck, [vote("p1", "a", "right"), vote("p2", "a", "right")])).toBeNull();
+  });
+
+  it("summarizes openness, overlap, and price without naming a place or person", () => {
+    const pricedDeck = deck.map((place, index) => ({ ...place, priceTier: (index + 1) as 1 | 2 | 3 }));
+    expect(tastePulse(pricedDeck, [
+      vote("p1", "a", "right"),
+      vote("p1", "b", "left"),
+      vote("p2", "a", "right"),
+      vote("p2", "c", "right"),
+    ])).toEqual({ rightRate: 75, activeVoters: 2, strongestOverlap: 2, averagePriceTier: 1.7 });
+  });
+
+  it("ignores votes for places outside the round", () => {
+    expect(tastePulse(deck, [
+      vote("p1", "ghost", "right"),
+      vote("p1", "a", "right"),
+      vote("p2", "a", "right"),
+      vote("p2", "b", "left"),
+      vote("p2", "c", "left"),
+    ])?.rightRate).toBe(50);
+  });
+});
 
 describe("super-like weighting", () => {
   it("tallyScores weights a super-like as 2 but tallyRightSwipes stays a headcount", () => {

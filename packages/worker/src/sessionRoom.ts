@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import {
   clientMessageSchema,
   finishedParticipantIds,
+  tastePulse,
   decideWinner,
   vetoedRestaurantIds,
   type DecisionResult,
@@ -434,11 +435,13 @@ export class SessionRoom extends DurableObject<Env> {
       participants.map((p) => p.participantId),
       deck.length,
     );
+    const pulse = tastePulse(deck, votes);
 
     this.broadcast({
       type: "vote_progress",
       finishedCount: finishedIds.length,
       totalParticipants: total,
+      ...(pulse ? { tastePulse: pulse } : {}),
       // Only reveal identities when the host chose to; otherwise the field is omitted and the round
       // stays anonymous on the wire, not just in the UI.
       ...(meta.filters.revealVoters ? { finishedIds } : {}),

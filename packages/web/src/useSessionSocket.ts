@@ -4,6 +4,7 @@ import type {
   Restaurant,
   ServerMessage,
   Session,
+  TastePulse,
   VisitedPlace,
 } from "@wherever/shared";
 
@@ -14,6 +15,7 @@ export interface Progress {
   totalParticipants: number;
   /** Ids of participants who've finished; present only in reveal-voters sessions. */
   finishedIds?: string[];
+  tastePulse?: TastePulse;
 }
 
 export type MatchState =
@@ -101,6 +103,7 @@ export function useSessionSocket(code: string, displayName: string) {
             finishedCount: msg.finishedCount,
             totalParticipants: msg.totalParticipants,
             finishedIds: msg.finishedIds,
+            tastePulse: msg.tastePulse,
           });
         case "match":
           return setMatch({

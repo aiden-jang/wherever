@@ -360,7 +360,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, visited, error, status, everConnected, participantId, reactions, send } =
+  const { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
@@ -509,9 +509,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           filters={session?.filters}
           isHost={isHost}
           planned={planned}
+          arrivals={arrivals}
+          participantId={participantId}
           onAgain={() => send({ type: "again" })}
           onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
           onPlan={(nextPlan) => send({ type: "set_plan", planned: nextPlan })}
+          onArrival={(arrivalStatus) => send({ type: "set_arrival", status: arrivalStatus })}
         />
       </main>
     );

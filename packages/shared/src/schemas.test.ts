@@ -21,3 +21,15 @@ describe("shared meetup plan messages", () => {
     }).success).toBe(false);
   });
 });
+
+describe("arrival status messages", () => {
+  it("accepts the two statuses and clearing your status", () => {
+    expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "heading_out" }).success).toBe(true);
+    expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "here" }).success).toBe(true);
+    expect(clientMessageSchema.safeParse({ type: "set_arrival", status: null }).success).toBe(true);
+  });
+
+  it("rejects arbitrary presence labels", () => {
+    expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "five_minutes" }).success).toBe(false);
+  });
+});

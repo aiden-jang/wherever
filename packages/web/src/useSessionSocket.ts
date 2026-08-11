@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ClientMessage,
+  ArrivalUpdate,
   DecisionAlternative,
   PlannedMeetup,
   Restaurant,
@@ -62,6 +63,7 @@ export function useSessionSocket(code: string, displayName: string) {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [match, setMatch] = useState<MatchState>(null);
   const [planned, setPlanned] = useState<PlannedMeetup | null>(null);
+  const [arrivals, setArrivals] = useState<ArrivalUpdate[]>([]);
   const [visited, setVisited] = useState<VisitedPlace[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("connecting");
@@ -95,6 +97,7 @@ export function useSessionSocket(code: string, displayName: string) {
           // A fresh deck means a new round: clear any prior match outcome.
           setMatch(null);
           setPlanned(null);
+          setArrivals([]);
           setProgress(null);
           setDeck(msg.restaurants);
           setDemo(msg.demo ?? false);
@@ -125,6 +128,8 @@ export function useSessionSocket(code: string, displayName: string) {
           return setVisited(msg.visited);
         case "plan":
           return setPlanned(msg.planned);
+        case "arrivals":
+          return setArrivals(msg.arrivals);
         case "reaction": {
           const id = crypto.randomUUID();
           setReactions((prev) => [...prev, { id, emoji: msg.emoji, from: msg.from }]);
@@ -193,5 +198,5 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, visited, error, status, everConnected, participantId, reactions, send };
+  return { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, visited, error, status, everConnected, participantId, reactions, send };
 }

@@ -30,6 +30,16 @@ function directionsUrl(r: Restaurant): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
 }
 
+function appleDirectionsUrl(r: Restaurant): string {
+  const destination = `${r.name} ${r.address ?? ""}`.trim();
+  return `https://maps.apple.com/?daddr=${encodeURIComponent(destination)}&dirflg=d`;
+}
+
+function wazeDirectionsUrl(r: Restaurant): string {
+  const destination = `${r.name} ${r.address ?? ""}`.trim();
+  return `https://www.waze.com/ul?q=${encodeURIComponent(destination)}&navigate=yes`;
+}
+
 /** The tally is useful evidence; this is the human version of what it means. */
 function consensusLine(rightSwipes: number, totalParticipants: number): string {
   if (totalParticipants <= 1) return 'Your call. Dinner is handled.';
@@ -218,11 +228,12 @@ function WinnerScreen({
     restaurant.openNow === false ||
     restaurant.businessStatus === 'CLOSED_PERMANENTLY' ||
     restaurant.businessStatus === 'CLOSED_TEMPORARILY';
-  const mapsAction = unavailable ? 'See it in Google Maps ↗' : 'Get directions ↗';
+  const mapsAction = unavailable ? 'See it in Google Maps ↗' : 'Get directions';
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
   const [cardResult, setCardResult] = useState<"making" | "shared" | "saved" | null>(null);
   const [plannerOpen, setPlannerOpen] = useState(false);
+  const [directionsOpen, setDirectionsOpen] = useState(false);
   const [planStart, setPlanStart] = useState(defaultPlanStart);
   const [planDuration, setPlanDuration] = useState<60 | 90 | 120>(90);
   const [planned, setPlanned] = useState<{ start: string; duration: 60 | 90 | 120 } | null>(null);
@@ -527,14 +538,24 @@ function WinnerScreen({
       )}
 
       <div className="mt-8 flex flex-col gap-3">
-        <a
-          href={unavailable ? mapsUrl(restaurant) : directionsUrl(restaurant)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
-        >
-          {mapsAction}
-        </a>
+        {unavailable ? (
+          <a
+            href={mapsUrl(restaurant)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
+          >
+            {mapsAction}
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDirectionsOpen(true)}
+            className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
+          >
+            {mapsAction}
+          </button>
+        )}
         {(restaurant.phone || restaurant.website) && (
           <div className={`grid gap-3 ${restaurant.phone && restaurant.website ? "grid-cols-2" : "grid-cols-1"}`}>
             {restaurant.phone && (
@@ -620,6 +641,57 @@ function WinnerScreen({
 
       {detailOpen && (
         <RestaurantDetail restaurant={restaurant} onClose={() => setDetailOpen(false)} />
+      )}
+      {directionsOpen && (
+        <Modal title="How are we getting there?" onClose={() => setDirectionsOpen(false)}>
+          <p className="text-sm leading-relaxed text-muted">
+            Pick the map app you already trust with the aux cord.
+          </p>
+          {restaurant.address && (
+            <p className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-cream/90">
+              {restaurant.address}
+            </p>
+          )}
+          <div className="mt-5 grid gap-2">
+            <a
+              href={directionsUrl(restaurant)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setDirectionsOpen(false)}
+              className="rounded-full bg-ember px-5 py-3 text-center text-sm font-semibold text-ink transition hover:brightness-110 active:scale-[0.98]"
+            >
+              Google Maps ↗
+            </a>
+            <a
+              href={appleDirectionsUrl(restaurant)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setDirectionsOpen(false)}
+              className="rounded-full border border-white/15 px-5 py-3 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"
+            >
+              Apple Maps ↗
+            </a>
+            <a
+              href={wazeDirectionsUrl(restaurant)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setDirectionsOpen(false)}
+              className="rounded-full border border-white/15 px-5 py-3 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"
+            >
+              Waze ↗
+            </a>
+          </div>
+          {restaurant.address && (
+            <button
+              type="button"
+              onClick={() => void copyAddress()}
+              disabled={addressCopied}
+              className="mt-3 w-full px-4 py-2 text-xs font-semibold text-muted transition hover:text-cream disabled:opacity-70"
+            >
+              {addressCopied ? "Address copied" : "Copy address instead"}
+            </button>
+          )}
+        </Modal>
       )}
       {plannerOpen && (
         <Modal title="Put dinner on the calendar" onClose={() => { setPlannerOpen(false); setCalendarError(null); }}>

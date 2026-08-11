@@ -99,6 +99,8 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleStartRound(ws);
       case "swipe":
         return this.handleSwipe(ws, msg.restaurantId, msg.direction, msg.super ?? false, msg.veto ?? false);
+      case "undo_swipe":
+        return this.handleUndoSwipe(ws, msg.restaurantId);
       case "decide_now":
         return this.handleDecideNow(ws);
       case "again":
@@ -385,6 +387,24 @@ export class SessionRoom extends DurableObject<Env> {
     // the conversation this app exists to avoid.
     if (vetoing) this.broadcast({ type: "reaction", emoji: "🚫", from: "" });
 
+    await this.evaluate(meta);
+  }
+
+  /**
+   * Rewind belongs on the server too: removing only the card in React would leave the original vote
+   * in the tally and turn the replacement into an overwrite that may keep a spent super/veto. The
+   * participant id comes from the socket attachment, so nobody can rewind somebody else's choice.
+   */
+  private async handleUndoSwipe(ws: WebSocket, restaurantId: string): Promise<void> {
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta || meta.status !== "swiping") return;
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att) return;
+    const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
+    const key = `${att.participantId}:${restaurantId}`;
+    if (!votes[key]) return;
+    delete votes[key];
+    await this.ctx.storage.put("votes", votes);
     await this.evaluate(meta);
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Restaurant, SessionFilters, VisitedPlace } from "@wherever/shared";
+import { matchReasons, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -54,6 +54,8 @@ function planText(
   rightSwipes: number,
   totalParticipants: number,
   planned?: { start: string; duration: number } | null,
+  reasons: string[] = [],
+  backup?: Restaurant,
 ): string {
   const where = r.address ? `\n${r.address}` : "";
   const when = planned
@@ -75,7 +77,9 @@ function planText(
           : r.openNow
             ? " Open now."
             : " Closed right now.";
-  return `Dinner plan: ${r.name}${where}${when}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}`;
+  const why = reasons.length > 0 ? `\nWhy it won: ${reasons.join(" · ")}` : "";
+  const fallback = backup ? `\nPlan B: ${backup.name} — ${mapsUrl(backup)}` : "";
+  return `Dinner plan: ${r.name}${where}${when}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}${why}${fallback}`;
 }
 
 function localDateTime(date: Date): string {
@@ -239,6 +243,7 @@ function WinnerScreen({
   const [planned, setPlanned] = useState<{ start: string; duration: 60 | 90 | 120 } | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
+  const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -251,7 +256,14 @@ function WinnerScreen({
 
   const sharePlan = async () => {
     const url = mapsUrl(restaurant);
-    const text = planText(restaurant, rightSwipes, totalParticipants, planned);
+    const text = planText(
+      restaurant,
+      rightSwipes,
+      totalParticipants,
+      planned,
+      reasons.map((reason) => reason.label),
+      alternatives[0]?.restaurant,
+    );
     const finish = (result: "copied" | "shared") => {
       setShareResult(result);
       setTimeout(() => setShareResult(null), 1800);
@@ -457,6 +469,19 @@ function WinnerScreen({
       <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
         {consensusLine(rightSwipes, totalParticipants)}
       </p>
+      <section className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left">
+        <p className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted">Why this one works</p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {reasons.map((reason) => (
+            <div key={`${reason.icon}-${reason.label}`} className="flex min-w-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-black/15 px-2.5 py-2">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-acid/10 text-xs font-bold text-acid" aria-hidden>
+                {reason.icon}
+              </span>
+              <span className="text-xs font-medium leading-tight text-cream/90">{reason.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
       {planned && (
         <button
           type="button"

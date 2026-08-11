@@ -38,8 +38,22 @@ function consensusLine(rightSwipes: number, totalParticipants: number): string {
 }
 
 /** A share should read like a plan someone can act on, not an app notification. */
-function planText(r: Restaurant, rightSwipes: number, totalParticipants: number): string {
+function planText(
+  r: Restaurant,
+  rightSwipes: number,
+  totalParticipants: number,
+  planned?: { start: string; duration: number } | null,
+): string {
   const where = r.address ? `\n${r.address}` : "";
+  const when = planned
+    ? `\nMeet there ${new Date(planned.start).toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })} · ${planned.duration} min`
+    : "";
   const availability =
     r.businessStatus === "CLOSED_PERMANENTLY"
       ? " Permanently closed."
@@ -50,7 +64,7 @@ function planText(r: Restaurant, rightSwipes: number, totalParticipants: number)
           : r.openNow
             ? " Open now."
             : " Closed right now.";
-  return `Dinner plan: ${r.name}${where}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}`;
+  return `Dinner plan: ${r.name}${where}${when}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}`;
 }
 
 function localDateTime(date: Date): string {
@@ -206,6 +220,7 @@ function WinnerScreen({
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [planStart, setPlanStart] = useState(defaultPlanStart);
   const [planDuration, setPlanDuration] = useState<60 | 90 | 120>(90);
+  const [planned, setPlanned] = useState<{ start: string; duration: 60 | 90 | 120 } | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
 
@@ -220,7 +235,7 @@ function WinnerScreen({
 
   const sharePlan = async () => {
     const url = mapsUrl(restaurant);
-    const text = planText(restaurant, rightSwipes, totalParticipants);
+    const text = planText(restaurant, rightSwipes, totalParticipants, planned);
     const finish = (result: "copied" | "shared") => {
       setShareResult(result);
       setTimeout(() => setShareResult(null), 1800);
@@ -326,6 +341,7 @@ function WinnerScreen({
     link.download = `${restaurant.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "dinner"}.ics`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(href), 0);
+    setPlanned({ start: start.toISOString(), duration: planDuration });
     setPlannerOpen(false);
     setCalendarError(null);
   };
@@ -348,6 +364,7 @@ function WinnerScreen({
       ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${icsDate(start)}/${icsDate(end)}&location=${encodeURIComponent(location)}&details=${encodeURIComponent(details)}`
       : `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${encodeURIComponent(start.toISOString())}&enddt=${encodeURIComponent(end.toISOString())}&location=${encodeURIComponent(location)}&body=${encodeURIComponent(details)}`;
     window.open(url, "_blank", "noopener,noreferrer");
+    setPlanned({ start: start.toISOString(), duration: planDuration });
     setPlannerOpen(false);
     setCalendarError(null);
   };
@@ -424,6 +441,35 @@ function WinnerScreen({
       <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
         {consensusLine(rightSwipes, totalParticipants)}
       </p>
+      {planned && (
+        <button
+          type="button"
+          onClick={() => {
+            setPlanStart(localDateTime(new Date(planned.start)));
+            setPlanDuration(planned.duration);
+            setPlannerOpen(true);
+          }}
+          className="mx-auto mt-3 flex max-w-full items-center gap-3 rounded-2xl border border-acid/20 bg-acid/10 px-4 py-3 text-left transition hover:border-acid/40 active:scale-[0.99]"
+          aria-label="Change meetup time"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-acid/15 text-lg" aria-hidden>
+            ◷
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-acid">meet there</span>
+            <span className="block truncate text-sm font-semibold text-cream">
+              {new Date(planned.start).toLocaleString(undefined, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </span>
+            <span className="block text-xs text-muted">{planned.duration} minutes · tap to change</span>
+          </span>
+        </button>
+      )}
       <div
         className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10"
         role="progressbar"
@@ -527,7 +573,7 @@ function WinnerScreen({
           onClick={() => setPlannerOpen(true)}
           className="rounded-full border border-white/10 px-8 py-2.5 text-sm font-semibold text-muted hover:border-white/20 hover:text-cream active:scale-[0.98] transition"
         >
-          Add it to calendar
+          {planned ? "Change meetup time" : "Add it to calendar"}
         </button>
         {isHost ? (
           <button
@@ -631,6 +677,22 @@ function WinnerScreen({
             className="mt-2 w-full rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-muted hover:border-white/20 hover:text-cream active:scale-[0.98] transition"
           >
             Download .ics for Apple Calendar
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const start = new Date(planStart);
+              if (Number.isNaN(start.getTime()) || start.getTime() < Date.now()) {
+                setCalendarError(Number.isNaN(start.getTime()) ? "Pick a time first." : "Pick a time that hasn’t happened yet.");
+                return;
+              }
+              setPlanned({ start: start.toISOString(), duration: planDuration });
+              setPlannerOpen(false);
+              setCalendarError(null);
+            }}
+            className="mt-2 w-full rounded-full px-5 py-2 text-xs font-semibold text-muted/80 hover:text-cream transition"
+          >
+            Just save the meetup time
           </button>
         </Modal>
       )}

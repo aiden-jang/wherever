@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { matchReasons, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
+import { matchReasons, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -168,15 +168,19 @@ export function MatchScreen({
   visited,
   filters,
   isHost,
+  planned,
   onAgain,
   onChooseAlternative,
+  onPlan,
 }: {
   match: NonNullable<MatchState>;
   visited: VisitedPlace[];
   filters?: SessionFilters;
   isHost: boolean;
+  planned: PlannedMeetup | null;
   onAgain: () => void;
   onChooseAlternative: (restaurantId: string) => void;
+  onPlan: (planned: PlannedMeetup | null) => void;
 }) {
   const navigate = useNavigate();
 
@@ -211,7 +215,7 @@ export function MatchScreen({
     );
   }
 
-  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} onAgain={onAgain} onChooseAlternative={onChooseAlternative} navigate={navigate} />;
+  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} planned={planned} onAgain={onAgain} onChooseAlternative={onChooseAlternative} onPlan={onPlan} navigate={navigate} />;
 }
 
 function WinnerScreen({
@@ -219,16 +223,20 @@ function WinnerScreen({
   visited,
   filters,
   isHost,
+  planned,
   onAgain,
   onChooseAlternative,
+  onPlan,
   navigate,
 }: {
   match: Extract<NonNullable<MatchState>, { kind: "match" }>;
   visited: VisitedPlace[];
   filters?: SessionFilters;
   isHost: boolean;
+  planned: PlannedMeetup | null;
   onAgain: () => void;
   onChooseAlternative: (restaurantId: string) => void;
+  onPlan: (planned: PlannedMeetup | null) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round } = match;
@@ -244,7 +252,6 @@ function WinnerScreen({
   const [directionsOpen, setDirectionsOpen] = useState(false);
   const [planStart, setPlanStart] = useState(defaultPlanStart);
   const [planDuration, setPlanDuration] = useState<60 | 90 | 120>(90);
-  const [planned, setPlanned] = useState<{ start: string; duration: 60 | 90 | 120 } | null>(null);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
   const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
@@ -354,17 +361,8 @@ function WinnerScreen({
     }
   };
 
-  const addToCalendar = () => {
-    const start = new Date(planStart);
-    if (Number.isNaN(start.getTime())) {
-      setCalendarError("Pick a time first.");
-      return;
-    }
-    if (start.getTime() < Date.now()) {
-      setCalendarError("Pick a time that hasn’t happened yet.");
-      return;
-    }
-    const end = new Date(start.getTime() + planDuration * 60_000);
+  const downloadCalendar = (start: Date, duration: number) => {
+    const end = new Date(start.getTime() + duration * 60_000);
     const uid = `${restaurant.id}-${start.getTime()}@wherever`;
     const details = `Picked by ${rightSwipes} of ${totalParticipants} on Wherever, Honestly.`;
     const ics = [
@@ -379,7 +377,20 @@ function WinnerScreen({
     link.download = `${restaurant.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "dinner"}.ics`;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(href), 0);
-    setPlanned({ start: start.toISOString(), duration: planDuration });
+  };
+
+  const addToCalendar = () => {
+    const start = new Date(planStart);
+    if (Number.isNaN(start.getTime())) {
+      setCalendarError("Pick a time first.");
+      return;
+    }
+    if (start.getTime() < Date.now()) {
+      setCalendarError("Pick a time that hasn’t happened yet.");
+      return;
+    }
+    downloadCalendar(start, planDuration);
+    onPlan({ start: start.toISOString(), duration: planDuration });
     setPlannerOpen(false);
     setCalendarError(null);
   };
@@ -402,7 +413,7 @@ function WinnerScreen({
       ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${icsDate(start)}/${icsDate(end)}&location=${encodeURIComponent(location)}&details=${encodeURIComponent(details)}`
       : `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${encodeURIComponent(start.toISOString())}&enddt=${encodeURIComponent(end.toISOString())}&location=${encodeURIComponent(location)}&body=${encodeURIComponent(details)}`;
     window.open(url, "_blank", "noopener,noreferrer");
-    setPlanned({ start: start.toISOString(), duration: planDuration });
+    onPlan({ start: start.toISOString(), duration: planDuration });
     setPlannerOpen(false);
     setCalendarError(null);
   };
@@ -496,12 +507,13 @@ function WinnerScreen({
         <button
           type="button"
           onClick={() => {
+            if (!isHost) return;
             setPlanStart(localDateTime(new Date(planned.start)));
             setPlanDuration(planned.duration);
             setPlannerOpen(true);
           }}
-          className="mx-auto mt-3 flex max-w-full items-center gap-3 rounded-2xl border border-acid/20 bg-acid/10 px-4 py-3 text-left transition hover:border-acid/40 active:scale-[0.99]"
-          aria-label="Change meetup time"
+          className={`mx-auto mt-3 flex max-w-full items-center gap-3 rounded-2xl border border-acid/20 bg-acid/10 px-4 py-3 text-left transition ${isHost ? "hover:border-acid/40 active:scale-[0.99]" : "cursor-default"}`}
+          aria-label={isHost ? "Change meetup time" : "Meetup time set by the host"}
         >
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-acid/15 text-lg" aria-hidden>
             ◷
@@ -517,7 +529,9 @@ function WinnerScreen({
                 minute: "2-digit",
               })}
             </span>
-            <span className="block text-xs text-muted">{planned.duration} minutes · tap to change</span>
+            <span className="block text-xs text-muted">
+              {planned.duration} minutes · {isHost ? "tap to change" : "set by the host"}
+            </span>
           </span>
         </button>
       )}
@@ -710,13 +724,24 @@ function WinnerScreen({
             >
               {cardResult === "making" ? "Making winner card…" : cardResult === "shared" ? "Winner card shared" : cardResult === "saved" ? "Winner card saved" : "Save the winner card"}
             </button>
-            <button
-              type="button"
-              onClick={() => setPlannerOpen(true)}
-              className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98]"
-            >
-              {planned ? "Change meetup time" : "Add it to calendar"}
-            </button>
+            {isHost && (
+              <button
+                type="button"
+                onClick={() => setPlannerOpen(true)}
+                className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98]"
+              >
+                {planned ? "Change meetup time" : "Set meetup time"}
+              </button>
+            )}
+            {!isHost && planned && (
+              <button
+                type="button"
+                onClick={() => downloadCalendar(new Date(planned.start), planned.duration)}
+                className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98]"
+              >
+                Add meetup to my calendar
+              </button>
+            )}
           </div>
         </details>
         {isHost ? (
@@ -881,14 +906,27 @@ function WinnerScreen({
                 setCalendarError(Number.isNaN(start.getTime()) ? "Pick a time first." : "Pick a time that hasn’t happened yet.");
                 return;
               }
-              setPlanned({ start: start.toISOString(), duration: planDuration });
+              onPlan({ start: start.toISOString(), duration: planDuration });
               setPlannerOpen(false);
               setCalendarError(null);
             }}
             className="mt-2 w-full rounded-full px-5 py-2 text-xs font-semibold text-muted/80 hover:text-cream transition"
           >
-            Just save the meetup time
+            Save for everyone
           </button>
+          {planned && (
+            <button
+              type="button"
+              onClick={() => {
+                onPlan(null);
+                setPlannerOpen(false);
+                setCalendarError(null);
+              }}
+              className="mt-1 w-full rounded-full px-5 py-2 text-xs font-semibold text-flare/80 transition hover:text-flare"
+            >
+              Clear meetup time for everyone
+            </button>
+          )}
         </Modal>
       )}
     </div>

@@ -6,6 +6,7 @@ import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./ca
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
+import { Modal } from "./Modal.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 import { renderShareCard } from "./shareCard.js";
@@ -50,6 +51,22 @@ function planText(r: Restaurant, rightSwipes: number, totalParticipants: number)
             ? " Open now."
             : " Closed right now.";
   return `Dinner plan: ${r.name}${where}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}`;
+}
+
+function defaultPlanStart(): string {
+  const date = new Date();
+  date.setHours(19, 0, 0, 0);
+  if (date.getTime() < Date.now()) date.setDate(date.getDate() + 1);
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function icsDate(date: Date): string {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+function icsText(value: string): string {
+  return value.replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
 }
 
 function History({ visited }: { visited: VisitedPlace[] }) {
@@ -142,6 +159,9 @@ function WinnerScreen({
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
   const [cardResult, setCardResult] = useState<"making" | "shared" | "saved" | null>(null);
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [planStart, setPlanStart] = useState(defaultPlanStart);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
@@ -234,6 +254,49 @@ function WinnerScreen({
     } catch {
       setCardResult(null);
     }
+  };
+
+  const addToCalendar = () => {
+    const start = new Date(planStart);
+    if (Number.isNaN(start.getTime())) {
+      setCalendarError("Pick a time first.");
+      return;
+    }
+    const end = new Date(start.getTime() + 90 * 60_000);
+    const uid = `${restaurant.id}-${start.getTime()}@wherever`;
+    const details = `Picked by ${rightSwipes} of ${totalParticipants} on Wherever, Honestly.`;
+    const ics = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Wherever Honestly//EN", "BEGIN:VEVENT",
+      `UID:${icsText(uid)}`, `DTSTAMP:${icsDate(new Date())}`, `DTSTART:${icsDate(start)}`, `DTEND:${icsDate(end)}`,
+      `SUMMARY:${icsText(`Dinner at ${restaurant.name}`)}`, `LOCATION:${icsText(restaurant.address ?? restaurant.name)}`,
+      `DESCRIPTION:${icsText(details)}`, "END:VEVENT", "END:VCALENDAR", "",
+    ].join("\r\n");
+    const href = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = `${restaurant.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "dinner"}.ics`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(href), 0);
+    setPlannerOpen(false);
+    setCalendarError(null);
+  };
+
+  const openCalendar = (provider: "google" | "outlook") => {
+    const start = new Date(planStart);
+    if (Number.isNaN(start.getTime())) {
+      setCalendarError("Pick a time first.");
+      return;
+    }
+    const end = new Date(start.getTime() + 90 * 60_000);
+    const title = `Dinner at ${restaurant.name}`;
+    const location = restaurant.address ?? restaurant.name;
+    const details = `Picked by ${rightSwipes} of ${totalParticipants} on Wherever, Honestly.`;
+    const url = provider === "google"
+      ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${icsDate(start)}/${icsDate(end)}&location=${encodeURIComponent(location)}&details=${encodeURIComponent(details)}`
+      : `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${encodeURIComponent(start.toISOString())}&enddt=${encodeURIComponent(end.toISOString())}&location=${encodeURIComponent(location)}&body=${encodeURIComponent(details)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    setPlannerOpen(false);
+    setCalendarError(null);
   };
 
   return (
@@ -406,6 +469,13 @@ function WinnerScreen({
         >
           {cardResult === "making" ? "Making winner card…" : cardResult === "shared" ? "Winner card shared" : cardResult === "saved" ? "Winner card saved" : "Save the winner card"}
         </button>
+        <button
+          type="button"
+          onClick={() => setPlannerOpen(true)}
+          className="rounded-full border border-white/10 px-8 py-2.5 text-sm font-semibold text-muted hover:border-white/20 hover:text-cream active:scale-[0.98] transition"
+        >
+          Add it to calendar
+        </button>
         {isHost ? (
           <button
             onClick={onAgain}
@@ -427,6 +497,47 @@ function WinnerScreen({
 
       {detailOpen && (
         <RestaurantDetail restaurant={restaurant} onClose={() => setDetailOpen(false)} />
+      )}
+      {plannerOpen && (
+        <Modal title="Put dinner on the calendar" onClose={() => { setPlannerOpen(false); setCalendarError(null); }}>
+          <p className="text-sm leading-relaxed text-muted">
+            Save {restaurant.name} wherever the group keeps plans. It&apos;s set to 90 minutes; change the start if tonight isn&apos;t right.
+          </p>
+          <label className="mt-5 block text-xs font-semibold uppercase tracking-wider text-muted" htmlFor="dinner-time">
+            Start time
+          </label>
+          <input
+            id="dinner-time"
+            type="datetime-local"
+            value={planStart}
+            onChange={(event) => setPlanStart(event.target.value)}
+            className="mt-2 w-full rounded-xl border border-white/15 bg-ink px-3 py-3 text-sm text-cream outline-none focus:border-acid"
+          />
+          {calendarError && <p role="alert" className="mt-2 text-sm text-flare">{calendarError}</p>}
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => openCalendar("google")}
+              className="rounded-full bg-ember px-4 py-3 text-sm font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
+            >
+              Google Calendar ↗
+            </button>
+            <button
+              type="button"
+              onClick={() => openCalendar("outlook")}
+              className="rounded-full border border-white/15 px-4 py-3 text-sm font-semibold hover:bg-white/5 active:scale-[0.98] transition"
+            >
+              Outlook ↗
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={addToCalendar}
+            className="mt-2 w-full rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-muted hover:border-white/20 hover:text-cream active:scale-[0.98] transition"
+          >
+            Download .ics for Apple Calendar
+          </button>
+        </Modal>
       )}
     </div>
   );

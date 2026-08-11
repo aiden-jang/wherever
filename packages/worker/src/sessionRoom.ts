@@ -10,6 +10,7 @@ import {
   vetoedRestaurantIds,
   type DecisionResult,
   type Participant,
+  type PlannedMeetup,
   type Restaurant,
   type ServerMessage,
   type Session,
@@ -109,6 +110,8 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleAgain(ws);
       case "choose_alternative":
         return this.handleChooseAlternative(ws, msg.restaurantId);
+      case "set_plan":
+        return this.handleSetPlan(ws, msg.planned);
       case "react":
         return this.handleReact(ws, msg.emoji);
     }
@@ -306,6 +309,10 @@ export class SessionRoom extends DurableObject<Env> {
       await this.evaluate(meta); // refresh progress for the new arrival
     } else if (meta.status === "decided") {
       await this.sendResult(ws);
+      this.send(ws, {
+        type: "plan",
+        planned: (await this.ctx.storage.get<PlannedMeetup>("plannedMeetup")) ?? null,
+      });
     }
   }
 
@@ -453,6 +460,23 @@ export class SessionRoom extends DurableObject<Env> {
     await this.broadcastHistory(meta.code);
   }
 
+  /** Keep the post-decision meetup time consistent for every device in the room. */
+  private async handleSetPlan(ws: WebSocket, planned: PlannedMeetup | null): Promise<void> {
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att?.isHost) {
+      return this.send(ws, { type: "error", message: "Only the host can set the meetup time." });
+    }
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta || meta.status !== "decided") return;
+    if (planned && new Date(planned.start).getTime() < Date.now() - 60_000) {
+      return this.send(ws, { type: "error", message: "Pick a meetup time that hasn't happened yet." });
+    }
+
+    if (planned) await this.ctx.storage.put("plannedMeetup", planned);
+    else await this.ctx.storage.delete("plannedMeetup");
+    this.broadcast({ type: "plan", planned });
+  }
+
   // ---- core round logic ----
 
   /** Recompute + broadcast progress, then decide if everyone connected is done. */
@@ -553,6 +577,7 @@ export class SessionRoom extends DurableObject<Env> {
 
     await this.ctx.storage.delete("votes");
     await this.ctx.storage.delete("winner");
+    await this.ctx.storage.delete("plannedMeetup");
     await this.ctx.storage.put("againRounds", rounds + 1);
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);

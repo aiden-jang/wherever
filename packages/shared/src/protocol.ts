@@ -61,6 +61,17 @@ export interface ChooseAlternativeMessage {
   restaurantId: string;
 }
 
+export interface PlannedMeetup {
+  start: string;
+  duration: 60 | 90 | 120;
+}
+
+/** Host sets (or clears) the meetup time after a winner is chosen. */
+export interface SetPlanMessage {
+  type: "set_plan";
+  planned: PlannedMeetup | null;
+}
+
 /** Throw an emoji reaction to everyone in the session. Ephemeral, not persisted. */
 export interface ReactMessage {
   type: "react";
@@ -75,6 +86,7 @@ export type ClientMessage =
   | DecideNowMessage
   | AgainMessage
   | ChooseAlternativeMessage
+  | SetPlanMessage
   | ReactMessage;
 
 // ---- Server -> Client ----
@@ -173,6 +185,12 @@ export interface ReactionMessage {
   from: string;
 }
 
+/** The shared meetup time. Persisted so late joiners and reconnects see the same plan. */
+export interface PlanMessage {
+  type: "plan";
+  planned: PlannedMeetup | null;
+}
+
 export type ServerMessage =
   | SessionStateMessage
   | DeckMessage
@@ -183,4 +201,5 @@ export type ServerMessage =
   | HistoryMessage
   | ErrorMessage
   | IdentityMessage
+  | PlanMessage
   | ReactionMessage;

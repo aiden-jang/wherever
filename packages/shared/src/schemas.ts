@@ -84,6 +84,14 @@ const chooseAlternativeSchema = z.object({
   restaurantId: z.string().min(1),
 });
 
+const setPlanSchema = z.object({
+  type: z.literal("set_plan"),
+  planned: z.object({
+    start: z.string().datetime({ offset: true }),
+    duration: z.union([z.literal(60), z.literal(90), z.literal(120)]),
+  }).nullable(),
+});
+
 const reactSchema = z.object({
   type: z.literal("react"),
   emoji: z.enum(REACTION_EMOJIS),
@@ -98,5 +106,6 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   decideNowSchema,
   againSchema,
   chooseAlternativeSchema,
+  setPlanSchema,
   reactSchema,
 ]);

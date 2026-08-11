@@ -134,6 +134,20 @@ describe("decideWinner", () => {
     const result = decideWinner(deck, votes);
     expect(result?.restaurant.id).toBe("a");
     expect(result?.rightSwipes).toBe(2);
+    expect(result?.alternatives?.map((choice) => choice.restaurant.id)).toEqual(["b"]);
+  });
+
+  it("keeps two ranked, non-vetoed backups", () => {
+    const votes = [
+      vote("p1", "a", "right"),
+      vote("p2", "a", "right"),
+      vote("p1", "b", "right"),
+      vote("p2", "c", "right"),
+      { ...vote("p3", "b", "left"), veto: true },
+    ];
+    const result = decideWinner(deck, votes);
+    expect(result?.restaurant.id).toBe("a");
+    expect(result?.alternatives).toEqual([{ restaurant: deck[2], rightSwipes: 1 }]);
   });
 
   it("a single left swipe does not veto a popular choice", () => {
@@ -241,6 +255,6 @@ describe("veto", () => {
 
   it("does not count toward the winner's headcount", () => {
     const votes = [yes("p1", "b"), yes("p2", "b"), veto("p3", "a")];
-    expect(decideWinner(deck, votes)).toEqual({ restaurant: deck[1], rightSwipes: 2 });
+    expect(decideWinner(deck, votes)).toEqual({ restaurant: deck[1], rightSwipes: 2, alternatives: [] });
   });
 });

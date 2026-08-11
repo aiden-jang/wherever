@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ClientMessage,
+  DecisionAlternative,
   Restaurant,
   ServerMessage,
   Session,
@@ -19,7 +20,7 @@ export interface Progress {
 }
 
 export type MatchState =
-  | { kind: "match"; restaurant: Restaurant; rightSwipes: number; totalParticipants: number; vetoedCount: number; round: number }
+  | { kind: "match"; restaurant: Restaurant; rightSwipes: number; alternatives: DecisionAlternative[]; totalParticipants: number; vetoedCount: number; round: number }
   | { kind: "none"; vetoedCount: number }
   | null;
 
@@ -110,6 +111,7 @@ export function useSessionSocket(code: string, displayName: string) {
             kind: "match",
             restaurant: msg.restaurant,
             rightSwipes: msg.rightSwipes,
+            alternatives: msg.alternatives ?? [],
             totalParticipants: msg.totalParticipants,
             vetoedCount: msg.vetoedCount ?? 0,
             round: msg.round ?? 1,

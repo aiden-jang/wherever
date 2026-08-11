@@ -10,6 +10,7 @@ import type {
   TastePulse,
   VisitedPlace,
 } from "./types.js";
+import type { DecisionAlternative } from "./decision.js";
 
 // ---- Client -> Server ----
 
@@ -115,6 +116,8 @@ export interface MatchMessage {
   restaurant: Restaurant;
   rightSwipes: number;
   totalParticipants: number;
+  /** Ranked, non-vetoed fallbacks from the same anonymous tally. Optional for older rooms. */
+  alternatives?: DecisionAlternative[];
   /** How many places somebody vetoed, so the winner doesn't look arbitrary. */
   vetoedCount?: number;
   /**

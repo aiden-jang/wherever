@@ -10,6 +10,7 @@ import { LiveRegion } from "../components/LiveRegion.js";
 import { buzz } from "../components/haptics.js";
 import { play } from "../components/sound.js";
 import { FilterSummary } from "../components/FilterSummary.js";
+import { JoinQr } from "../components/JoinQr.js";
 
 function initials(name: string): string {
   return name.trim().slice(0, 2).toUpperCase();
@@ -604,6 +605,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             Copy link
           </button>
         </div>
+        <JoinQr code={code} url={location.href} />
         {session?.filters && <FilterSummary filters={session.filters} />}
       </div>
 

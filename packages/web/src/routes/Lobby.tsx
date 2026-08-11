@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { Participant, SessionFilters } from "@wherever/shared";
-import { amenityLabel, cuisineLabel, neighborhoodLabel, PRICE_OPTIONS, RADIUS_OPTIONS, ROUND_TIMER_OPTIONS, SORT_OPTIONS } from "@wherever/shared";
+import type { Participant } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
@@ -10,6 +9,7 @@ import { ReactionBar, FloatingReactions } from "../components/Reactions.js";
 import { LiveRegion } from "../components/LiveRegion.js";
 import { buzz } from "../components/haptics.js";
 import { play } from "../components/sound.js";
+import { FilterSummary } from "../components/FilterSummary.js";
 
 function initials(name: string): string {
   return name.trim().slice(0, 2).toUpperCase();
@@ -58,54 +58,6 @@ function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
       <button onClick={() => location.reload()} className="underline font-semibold">
         Reload to rejoin
       </button>
-    </div>
-  );
-}
-
-function radiusLabel(meters: number): string {
-  return RADIUS_OPTIONS.find((o) => o.meters === meters)?.label ?? `${Math.round(meters / 1000)} km`;
-}
-
-/** Read-only recap of the filters the host chose, so joiners know the game. */
-function FilterSummary({ filters }: { filters: SessionFilters }) {
-  // A manually-searched place wins the label, then a picked neighborhood, else just the radius.
-  const place = filters.locationLabel ?? (filters.area ? neighborhoodLabel(filters.area) : undefined);
-  const chips: string[] = [
-    place ? `${place} · ${radiusLabel(filters.radiusMeters)}` : radiusLabel(filters.radiusMeters),
-  ];
-  const priceLabelFor = (t: number) => PRICE_OPTIONS.find((o) => o.tier === t)?.label ?? "$";
-  if (filters.priceTiers && filters.priceTiers.length > 0) {
-    chips.push(filters.priceTiers.map(priceLabelFor).join(", "));
-  } else if (filters.maxPriceTier < 4) {
-    chips.push(`up to ${priceLabelFor(filters.maxPriceTier)}`);
-  }
-  if (filters.minRating && filters.minRating > 0) chips.push(`${filters.minRating.toFixed(1)}+ stars`);
-  if (filters.minReviews && filters.minReviews > 0) chips.push(`${filters.minReviews}+ reviews`);
-  if (filters.openNow) chips.push("open now");
-  if (filters.roundSeconds) {
-    const t = ROUND_TIMER_OPTIONS.find((o) => o.seconds === filters.roundSeconds)?.label;
-    chips.push(`${(t ?? `${filters.roundSeconds}s`).toLowerCase()} timer`);
-  }
-  for (const a of filters.amenities ?? []) chips.push(amenityLabel(a).toLowerCase());
-  for (const c of filters.excludedCategories ?? []) chips.push(`no ${cuisineLabel(c).toLowerCase()}`);
-  if (filters.revealVoters) chips.push("votes shown");
-  if (filters.sort === "distance") {
-    const sortLabel = SORT_OPTIONS.find((o) => o.value === "distance")?.label ?? "closest";
-    chips.push(sortLabel.toLowerCase());
-  }
-  chips.push(
-    filters.categories.length > 0
-      ? filters.categories.map(cuisineLabel).join(", ")
-      : "any food",
-  );
-
-  return (
-    <div className="mt-6 flex flex-wrap justify-center gap-2">
-      {chips.map((c) => (
-        <span key={c} className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs text-muted">
-          {c}
-        </span>
-      ))}
     </div>
   );
 }
@@ -527,6 +479,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <MatchScreen
           match={match}
           visited={visited}
+          filters={session?.filters}
           isHost={isHost}
           onAgain={() => send({ type: "again" })}
         />

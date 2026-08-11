@@ -72,6 +72,20 @@ export interface SetPlanMessage {
   planned: PlannedMeetup | null;
 }
 
+export type ArrivalStatus = "heading_out" | "here";
+
+export interface ArrivalUpdate {
+  participantId: string;
+  displayName: string;
+  status: ArrivalStatus;
+}
+
+/** Each participant owns their own arrival status; null quietly clears it. */
+export interface SetArrivalMessage {
+  type: "set_arrival";
+  status: ArrivalStatus | null;
+}
+
 /** Throw an emoji reaction to everyone in the session. Ephemeral, not persisted. */
 export interface ReactMessage {
   type: "react";
@@ -87,6 +101,7 @@ export type ClientMessage =
   | AgainMessage
   | ChooseAlternativeMessage
   | SetPlanMessage
+  | SetArrivalMessage
   | ReactMessage;
 
 // ---- Server -> Client ----
@@ -191,6 +206,11 @@ export interface PlanMessage {
   planned: PlannedMeetup | null;
 }
 
+export interface ArrivalsMessage {
+  type: "arrivals";
+  arrivals: ArrivalUpdate[];
+}
+
 export type ServerMessage =
   | SessionStateMessage
   | DeckMessage
@@ -202,4 +222,5 @@ export type ServerMessage =
   | ErrorMessage
   | IdentityMessage
   | PlanMessage
+  | ArrivalsMessage
   | ReactionMessage;

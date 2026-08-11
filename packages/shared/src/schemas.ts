@@ -92,6 +92,11 @@ const setPlanSchema = z.object({
   }).nullable(),
 });
 
+const setArrivalSchema = z.object({
+  type: z.literal("set_arrival"),
+  status: z.enum(["heading_out", "here"]).nullable(),
+});
+
 const reactSchema = z.object({
   type: z.literal("react"),
   emoji: z.enum(REACTION_EMOJIS),
@@ -107,5 +112,6 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   againSchema,
   chooseAlternativeSchema,
   setPlanSchema,
+  setArrivalSchema,
   reactSchema,
 ]);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { matchReasons, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
+import { matchReasons, type ArrivalStatus, type ArrivalUpdate, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -169,18 +169,24 @@ export function MatchScreen({
   filters,
   isHost,
   planned,
+  arrivals,
+  participantId,
   onAgain,
   onChooseAlternative,
   onPlan,
+  onArrival,
 }: {
   match: NonNullable<MatchState>;
   visited: VisitedPlace[];
   filters?: SessionFilters;
   isHost: boolean;
   planned: PlannedMeetup | null;
+  arrivals: ArrivalUpdate[];
+  participantId: string | null;
   onAgain: () => void;
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
+  onArrival: (status: ArrivalStatus | null) => void;
 }) {
   const navigate = useNavigate();
 
@@ -215,7 +221,7 @@ export function MatchScreen({
     );
   }
 
-  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} planned={planned} onAgain={onAgain} onChooseAlternative={onChooseAlternative} onPlan={onPlan} navigate={navigate} />;
+  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} planned={planned} arrivals={arrivals} participantId={participantId} onAgain={onAgain} onChooseAlternative={onChooseAlternative} onPlan={onPlan} onArrival={onArrival} navigate={navigate} />;
 }
 
 function WinnerScreen({
@@ -224,9 +230,12 @@ function WinnerScreen({
   filters,
   isHost,
   planned,
+  arrivals,
+  participantId,
   onAgain,
   onChooseAlternative,
   onPlan,
+  onArrival,
   navigate,
 }: {
   match: Extract<NonNullable<MatchState>, { kind: "match" }>;
@@ -234,9 +243,12 @@ function WinnerScreen({
   filters?: SessionFilters;
   isHost: boolean;
   planned: PlannedMeetup | null;
+  arrivals: ArrivalUpdate[];
+  participantId: string | null;
   onAgain: () => void;
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
+  onArrival: (status: ArrivalStatus | null) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round } = match;
@@ -255,6 +267,9 @@ function WinnerScreen({
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
   const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
+  const myArrival = arrivals.find(arrival => arrival.participantId === participantId)?.status ?? null;
+  const hereCount = arrivals.filter(arrival => arrival.status === "here").length;
+  const headingCount = arrivals.filter(arrival => arrival.status === "heading_out").length;
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -535,6 +550,53 @@ function WinnerScreen({
           </span>
         </button>
       )}
+      <section className="mt-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left">
+        <div className="flex items-start justify-between gap-3 px-1">
+          <span>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-acid">arrival pulse</span>
+            <span className="mt-0.5 block text-xs text-muted">
+              {arrivals.length === 0
+                ? "Let the group know when you move."
+                : [hereCount ? `${hereCount} here` : null, headingCount ? `${headingCount} heading out` : null].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+          <span className="text-lg" aria-hidden>⌁</span>
+        </div>
+        {arrivals.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Group arrival status">
+            {arrivals.map(arrival => (
+              <li key={arrival.participantId} className="flex items-center gap-2 rounded-full border border-white/10 bg-black/15 py-1 pl-1 pr-2.5 text-xs text-cream/90">
+                <span className={`grid h-6 w-6 place-items-center rounded-full text-[9px] font-bold ${arrival.status === "here" ? "bg-acid text-ink" : "bg-ember/20 text-ember"}`} aria-hidden>
+                  {arrival.displayName.trim().slice(0, 2).toUpperCase() || "?"}
+                </span>
+                <span className="max-w-28 truncate">{arrival.displayName}</span>
+                <span className={arrival.status === "here" ? "text-acid" : "text-ember"}>
+                  {arrival.status === "here" ? "here" : "on the way"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {participantId && (
+          <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Update my arrival status">
+            {([['heading_out', 'Heading out'], ['here', "I’m here"]] as const).map(([status, label]) => (
+              <button
+                key={status}
+                type="button"
+                aria-pressed={myArrival === status}
+                onClick={() => onArrival(myArrival === status ? null : status)}
+                className={`rounded-full border px-3 py-2 text-xs font-bold transition active:scale-[0.98] ${
+                  myArrival === status
+                    ? "border-acid bg-acid text-ink"
+                    : "border-white/15 text-muted hover:border-acid/40 hover:text-cream"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
       <div
         className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10"
         role="progressbar"

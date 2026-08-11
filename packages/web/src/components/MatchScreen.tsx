@@ -8,6 +8,7 @@ import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
+import { renderShareCard } from "./shareCard.js";
 
 /**
  * A Google Maps link to the winning place itself (the place page, not turn-by-turn navigation), so
@@ -140,6 +141,7 @@ function WinnerScreen({
   const mapsAction = unavailable ? 'See it in Google Maps ↗' : 'Get directions ↗';
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
+  const [cardResult, setCardResult] = useState<"making" | "shared" | "saved" | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
@@ -190,6 +192,47 @@ function WinnerScreen({
       setTimeout(() => setAddressCopied(false), 2000);
     } catch {
       // Directions is still the primary, no-fail way to get there.
+    }
+  };
+
+  // A group-chat text gets people moving; a card is the little receipt someone keeps. The renderer
+  // is fully local and the native sheet gets the actual PNG when the platform supports file shares.
+  const saveWinnerCard = async () => {
+    if (cardResult) return;
+    setCardResult("making");
+    try {
+      const blob = await renderShareCard(restaurant);
+      if (!blob) {
+        setCardResult(null);
+        return;
+      }
+      const fileName = `${restaurant.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "wherever"}-winner.png`;
+      const file = new File([blob], fileName, { type: "image/png" });
+      const canShareFile = typeof navigator.share === "function" &&
+        (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] }));
+      if (canShareFile) {
+        try {
+          await navigator.share({ title: `${restaurant.name} won`, files: [file] });
+          setCardResult("shared");
+          setTimeout(() => setCardResult(null), 2000);
+          return;
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") {
+            setCardResult(null);
+            return;
+          }
+        }
+      }
+      const href = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = fileName;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(href), 0);
+      setCardResult("saved");
+      setTimeout(() => setCardResult(null), 2000);
+    } catch {
+      setCardResult(null);
     }
   };
 
@@ -354,6 +397,14 @@ function WinnerScreen({
           className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
         >
           {shareResult === "sharing" ? "Opening…" : shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Send the plan"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void saveWinnerCard()}
+          disabled={cardResult !== null}
+          className="rounded-full border border-white/10 px-8 py-2.5 text-sm font-semibold text-muted hover:border-white/20 hover:text-cream active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
+        >
+          {cardResult === "making" ? "Making winner card…" : cardResult === "shared" ? "Winner card shared" : cardResult === "saved" ? "Winner card saved" : "Save the winner card"}
         </button>
         {isHost ? (
           <button

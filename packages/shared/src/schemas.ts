@@ -94,7 +94,8 @@ const setPlanSchema = z.object({
 
 const setArrivalSchema = z.object({
   type: z.literal("set_arrival"),
-  status: z.enum(["heading_out", "here"]).nullable(),
+  status: z.enum(["planning", "heading_out", "here"]).nullable(),
+  travelMinutes: z.number().int().min(1).max(180).optional(),
 });
 
 const reactSchema = z.object({

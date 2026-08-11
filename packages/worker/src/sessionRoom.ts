@@ -116,7 +116,7 @@ export class SessionRoom extends DurableObject<Env> {
       case "set_plan":
         return this.handleSetPlan(ws, msg.planned);
       case "set_arrival":
-        return this.handleSetArrival(ws, msg.status);
+        return this.handleSetArrival(ws, msg.status, msg.travelMinutes);
       case "react":
         return this.handleReact(ws, msg.emoji);
     }
@@ -487,17 +487,21 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /** Arrival updates are self-owned, but shared and durable for people joining the plan later. */
-  private async handleSetArrival(ws: WebSocket, status: ArrivalStatus | null): Promise<void> {
+  private async handleSetArrival(ws: WebSocket, status: ArrivalStatus | null, travelMinutes?: number): Promise<void> {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att) return;
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "decided") return;
     const arrivals = (await this.ctx.storage.get<ArrivalMap>("arrivals")) ?? {};
     if (status) {
+      const previous = arrivals[att.participantId];
+      const estimate = travelMinutes ?? previous?.travelMinutes;
       arrivals[att.participantId] = {
         participantId: att.participantId,
         displayName: att.displayName,
         status,
+        ...(estimate ? { travelMinutes: estimate } : {}),
+        updatedAt: new Date().toISOString(),
       };
     } else {
       delete arrivals[att.participantId];

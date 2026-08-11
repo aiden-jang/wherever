@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { matchReasons, type ArrivalStatus, type ArrivalUpdate, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
+import { journeyTiming, matchReasons, type ArrivalStatus, type ArrivalUpdate, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -186,7 +186,7 @@ export function MatchScreen({
   onAgain: () => void;
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
-  onArrival: (status: ArrivalStatus | null) => void;
+  onArrival: (status: ArrivalStatus | null, travelMinutes?: number) => void;
 }) {
   const navigate = useNavigate();
 
@@ -248,7 +248,7 @@ function WinnerScreen({
   onAgain: () => void;
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
-  onArrival: (status: ArrivalStatus | null) => void;
+  onArrival: (status: ArrivalStatus | null, travelMinutes?: number) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round } = match;
@@ -266,10 +266,26 @@ function WinnerScreen({
   const [planDuration, setPlanDuration] = useState<60 | 90 | 120>(90);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
+  const [travelMinutes, setTravelMinutes] = useState(20);
+  const [clockNow, setClockNow] = useState(() => new Date());
   const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
-  const myArrival = arrivals.find(arrival => arrival.participantId === participantId)?.status ?? null;
+  const myArrivalUpdate = arrivals.find(arrival => arrival.participantId === participantId);
+  const myArrival = myArrivalUpdate?.status ?? null;
   const hereCount = arrivals.filter(arrival => arrival.status === "here").length;
   const headingCount = arrivals.filter(arrival => arrival.status === "heading_out").length;
+  const planningCount = arrivals.filter(arrival => arrival.status === "planning").length;
+  const myTiming = myArrivalUpdate
+    ? journeyTiming(planned, myArrivalUpdate.status, myArrivalUpdate.travelMinutes, myArrivalUpdate.updatedAt, clockNow)
+    : null;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (myArrivalUpdate?.travelMinutes) setTravelMinutes(myArrivalUpdate.travelMinutes);
+  }, [myArrivalUpdate?.travelMinutes]);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -557,7 +573,7 @@ function WinnerScreen({
             <span className="mt-0.5 block text-xs text-muted">
               {arrivals.length === 0
                 ? "Let the group know when you move."
-                : [hereCount ? `${hereCount} here` : null, headingCount ? `${headingCount} heading out` : null].filter(Boolean).join(" · ")}
+                : [hereCount ? `${hereCount} here` : null, headingCount ? `${headingCount} on the way` : null, planningCount ? `${planningCount} getting ready` : null].filter(Boolean).join(" · ")}
             </span>
           </span>
           <span className="text-lg" aria-hidden>⌁</span>
@@ -566,34 +582,73 @@ function WinnerScreen({
           <ul className="mt-3 flex flex-wrap gap-2" aria-label="Group arrival status">
             {arrivals.map(arrival => (
               <li key={arrival.participantId} className="flex items-center gap-2 rounded-full border border-white/10 bg-black/15 py-1 pl-1 pr-2.5 text-xs text-cream/90">
-                <span className={`grid h-6 w-6 place-items-center rounded-full text-[9px] font-bold ${arrival.status === "here" ? "bg-acid text-ink" : "bg-ember/20 text-ember"}`} aria-hidden>
+                <span className={`grid h-6 w-6 place-items-center rounded-full text-[9px] font-bold ${arrival.status === "here" ? "bg-acid text-ink" : arrival.status === "heading_out" ? "bg-ember/20 text-ember" : "bg-white/10 text-muted"}`} aria-hidden>
                   {arrival.displayName.trim().slice(0, 2).toUpperCase() || "?"}
                 </span>
                 <span className="max-w-28 truncate">{arrival.displayName}</span>
-                <span className={arrival.status === "here" ? "text-acid" : "text-ember"}>
-                  {arrival.status === "here" ? "here" : "on the way"}
+                <span className={arrival.status === "here" ? "text-acid" : arrival.status === "heading_out" ? "text-ember" : "text-muted"}>
+                  {journeyTiming(planned, arrival.status, arrival.travelMinutes, arrival.updatedAt, clockNow).label}
                 </span>
               </li>
             ))}
           </ul>
         )}
         {participantId && (
-          <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Update my arrival status">
-            {([['heading_out', 'Heading out'], ['here', "I’m here"]] as const).map(([status, label]) => (
-              <button
-                key={status}
-                type="button"
-                aria-pressed={myArrival === status}
-                onClick={() => onArrival(myArrival === status ? null : status)}
-                className={`rounded-full border px-3 py-2 text-xs font-bold transition active:scale-[0.98] ${
-                  myArrival === status
-                    ? "border-acid bg-acid text-ink"
-                    : "border-white/15 text-muted hover:border-acid/40 hover:text-cream"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="mt-3">
+            {planned && (
+              <div className="mb-2.5 rounded-xl border border-white/10 bg-black/15 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span>
+                    <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-muted">My trip</span>
+                    <span className="mt-0.5 block text-xs text-cream">
+                      {journeyTiming(planned, 'planning', travelMinutes, undefined, clockNow).label}
+                    </span>
+                  </span>
+                  <div className="flex gap-1" role="group" aria-label="Estimated travel time">
+                    {[10, 20, 30, 45].map(minutes => (
+                      <button
+                        key={minutes}
+                        type="button"
+                        aria-pressed={travelMinutes === minutes}
+                        onClick={() => setTravelMinutes(minutes)}
+                        className={`rounded-full border px-2 py-1 text-[10px] font-bold transition ${travelMinutes === minutes ? "border-acid bg-acid text-ink" : "border-white/10 text-muted hover:text-cream"}`}
+                      >
+                        {minutes}m
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onArrival('planning', travelMinutes)}
+                  className={`mt-2.5 w-full rounded-full border px-3 py-2 text-xs font-bold transition active:scale-[0.98] ${myArrival === 'planning' ? "border-acid/40 bg-acid/10 text-acid" : "border-white/15 text-muted hover:border-acid/40 hover:text-cream"}`}
+                >
+                  {myArrival === 'planning' ? 'Leave-by shared ✓' : 'Share my leave-by'}
+                </button>
+                {myTiming?.overdueMinutes ? (
+                  <p className="mt-2 text-center text-[11px] font-semibold text-ember" role="status">
+                    Leave-by passed {myTiming.overdueMinutes}m ago. Still getting ready?
+                  </p>
+                ) : null}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Update my arrival status">
+              {([['heading_out', 'Heading out'], ['here', "I’m here"]] as const).map(([status, label]) => (
+                <button
+                  key={status}
+                  type="button"
+                  aria-pressed={myArrival === status}
+                  onClick={() => onArrival(myArrival === status ? null : status, travelMinutes)}
+                  className={`rounded-full border px-3 py-2 text-xs font-bold transition active:scale-[0.98] ${
+                    myArrival === status
+                      ? "border-acid bg-acid text-ink"
+                      : "border-white/15 text-muted hover:border-acid/40 hover:text-cream"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </section>

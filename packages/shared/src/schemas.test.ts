@@ -23,7 +23,8 @@ describe("shared meetup plan messages", () => {
 });
 
 describe("arrival status messages", () => {
-  it("accepts the two statuses and clearing your status", () => {
+  it("accepts planning, arrival statuses, trip estimates, and clearing", () => {
+    expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "planning", travelMinutes: 25 }).success).toBe(true);
     expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "heading_out" }).success).toBe(true);
     expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "here" }).success).toBe(true);
     expect(clientMessageSchema.safeParse({ type: "set_arrival", status: null }).success).toBe(true);
@@ -31,5 +32,7 @@ describe("arrival status messages", () => {
 
   it("rejects arbitrary presence labels", () => {
     expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "five_minutes" }).success).toBe(false);
+    expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "planning", travelMinutes: 0 }).success).toBe(false);
+    expect(clientMessageSchema.safeParse({ type: "set_arrival", status: "planning", travelMinutes: 181 }).success).toBe(false);
   });
 });

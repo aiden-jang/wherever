@@ -37,6 +37,12 @@ export interface SwipeMessage {
   veto?: boolean;
 }
 
+/** Remove this participant's most recent local vote before the round is decided. */
+export interface UndoSwipeMessage {
+  type: "undo_swipe";
+  restaurantId: string;
+}
+
 /** Host can end the round early and let the current tally decide. */
 export interface DecideNowMessage {
   type: "decide_now";
@@ -57,6 +63,7 @@ export type ClientMessage =
   | JoinMessage
   | StartRoundMessage
   | SwipeMessage
+  | UndoSwipeMessage
   | DecideNowMessage
   | AgainMessage
   | ReactMessage;

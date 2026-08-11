@@ -516,6 +516,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               onSwipe={(restaurantId, direction, isSuper, isVeto) =>
                 send({ type: "swipe", restaurantId, direction, super: isSuper, veto: isVeto })
               }
+              onUndo={(restaurantId) => send({ type: "undo_swipe", restaurantId })}
             />
             {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
               <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />

@@ -70,6 +70,11 @@ const swipeSchema = z.object({
   veto: z.boolean().optional(),
 });
 
+const undoSwipeSchema = z.object({
+  type: z.literal("undo_swipe"),
+  restaurantId: z.string().min(1),
+});
+
 const decideNowSchema = z.object({ type: z.literal("decide_now") });
 
 const againSchema = z.object({ type: z.literal("again") });
@@ -84,6 +89,7 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   joinSchema,
   startRoundSchema,
   swipeSchema,
+  undoSwipeSchema,
   decideNowSchema,
   againSchema,
   reactSchema,

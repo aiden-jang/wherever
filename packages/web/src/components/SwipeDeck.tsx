@@ -219,6 +219,7 @@ export function SwipeDeck({
   superSpent = false,
   vetoSpent = false,
   onSwipe,
+  onUndo,
 }: {
   restaurants: Restaurant[];
   alreadyVoted?: string[];
@@ -226,6 +227,7 @@ export function SwipeDeck({
   /** Seeded from the server so a reconnect can't hand back a spent veto. */
   vetoSpent?: boolean;
   onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean, isVeto?: boolean) => void;
+  onUndo: (restaurantId: string) => void;
 }) {
   // Resume after a reconnect: start at the first card this client has not voted.
   const [index, setIndex] = useState(() => {
@@ -237,6 +239,10 @@ export function SwipeDeck({
   // One super-like per round; seeded from the server (survives reconnect) then set locally on use.
   const [superUsed, setSuperUsed] = useState(superSpent);
   const [vetoUsed, setVetoUsed] = useState(vetoSpent);
+  // Only choices made in this mount are rewindable. Votes restored after a reconnect have no safe
+  // local ordering, so guessing which was "last" could remove the wrong restaurant on the server.
+  const historyRef = useRef<{ index: number; restaurantId: string; super: boolean; veto: boolean }[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
   // The card whose full details are open in the sheet (null = closed). Tapping a card opens it;
   // it never blocks voting since a drag isn't a tap.
   const [detail, setDetail] = useState<Restaurant | null>(null);
@@ -273,6 +279,8 @@ export function SwipeDeck({
       play(isVeto ? "veto" : isSuper ? "superLike" : dir === "right" ? "like" : "pass");
       if (isSuper) setSuperUsed(true);
       if (isVeto) setVetoUsed(true);
+      historyRef.current.push({ index: i, restaurantId: current.id, super: isSuper, veto: isVeto });
+      setCanUndo(true);
       dismissHint();
       setExitDir(dir);
       onSwipe(current.id, dir, isSuper, isVeto);
@@ -280,6 +288,18 @@ export function SwipeDeck({
     },
     [restaurants, onSwipe, dismissHint],
   );
+
+  const undoLast = useCallback(() => {
+    const previous = historyRef.current.pop();
+    if (!previous) return;
+    indexRef.current = previous.index;
+    setIndex(previous.index);
+    if (previous.super) setSuperUsed(false);
+    if (previous.veto) setVetoUsed(false);
+    setCanUndo(historyRef.current.length > 0);
+    buzz(8);
+    onUndo(previous.restaurantId);
+  }, [onUndo]);
 
   // Don't let the hint linger if they just sit there.
   useEffect(() => {
@@ -293,13 +313,16 @@ export function SwipeDeck({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (detail) return;
-      if (e.key === "ArrowLeft") commit("left");
+      if ((e.key === "Backspace" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z")) && canUndo) {
+        e.preventDefault();
+        undoLast();
+      } else if (e.key === "ArrowLeft") commit("left");
       else if (e.key === "ArrowRight") commit("right");
       else if (e.key === "ArrowUp" && !superUsed) commit("right", true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [commit, detail, superUsed]);
+  }, [canUndo, commit, detail, superUsed, undoLast]);
 
   const done = index >= restaurants.length;
 
@@ -312,6 +335,15 @@ export function SwipeDeck({
           Your votes are in. Now we wait on everyone else to stop overthinking a
           taco. This is the longest part.
         </p>
+        {canUndo && (
+          <button
+            type="button"
+            onClick={undoLast}
+            className="mt-5 rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-muted transition hover:border-white/30 hover:text-cream active:scale-95"
+          >
+            Undo last vote
+          </button>
+        )}
       </div>
     );
   }
@@ -407,6 +439,15 @@ export function SwipeDeck({
         {!superUsed && <span className="ml-2 text-grape">· ⭐ super</span>}
         {!vetoUsed && <span className="ml-2 text-flare">· 🚫 veto, kills it</span>}
       </p>
+      {canUndo && (
+        <button
+          type="button"
+          onClick={undoLast}
+          className="mx-auto mt-2 block px-3 py-1 text-xs font-medium text-muted transition hover:text-cream hover:underline"
+        >
+          Undo last vote
+        </button>
+      )}
 
       {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}
     </div>

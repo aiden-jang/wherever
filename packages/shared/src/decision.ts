@@ -58,6 +58,13 @@ export function tastePulse(deck: Restaurant[], votes: Vote[]): TastePulse | null
 export interface DecisionResult {
   restaurant: Restaurant;
   rightSwipes: number;
+  /** The next two non-vetoed choices by the same tally, ready when the winner is impractical. */
+  alternatives?: DecisionAlternative[];
+}
+
+export interface DecisionAlternative {
+  restaurant: Restaurant;
+  rightSwipes: number;
 }
 
 /**
@@ -115,20 +122,23 @@ export function decideWinner(
   const scores = tallyScores(votes); // weighted — decides the winner
   const counts = tallyRightSwipes(votes); // unweighted — the headcount we display
   const vetoed = vetoedRestaurantIds(votes);
-  let best: DecisionResult | null = null;
-  let bestScore = 0;
-  for (const restaurant of deck) {
-    if (vetoed.has(restaurant.id)) continue;
-    const score = scores.get(restaurant.id) ?? 0;
-    if (score === 0) continue;
-    // Strict greater-than means the first card seen at a given score keeps the
-    // lead, so ties resolve to deck order.
-    if (!best || score > bestScore) {
-      best = { restaurant, rightSwipes: counts.get(restaurant.id) ?? 0 };
-      bestScore = score;
-    }
-  }
-  return best;
+  // Array.sort is stable: equal scores keep deck order, preserving the original deterministic
+  // tie-break while also giving us the group's next-best choices from the very same decision.
+  const ranked = deck
+    .map((restaurant) => ({
+      restaurant,
+      score: scores.get(restaurant.id) ?? 0,
+      rightSwipes: counts.get(restaurant.id) ?? 0,
+    }))
+    .filter((candidate) => candidate.score > 0 && !vetoed.has(candidate.restaurant.id))
+    .sort((a, b) => b.score - a.score);
+  const [winner, ...rest] = ranked;
+  if (!winner) return null;
+  return {
+    restaurant: winner.restaurant,
+    rightSwipes: winner.rightSwipes,
+    alternatives: rest.slice(0, 2).map(({ restaurant, rightSwipes }) => ({ restaurant, rightSwipes })),
+  };
 }
 
 /**

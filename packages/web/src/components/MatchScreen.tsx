@@ -223,7 +223,7 @@ function WinnerScreen({
   onAgain: () => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
-  const { restaurant, rightSwipes, totalParticipants, vetoedCount, round } = match;
+  const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round } = match;
   const unavailable =
     restaurant.openNow === false ||
     restaurant.businessStatus === 'CLOSED_PERMANENTLY' ||
@@ -534,6 +534,53 @@ function WinnerScreen({
               </span>
             ))}
           </div>
+        </details>
+      )}
+
+      {alternatives.length > 0 && (
+        <details
+          className="group mt-3 rounded-2xl border border-white/10 bg-white/[0.035] text-left"
+          open={unavailable || undefined}
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:content-none">
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-cream">
+                {unavailable ? "The doors are shut. Try a backup." : "If the wait is ridiculous"}
+              </span>
+              <span className="block truncate text-xs text-muted">
+                Plan B: {alternatives[0]!.restaurant.name}
+              </span>
+            </span>
+            <span className="shrink-0 text-xs text-muted transition group-open:rotate-180" aria-hidden>⌄</span>
+          </summary>
+          <ol className="space-y-2 border-t border-white/10 p-3">
+            {alternatives.map((choice, index) => (
+              <li key={choice.restaurant.id}>
+                <a
+                  href={mapsUrl(choice.restaurant)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/15 p-2 transition hover:border-white/25 hover:bg-white/5 active:scale-[0.99]"
+                >
+                  <span className="w-5 shrink-0 text-center font-display text-sm font-bold text-ember">
+                    {index + 2}
+                  </span>
+                  <RestaurantPhoto
+                    imageUrl={choice.restaurant.imageUrl}
+                    category={choice.restaurant.category}
+                    className="h-12 w-12 shrink-0 rounded-lg"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-sm text-cream">{choice.restaurant.name}</strong>
+                    <span className="block truncate text-xs text-muted">
+                      {choice.rightSwipes} liked it · {distanceLabel(choice.restaurant.distanceMeters)} · {priceLabel(choice.restaurant.priceTier)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm text-muted" aria-hidden>↗</span>
+                </a>
+              </li>
+            ))}
+          </ol>
         </details>
       )}
 

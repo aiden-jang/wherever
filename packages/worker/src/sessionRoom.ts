@@ -1,9 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   clientMessageSchema,
   finishedParticipantIds,
+  promoteAlternative,
   tastePulse,
   decideWinner,
   vetoedRestaurantIds,
@@ -106,6 +107,8 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleDecideNow(ws);
       case "again":
         return this.handleAgain(ws);
+      case "choose_alternative":
+        return this.handleChooseAlternative(ws, msg.restaurantId);
       case "react":
         return this.handleReact(ws, msg.emoji);
     }
@@ -422,6 +425,34 @@ export class SessionRoom extends DurableObject<Env> {
     await this.decide(meta);
   }
 
+  /** Let the host rescue a good result when the winning place is impractical, without another round. */
+  private async handleChooseAlternative(ws: WebSocket, restaurantId: string): Promise<void> {
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att?.isHost) {
+      return this.send(ws, { type: "error", message: "Only the host can switch the final pick." });
+    }
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    const result = await this.ctx.storage.get<DecisionResult | null>("winner");
+    if (!meta || meta.status !== "decided" || !result) return;
+
+    const promoted = promoteAlternative(result, restaurantId);
+    if (!promoted) {
+      return this.send(ws, { type: "error", message: "That place is no longer a finalist." });
+    }
+
+    await this.ctx.storage.put("winner", promoted);
+    await this.recordVisit(meta.code, promoted.restaurant.id, promoted.restaurant.name);
+    const votes = await this.getVotes();
+    const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
+    this.broadcastResult(
+      promoted,
+      this.connectedParticipants().length,
+      vetoedRestaurantIds(votes).size,
+      round,
+    );
+    await this.broadcastHistory(meta.code);
+  }
+
   // ---- core round logic ----
 
   /** Recompute + broadcast progress, then decide if everyone connected is done. */
@@ -630,6 +661,12 @@ export class SessionRoom extends DurableObject<Env> {
     name: string,
   ): Promise<void> {
     const db = drizzle(this.env.DB);
+    const existing = await db
+      .select({ id: visitedPlaces.id })
+      .from(visitedPlaces)
+      .where(and(eq(visitedPlaces.sessionCode, code), eq(visitedPlaces.restaurantId, restaurantId)))
+      .get();
+    if (existing) return;
     await db.insert(visitedPlaces).values({
       id: crypto.randomUUID(),
       sessionCode: code,

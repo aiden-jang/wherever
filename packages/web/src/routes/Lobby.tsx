@@ -503,11 +503,13 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       <main className="flex-1 flex items-center justify-center px-6 py-10">
         <LiveRegion message={announcement} />
         <MatchScreen
+          key={match.kind === "match" ? match.restaurant.id : "no-match"}
           match={match}
           visited={visited}
           filters={session?.filters}
           isHost={isHost}
           onAgain={() => send({ type: "again" })}
+          onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
         />
       </main>
     );

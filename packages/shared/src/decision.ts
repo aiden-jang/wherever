@@ -67,6 +67,25 @@ export interface DecisionAlternative {
   rightSwipes: number;
 }
 
+/** Promote one ranked backup without throwing away the group's original tally. */
+export function promoteAlternative(
+  result: DecisionResult,
+  restaurantId: string,
+): DecisionResult | null {
+  const alternatives = result.alternatives ?? [];
+  const promoted = alternatives.find(choice => choice.restaurant.id === restaurantId);
+  if (!promoted) return null;
+
+  return {
+    restaurant: promoted.restaurant,
+    rightSwipes: promoted.rightSwipes,
+    alternatives: [
+      { restaurant: result.restaurant, rightSwipes: result.rightSwipes },
+      ...alternatives.filter(choice => choice.restaurant.id !== restaurantId),
+    ].slice(0, 2),
+  };
+}
+
 /**
  * Count right-swipes per restaurant. Votes are assumed already deduped per
  * (participant, restaurant) by the caller, so a participant contributes at most

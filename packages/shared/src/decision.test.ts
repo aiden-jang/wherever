@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   countFinished,
   decideWinner,
+  promoteAlternative,
   tallyRightSwipes,
   tallyScores,
   tastePulse,
@@ -33,6 +34,33 @@ function superVote(participantId: string, restaurantId: string): Vote {
 }
 
 const deck = [restaurant("a"), restaurant("b"), restaurant("c")];
+
+describe("promoteAlternative", () => {
+  it("makes a backup the winner and keeps the old winner as a reversible Plan B", () => {
+    const result = {
+      restaurant: deck[0]!,
+      rightSwipes: 3,
+      alternatives: [
+        { restaurant: deck[1]!, rightSwipes: 2 },
+        { restaurant: deck[2]!, rightSwipes: 1 },
+      ],
+    };
+
+    expect(promoteAlternative(result, "b")).toEqual({
+      restaurant: deck[1],
+      rightSwipes: 2,
+      alternatives: [
+        { restaurant: deck[0], rightSwipes: 3 },
+        { restaurant: deck[2], rightSwipes: 1 },
+      ],
+    });
+  });
+
+  it("refuses a restaurant that was not a ranked finalist", () => {
+    expect(promoteAlternative({ restaurant: deck[0]!, rightSwipes: 2, alternatives: [] }, "ghost"))
+      .toBeNull();
+  });
+});
 
 describe("taste pulse", () => {
   it("stays hidden until enough anonymous group activity exists", () => {

@@ -129,3 +129,11 @@ export interface VisitedPlace {
   name: string;
   visitedAt: string;
 }
+
+/** Anonymous, restaurant-free signals about how the round is feeling so far. */
+export interface TastePulse {
+  rightRate: number;
+  activeVoters: number;
+  strongestOverlap: number;
+  averagePriceTier: number | null;
+}

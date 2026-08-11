@@ -241,7 +241,8 @@ export function SwipeDeck({
   const [vetoUsed, setVetoUsed] = useState(vetoSpent);
   // Only choices made in this mount are rewindable. Votes restored after a reconnect have no safe
   // local ordering, so guessing which was "last" could remove the wrong restaurant on the server.
-  const historyRef = useRef<{ index: number; restaurantId: string; super: boolean; veto: boolean }[]>([]);
+  const historyRef = useRef<{ index: number; restaurantId: string; direction: SwipeDirection; super: boolean; veto: boolean }[]>([]);
+  const [choices, setChoices] = useState<{ restaurantId: string; direction: SwipeDirection; super: boolean; veto: boolean }[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   // The card whose full details are open in the sheet (null = closed). Tapping a card opens it;
   // it never blocks voting since a drag isn't a tap.
@@ -279,7 +280,8 @@ export function SwipeDeck({
       play(isVeto ? "veto" : isSuper ? "superLike" : dir === "right" ? "like" : "pass");
       if (isSuper) setSuperUsed(true);
       if (isVeto) setVetoUsed(true);
-      historyRef.current.push({ index: i, restaurantId: current.id, super: isSuper, veto: isVeto });
+      historyRef.current.push({ index: i, restaurantId: current.id, direction: dir, super: isSuper, veto: isVeto });
+      setChoices((previous) => [...previous, { restaurantId: current.id, direction: dir, super: isSuper, veto: isVeto }]);
       setCanUndo(true);
       dismissHint();
       setExitDir(dir);
@@ -296,6 +298,7 @@ export function SwipeDeck({
     setIndex(previous.index);
     if (previous.super) setSuperUsed(false);
     if (previous.veto) setVetoUsed(false);
+    setChoices((current) => current.slice(0, -1));
     setCanUndo(historyRef.current.length > 0);
     buzz(8);
     onUndo(previous.restaurantId);
@@ -325,26 +328,66 @@ export function SwipeDeck({
   }, [canUndo, commit, detail, superUsed, undoLast]);
 
   const done = index >= restaurants.length;
+  const likedChoices = choices.filter((choice) => choice.direction === "right");
 
   if (done) {
     return (
-      <div className="text-center max-w-sm mx-auto mt-10">
-        <div className="text-5xl">🧾</div>
-        <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
-        <p className="mt-2 text-muted">
-          Your votes are in. Now we wait on everyone else to stop overthinking a
-          taco. This is the longest part.
-        </p>
-        {canUndo && (
-          <button
-            type="button"
-            onClick={undoLast}
-            className="mt-5 rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-muted transition hover:border-white/30 hover:text-cream active:scale-95"
-          >
-            Undo last vote
-          </button>
-        )}
-      </div>
+      <>
+        <div className="text-center max-w-sm mx-auto mt-10">
+          <div className="text-5xl">🧾</div>
+          <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
+          <p className="mt-2 text-muted">
+            Your votes are in. Now we wait on everyone else to stop overthinking a
+            taco. This is the longest part.
+          </p>
+          {choices.length > 0 && (
+            <details className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] text-left">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
+                <span>Your private shortlist</span>
+                <span className="rounded-full bg-acid/10 px-2 py-0.5 text-xs text-acid">
+                  {likedChoices.length} liked
+                </span>
+              </summary>
+              <div className="border-t border-white/10 p-2">
+                {likedChoices.length === 0 ? (
+                  <p className="px-2 py-3 text-sm text-muted">You passed on the whole deck. Bold.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {likedChoices.map((choice) => {
+                      const restaurant = restaurants.find((candidate) => candidate.id === choice.restaurantId);
+                      if (!restaurant) return null;
+                      return (
+                        <li key={choice.restaurantId}>
+                          <button
+                            type="button"
+                            onClick={() => setDetail(restaurant)}
+                            className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-white/5"
+                          >
+                            <span className="min-w-0 truncate font-medium">{restaurant.name}</span>
+                            <span className={choice.super ? "shrink-0 text-grape" : "shrink-0 text-acid"}>
+                              {choice.super ? "⭐ super" : "♥ liked"}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </details>
+          )}
+          {canUndo && (
+            <button
+              type="button"
+              onClick={undoLast}
+              className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-muted transition hover:border-white/30 hover:text-cream active:scale-95"
+            >
+              Undo last vote
+            </button>
+          )}
+        </div>
+        {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}
+      </>
     );
   }
 

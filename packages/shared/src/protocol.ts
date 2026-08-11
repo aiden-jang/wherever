@@ -72,18 +72,22 @@ export interface SetPlanMessage {
   planned: PlannedMeetup | null;
 }
 
-export type ArrivalStatus = "heading_out" | "here";
+export type ArrivalStatus = "planning" | "heading_out" | "here";
 
 export interface ArrivalUpdate {
   participantId: string;
   displayName: string;
   status: ArrivalStatus;
+  /** Self-reported trip estimate; used for leave-by and ETA copy, never live location. */
+  travelMinutes?: number;
+  updatedAt?: string;
 }
 
 /** Each participant owns their own arrival status; null quietly clears it. */
 export interface SetArrivalMessage {
   type: "set_arrival";
   status: ArrivalStatus | null;
+  travelMinutes?: number;
 }
 
 /** Throw an emoji reaction to everyone in the session. Ephemeral, not persisted. */

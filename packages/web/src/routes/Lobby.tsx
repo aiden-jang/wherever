@@ -514,7 +514,11 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           onAgain={() => send({ type: "again" })}
           onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
           onPlan={(nextPlan) => send({ type: "set_plan", planned: nextPlan })}
-          onArrival={(arrivalStatus) => send({ type: "set_arrival", status: arrivalStatus })}
+          onArrival={(arrivalStatus, travelMinutes) => send({
+            type: "set_arrival",
+            status: arrivalStatus,
+            ...(travelMinutes ? { travelMinutes } : {}),
+          })}
         />
       </main>
     );

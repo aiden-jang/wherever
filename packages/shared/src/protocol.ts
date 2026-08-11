@@ -55,6 +55,12 @@ export interface AgainMessage {
   type: "again";
 }
 
+/** Host promotes one of the ranked backups; all clients receive the same updated result. */
+export interface ChooseAlternativeMessage {
+  type: "choose_alternative";
+  restaurantId: string;
+}
+
 /** Throw an emoji reaction to everyone in the session. Ephemeral, not persisted. */
 export interface ReactMessage {
   type: "react";
@@ -68,6 +74,7 @@ export type ClientMessage =
   | UndoSwipeMessage
   | DecideNowMessage
   | AgainMessage
+  | ChooseAlternativeMessage
   | ReactMessage;
 
 // ---- Server -> Client ----

@@ -79,6 +79,11 @@ const decideNowSchema = z.object({ type: z.literal("decide_now") });
 
 const againSchema = z.object({ type: z.literal("again") });
 
+const chooseAlternativeSchema = z.object({
+  type: z.literal("choose_alternative"),
+  restaurantId: z.string().min(1),
+});
+
 const reactSchema = z.object({
   type: z.literal("react"),
   emoji: z.enum(REACTION_EMOJIS),
@@ -92,5 +97,6 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   undoSwipeSchema,
   decideNowSchema,
   againSchema,
+  chooseAlternativeSchema,
   reactSchema,
 ]);

@@ -169,12 +169,14 @@ export function MatchScreen({
   filters,
   isHost,
   onAgain,
+  onChooseAlternative,
 }: {
   match: NonNullable<MatchState>;
   visited: VisitedPlace[];
   filters?: SessionFilters;
   isHost: boolean;
   onAgain: () => void;
+  onChooseAlternative: (restaurantId: string) => void;
 }) {
   const navigate = useNavigate();
 
@@ -209,7 +211,7 @@ export function MatchScreen({
     );
   }
 
-  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} onAgain={onAgain} navigate={navigate} />;
+  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} onAgain={onAgain} onChooseAlternative={onChooseAlternative} navigate={navigate} />;
 }
 
 function WinnerScreen({
@@ -218,6 +220,7 @@ function WinnerScreen({
   filters,
   isHost,
   onAgain,
+  onChooseAlternative,
   navigate,
 }: {
   match: Extract<NonNullable<MatchState>, { kind: "match" }>;
@@ -225,6 +228,7 @@ function WinnerScreen({
   filters?: SessionFilters;
   isHost: boolean;
   onAgain: () => void;
+  onChooseAlternative: (restaurantId: string) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round } = match;
@@ -580,7 +584,7 @@ function WinnerScreen({
           </summary>
           <ol className="space-y-2 border-t border-white/10 p-3">
             {alternatives.map((choice, index) => (
-              <li key={choice.restaurant.id}>
+              <li key={choice.restaurant.id} className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <a
                   href={mapsUrl(choice.restaurant)}
                   target="_blank"
@@ -603,6 +607,15 @@ function WinnerScreen({
                   </span>
                   <span className="shrink-0 text-sm text-muted" aria-hidden>↗</span>
                 </a>
+                {isHost && (
+                  <button
+                    type="button"
+                    onClick={() => onChooseAlternative(choice.restaurant.id)}
+                    className="rounded-xl border border-acid/25 bg-acid/10 px-4 py-2 text-xs font-bold text-acid transition hover:border-acid/50 hover:bg-acid/15 active:scale-[0.98]"
+                  >
+                    Make Plan A
+                  </button>
+                )}
               </li>
             ))}
           </ol>

@@ -74,19 +74,59 @@ function icsText(value: string): string {
 }
 
 function History({ visited }: { visited: VisitedPlace[] }) {
+  const [shareStatus, setShareStatus] = useState<"sharing" | "shared" | "copied" | null>(null);
   if (visited.length === 0) return null;
+  const ordered = [...visited].sort((a, b) => new Date(b.visitedAt).getTime() - new Date(a.visitedAt).getTime());
+  const shareHistory = async () => {
+    if (shareStatus) return;
+    const text = `Already tried:\n${ordered.map((place) => `• ${place.name}`).join("\n")}`;
+    setShareStatus("sharing");
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Wherever past picks", text });
+        setShareStatus("shared");
+        setTimeout(() => setShareStatus(null), 1800);
+        return;
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          setShareStatus(null);
+          return;
+        }
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareStatus("copied");
+      setTimeout(() => setShareStatus(null), 1800);
+    } catch {
+      setShareStatus(null);
+    }
+  };
   return (
     <div className="mt-10 text-left">
-      <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">
-        Already been dragged to
-      </h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">
+          Already been dragged to
+        </h3>
+        <button
+          type="button"
+          onClick={() => void shareHistory()}
+          disabled={shareStatus !== null}
+          className="text-xs font-semibold text-muted transition hover:text-acid hover:underline disabled:cursor-default disabled:opacity-70"
+        >
+          {shareStatus === "sharing" ? "Opening…" : shareStatus === "shared" ? "Shared" : shareStatus === "copied" ? "Copied" : "Share list"}
+        </button>
+      </div>
       <div className="mt-2 flex flex-wrap gap-2">
-        {visited.map((v) => (
+        {ordered.map((v) => (
           <span
             key={v.restaurantId}
-            className="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-sm text-muted"
+            className="rounded-2xl bg-white/5 border border-white/10 px-3 py-1.5 text-sm text-muted"
           >
-            {v.name}
+            <span className="block text-cream/90">{v.name}</span>
+            <time dateTime={v.visitedAt} className="block text-[10px] text-muted/70">
+              {new Date(v.visitedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: new Date(v.visitedAt).getFullYear() === new Date().getFullYear() ? undefined : "numeric" })}
+            </time>
           </span>
         ))}
       </div>

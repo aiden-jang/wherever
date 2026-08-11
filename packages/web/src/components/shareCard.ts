@@ -1,6 +1,14 @@
 import type { Restaurant } from "@wherever/shared";
 import { distanceLabel, priceLabel, styleFor } from "./cardStyle.js";
 
+export interface WinnerCardDetails {
+  rightSwipes: number;
+  totalParticipants: number;
+  reasons?: string[];
+  planned?: { start: string; duration: number } | null;
+  backup?: Restaurant;
+}
+
 /** Two hex stops out of a `linear-gradient(...)` string, for painting on canvas. */
 function gradientStops(css: string): [string, string] {
   const hexes = css.match(/#[0-9a-f]{3,6}/gi);
@@ -29,7 +37,10 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
  * canvas (no dependency) so it can be shared as a file or downloaded. Returns null if the
  * canvas 2D context is unavailable.
  */
-export async function renderShareCard(r: Restaurant): Promise<Blob | null> {
+export async function renderShareCard(
+  r: Restaurant,
+  details?: WinnerCardDetails,
+): Promise<Blob | null> {
   const S = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = S;
@@ -58,23 +69,38 @@ export async function renderShareCard(r: Restaurant): Promise<Blob | null> {
 
   ctx.textAlign = "center";
 
-  // Eyebrow.
+  // Eyebrow + the piece of evidence that makes this a group decision rather than a recommendation.
   ctx.fillStyle = "#d7ff3e";
   ctx.font = "700 34px Inter, sans-serif";
-  ctx.fillText("IT'S DECIDED", S / 2, 150);
+  ctx.fillText("DINNER IS DECIDED", S / 2, 105);
+  if (details) {
+    ctx.fillStyle = "rgba(12,10,9,0.55)";
+    ctx.beginPath();
+    ctx.roundRect(S / 2 - 150, 132, 300, 64, 32);
+    ctx.fill();
+    ctx.fillStyle = "#f6f1e7";
+    ctx.font = "700 28px Inter, sans-serif";
+    ctx.fillText(`${details.rightSwipes} of ${details.totalParticipants} picked it`, S / 2, 173);
+  }
 
   // Big category emoji.
-  ctx.font = "220px sans-serif";
-  ctx.fillText(styleFor(r.category).emoji, S / 2, 470);
+  ctx.font = "180px sans-serif";
+  ctx.fillText(styleFor(r.category).emoji, S / 2, 410);
 
-  // Restaurant name (wrapped, up to 3 lines).
+  // A glassy receipt panel keeps the useful details legible without flattening the category color.
+  ctx.fillStyle = "rgba(12,10,9,0.42)";
+  ctx.beginPath();
+  ctx.roundRect(54, 485, S - 108, 500, 44);
+  ctx.fill();
+
+  // Restaurant name (wrapped, up to 2 lines so the actual plan still fits below it).
   ctx.fillStyle = "#f6f1e7";
-  ctx.font = "800 88px 'Bricolage Grotesque', Inter, sans-serif";
-  const lines = wrap(ctx, r.name, S - 140);
-  let y = 660;
+  ctx.font = "800 76px 'Bricolage Grotesque', Inter, sans-serif";
+  const lines = wrap(ctx, r.name, S - 170).slice(0, 2);
+  let y = 570;
   for (const line of lines) {
     ctx.fillText(line, S / 2, y);
-    y += 100;
+    y += 75;
   }
 
   // Meta row.
@@ -85,16 +111,50 @@ export async function renderShareCard(r: Restaurant): Promise<Blob | null> {
     distanceLabel(r.distanceMeters),
   ].join("   ·   ");
   ctx.fillStyle = "#a8a097";
-  ctx.font = "500 40px Inter, sans-serif";
-  ctx.fillText(meta, S / 2, y + 20);
-
-  // Wordmark + tagline footer.
-  ctx.fillStyle = "#f6f1e7";
-  ctx.font = "800 52px 'Bricolage Grotesque', Inter, sans-serif";
-  ctx.fillText("Wherever, Honestly", S / 2, S - 90);
-  ctx.fillStyle = "#a8a097";
   ctx.font = "500 32px Inter, sans-serif";
-  ctx.fillText("decided by swipe, not by group chat", S / 2, S - 44);
+  ctx.fillText(meta, S / 2, y + 5);
+  y += 55;
+
+  if (details?.reasons?.length) {
+    ctx.fillStyle = "#d7ff3e";
+    ctx.font = "700 25px Inter, sans-serif";
+    ctx.fillText("WHY IT WON", S / 2, y);
+    y += 34;
+    ctx.fillStyle = "#f6f1e7";
+    ctx.font = "500 29px Inter, sans-serif";
+    for (const line of wrap(ctx, details.reasons.slice(0, 3).join("  ·  "), S - 180).slice(0, 2)) {
+      ctx.fillText(line, S / 2, y);
+      y += 34;
+    }
+  }
+
+  if (details?.planned) {
+    const when = new Date(details.planned.start).toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    ctx.fillStyle = "#f6f1e7";
+    ctx.font = "700 29px Inter, sans-serif";
+    ctx.fillText(`MEET THERE  ${when}  ·  ${details.planned.duration} min`, S / 2, y + 8);
+    y += 44;
+  }
+
+  if (details?.backup) {
+    ctx.fillStyle = "#a8a097";
+    ctx.font = "500 27px Inter, sans-serif";
+    ctx.fillText(`Plan B  ·  ${details.backup.name}`, S / 2, Math.min(y + 4, 958), S - 170);
+  }
+
+  // A quieter signature: the card is the dinner plan first and product artifact second.
+  ctx.fillStyle = "#f6f1e7";
+  ctx.font = "800 40px 'Bricolage Grotesque', Inter, sans-serif";
+  ctx.fillText("Wherever, Honestly", S / 2, S - 42);
+  ctx.fillStyle = "#a8a097";
+  ctx.font = "500 23px Inter, sans-serif";
+  ctx.fillText("decided by swipe, not by group chat", S / 2, S - 12);
 
   return await new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 }

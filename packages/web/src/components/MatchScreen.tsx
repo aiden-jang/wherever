@@ -313,7 +313,13 @@ function WinnerScreen({
     if (cardResult) return;
     setCardResult("making");
     try {
-      const blob = await renderShareCard(restaurant);
+      const blob = await renderShareCard(restaurant, {
+        rightSwipes,
+        totalParticipants,
+        reasons: reasons.map(reason => reason.label),
+        planned,
+        backup: alternatives[0]?.restaurant,
+      });
       if (!blob) {
         setCardResult(null);
         return;

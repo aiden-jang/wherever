@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Restaurant, VisitedPlace } from "@wherever/shared";
+import type { Restaurant, SessionFilters, VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -10,6 +10,7 @@ import { Modal } from "./Modal.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 import { renderShareCard } from "./shareCard.js";
+import { filterSummaryChips } from "./FilterSummary.js";
 
 /**
  * A Google Maps link to the winning place itself (the place page, not turn-by-turn navigation), so
@@ -151,11 +152,13 @@ function History({ visited }: { visited: VisitedPlace[] }) {
 export function MatchScreen({
   match,
   visited,
+  filters,
   isHost,
   onAgain,
 }: {
   match: NonNullable<MatchState>;
   visited: VisitedPlace[];
+  filters?: SessionFilters;
   isHost: boolean;
   onAgain: () => void;
 }) {
@@ -192,18 +195,20 @@ export function MatchScreen({
     );
   }
 
-  return <WinnerScreen match={match} visited={visited} isHost={isHost} onAgain={onAgain} navigate={navigate} />;
+  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} onAgain={onAgain} navigate={navigate} />;
 }
 
 function WinnerScreen({
   match,
   visited,
+  filters,
   isHost,
   onAgain,
   navigate,
 }: {
   match: Extract<NonNullable<MatchState>, { kind: "match" }>;
   visited: VisitedPlace[];
+  filters?: SessionFilters;
   isHost: boolean;
   onAgain: () => void;
   navigate: ReturnType<typeof useNavigate>;
@@ -500,6 +505,25 @@ function WinnerScreen({
             ? `${round} rounds to pick one place. The group chat would have been faster.`
             : `Round ${round}. Worth the wait, presumably.`}
         </p>
+      )}
+
+      {filters && (
+        <details className="group mt-5 rounded-2xl border border-white/10 bg-white/[0.035] text-left">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-cream marker:content-none">
+            <span>
+              <span className="mr-2" aria-hidden>🧾</span>
+              Decision receipt
+            </span>
+            <span className="text-xs font-medium text-muted transition group-open:rotate-180" aria-hidden>⌄</span>
+          </summary>
+          <div className="flex flex-wrap gap-2 border-t border-white/10 px-4 py-3">
+            {filterSummaryChips(filters).map((chip) => (
+              <span key={chip} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-muted">
+                {chip}
+              </span>
+            ))}
+          </div>
+        </details>
       )}
 
       <div className="mt-8 flex flex-col gap-3">

@@ -510,6 +510,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           isHost={isHost}
           planned={planned}
           arrivals={arrivals}
+          participants={session?.participants ?? arrivals.map((arrival) => ({
+            id: arrival.participantId,
+            displayName: arrival.displayName,
+            isHost: false,
+            connected: true,
+          }))}
           participantId={participantId}
           onAgain={() => send({ type: "again" })}
           onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}

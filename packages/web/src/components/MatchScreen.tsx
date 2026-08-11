@@ -53,12 +53,16 @@ function planText(r: Restaurant, rightSwipes: number, totalParticipants: number)
   return `Dinner plan: ${r.name}${where}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}`;
 }
 
+function localDateTime(date: Date): string {
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
 function defaultPlanStart(): string {
   const date = new Date();
   date.setHours(19, 0, 0, 0);
   if (date.getTime() < Date.now()) date.setDate(date.getDate() + 1);
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  return localDateTime(date);
 }
 
 function icsDate(date: Date): string {
@@ -161,6 +165,7 @@ function WinnerScreen({
   const [cardResult, setCardResult] = useState<"making" | "shared" | "saved" | null>(null);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [planStart, setPlanStart] = useState(defaultPlanStart);
+  const [planDuration, setPlanDuration] = useState<60 | 90 | 120>(90);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
 
@@ -262,7 +267,11 @@ function WinnerScreen({
       setCalendarError("Pick a time first.");
       return;
     }
-    const end = new Date(start.getTime() + 90 * 60_000);
+    if (start.getTime() < Date.now()) {
+      setCalendarError("Pick a time that hasn’t happened yet.");
+      return;
+    }
+    const end = new Date(start.getTime() + planDuration * 60_000);
     const uid = `${restaurant.id}-${start.getTime()}@wherever`;
     const details = `Picked by ${rightSwipes} of ${totalParticipants} on Wherever, Honestly.`;
     const ics = [
@@ -287,7 +296,11 @@ function WinnerScreen({
       setCalendarError("Pick a time first.");
       return;
     }
-    const end = new Date(start.getTime() + 90 * 60_000);
+    if (start.getTime() < Date.now()) {
+      setCalendarError("Pick a time that hasn’t happened yet.");
+      return;
+    }
+    const end = new Date(start.getTime() + planDuration * 60_000);
     const title = `Dinner at ${restaurant.name}`;
     const location = restaurant.address ?? restaurant.name;
     const details = `Picked by ${rightSwipes} of ${totalParticipants} on Wherever, Honestly.`;
@@ -501,8 +514,36 @@ function WinnerScreen({
       {plannerOpen && (
         <Modal title="Put dinner on the calendar" onClose={() => { setPlannerOpen(false); setCalendarError(null); }}>
           <p className="text-sm leading-relaxed text-muted">
-            Save {restaurant.name} wherever the group keeps plans. It&apos;s set to 90 minutes; change the start if tonight isn&apos;t right.
+            Save {restaurant.name} wherever the group keeps plans.
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {([
+              ['Tonight', 0],
+              ['Tomorrow', 1],
+              ['This weekend', 'weekend'],
+            ] as const).map(([label, offset]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  const date = new Date();
+                  if (offset === 'weekend') {
+                    const days = (6 - date.getDay() + 7) % 7 || 7;
+                    date.setDate(date.getDate() + days);
+                  } else {
+                    date.setDate(date.getDate() + offset);
+                  }
+                  date.setHours(19, 0, 0, 0);
+                  if (date.getTime() < Date.now()) date.setDate(date.getDate() + 1);
+                  setPlanStart(localDateTime(date));
+                  setCalendarError(null);
+                }}
+                className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-muted hover:border-acid/50 hover:text-acid transition"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <label className="mt-5 block text-xs font-semibold uppercase tracking-wider text-muted" htmlFor="dinner-time">
             Start time
           </label>
@@ -510,9 +551,23 @@ function WinnerScreen({
             id="dinner-time"
             type="datetime-local"
             value={planStart}
+            min={localDateTime(new Date())}
             onChange={(event) => setPlanStart(event.target.value)}
             className="mt-2 w-full rounded-xl border border-white/15 bg-ink px-3 py-3 text-sm text-cream outline-none focus:border-acid"
           />
+          <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-muted" htmlFor="dinner-duration">
+            How long
+          </label>
+          <select
+            id="dinner-duration"
+            value={planDuration}
+            onChange={(event) => setPlanDuration(Number(event.target.value) as 60 | 90 | 120)}
+            className="mt-2 w-full rounded-xl border border-white/15 bg-ink px-3 py-3 text-sm text-cream outline-none focus:border-acid"
+          >
+            <option value={60}>1 hour</option>
+            <option value={90}>1½ hours</option>
+            <option value={120}>2 hours</option>
+          </select>
           {calendarError && <p role="alert" className="mt-2 text-sm text-flare">{calendarError}</p>}
           <div className="mt-5 grid grid-cols-2 gap-2">
             <button

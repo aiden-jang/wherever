@@ -128,6 +128,8 @@ export interface VisitedPlace {
   restaurantId: string;
   name: string;
   visitedAt: string;
+  /** Kept out of every future deck, not just the next few months. See revisit.ts. */
+  neverAgain?: boolean;
 }
 
 /** Anonymous, restaurant-free signals about how the round is feeling so far. */

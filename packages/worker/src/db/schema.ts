@@ -24,4 +24,6 @@ export const visitedPlaces = sqliteTable("visited_places", {
   visitedAt: integer("visited_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),
+  /* Permanent, unlike the visit itself. "We went last week" expires; "never again" does not. */
+  neverAgain: integer("never_again", { mode: "boolean" }).notNull().default(false),
 });

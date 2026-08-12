@@ -102,6 +102,18 @@ export interface SetVibeMessage {
   vibe: Vibe | null;
 }
 
+/**
+ * Mark somewhere the group has been as never-again, or take that back.
+ *
+ * Separate from the visit itself, which expires on its own. Any seat may set it: a place one person
+ * cannot eat at is a place the group cannot go, and making this host-only would mean saying so out loud.
+ */
+export interface SetNeverAgainMessage {
+  type: "set_never_again";
+  restaurantId: string;
+  neverAgain: boolean;
+}
+
 /** Throw an emoji reaction to everyone in the session. Ephemeral, not persisted. */
 export interface ReactMessage {
   type: "react";
@@ -119,6 +131,7 @@ export type ClientMessage =
   | SetPlanMessage
   | SetArrivalMessage
   | SetVibeMessage
+  | SetNeverAgainMessage
   | ReactMessage;
 
 // ---- Server -> Client ----

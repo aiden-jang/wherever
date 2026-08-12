@@ -105,6 +105,11 @@ const setVibeSchema = z.object({
   vibe: z.enum(VIBE_IDS).nullable(),
 });
 
+const setFiltersSchema = z.object({
+  type: z.literal("set_filters"),
+  filters: sessionFiltersSchema,
+});
+
 const setNeverAgainSchema = z.object({
   type: z.literal("set_never_again"),
   restaurantId: z.string().min(1).max(200),
@@ -128,6 +133,7 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   setPlanSchema,
   setArrivalSchema,
   setVibeSchema,
+  setFiltersSchema,
   setNeverAgainSchema,
   reactSchema,
 ]);

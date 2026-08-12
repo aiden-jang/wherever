@@ -208,3 +208,49 @@ describe("somewhere the group has been", () => {
     alex.close();
   });
 });
+
+describe("changing the rules from the lobby", () => {
+  const filters = { radiusMeters: 1600, maxPriceTier: 2, categories: ["pizza"] };
+
+  it("lets the host change them, and tells everybody", async () => {
+    const code = await createSession();
+    const alex = await join(code, "Alex"); // first in is the host
+    alex.send({ type: "set_filters", filters } as never);
+
+    const state = await alex.until("session_state", (msg) => msg.session.filters.radiusMeters === 1600);
+    expect(state.session.filters.categories).toEqual(["pizza"]);
+    alex.close();
+  });
+
+  /*
+   * Host-only, enforced here. These are one shared set of rules for everybody's deck, and the client
+   * hiding the controls from non-hosts has never been a rule.
+   */
+  it("ignores anybody who is not the host", async () => {
+    const code = await createSession();
+    const alex = await join(code, "Alex");
+    const sam = await join(code, "Sam");
+
+    sam.send({ type: "set_filters", filters } as never);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const seen = sam.seen.filter((m) => m.type === "session_state");
+    expect(seen.every((m) => m.session.filters.radiusMeters !== 1600)).toBe(true);
+
+    alex.close();
+    sam.close();
+  });
+
+  it("ignores a change once the round has started", async () => {
+    // Mid-round would deal two people different restaurants.
+    const code = await createSession();
+    const alex = await join(code, "Alex");
+    alex.send({ type: "start_round" });
+    await alex.next("deck");
+
+    alex.send({ type: "set_filters", filters } as never);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const seen = alex.seen.filter((m) => m.type === "session_state");
+    expect(seen.every((m) => m.session.filters.radiusMeters !== 1600)).toBe(true);
+    alex.close();
+  });
+});

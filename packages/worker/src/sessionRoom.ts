@@ -130,6 +130,8 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleSetArrival(ws, msg.status, msg.travelMinutes);
       case "set_vibe":
         return this.handleSetVibe(ws, msg.vibe);
+      case "set_filters":
+        return this.handleSetFilters(ws, msg.filters);
       case "set_never_again":
         return this.handleSetNeverAgain(msg.restaurantId, msg.neverAgain);
       case "react":
@@ -179,6 +181,23 @@ export class SessionRoom extends DurableObject<Env> {
     const counts: Partial<Record<Vibe, number>> = {};
     for (const picked of Object.values(map)) counts[picked] = (counts[picked] ?? 0) + 1;
     return counts;
+  }
+
+  /**
+   * Change the filters, from the lobby, as the host.
+   *
+   * Host-only because these are one shared set of rules for everybody's deck, and lobby-only because
+   * changing them mid-round would deal two people different restaurants. Both enforced here: the client
+   * hides the controls from non-hosts, and a hidden control has never been a rule.
+   */
+  private async handleSetFilters(ws: WebSocket, filters: SessionFilters): Promise<void> {
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att?.isHost) return;
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta || meta.status !== "lobby") return;
+    meta.filters = filters;
+    await this.ctx.storage.put("meta", meta);
+    await this.broadcastState();
   }
 
   /**

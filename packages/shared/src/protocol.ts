@@ -6,6 +6,7 @@ import type {
   Participant,
   Restaurant,
   Session,
+  SessionFilters,
   SwipeDirection,
   TastePulse,
   VisitedPlace,
@@ -103,6 +104,18 @@ export interface SetVibeMessage {
 }
 
 /**
+ * Change the round's filters from the lobby.
+ *
+ * Host only, and lobby only. They used to be answered once in the create modal, by one person, before
+ * anybody else had joined; the lobby is where the waiting already happens and where the group can see
+ * what is being set. Mid-round would mean two people swiping different decks.
+ */
+export interface SetFiltersMessage {
+  type: "set_filters";
+  filters: SessionFilters;
+}
+
+/**
  * Mark somewhere the group has been as never-again, or take that back.
  *
  * Separate from the visit itself, which expires on its own. Any seat may set it: a place one person
@@ -131,6 +144,7 @@ export type ClientMessage =
   | SetPlanMessage
   | SetArrivalMessage
   | SetVibeMessage
+  | SetFiltersMessage
   | SetNeverAgainMessage
   | ReactMessage;
 

@@ -653,7 +653,15 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           </button>
         </div>
         <JoinQr code={code} url={location.href} />
-        {session?.filters && <FilterSummary filters={session.filters} />}
+        {/* The rules live here now, not in the create modal: the group can see them, and somebody is
+            waiting for people to join anyway. Host-only to change, since they are one shared deck. */}
+        {session?.filters && (
+          <FilterSummary
+            filters={session.filters}
+            editable={isHost}
+            onChange={(filters) => send({ type: "set_filters", filters })}
+          />
+        )}
       </div>
 
       {/* Above the participant list, because it is the thing to do while waiting for people to arrive.

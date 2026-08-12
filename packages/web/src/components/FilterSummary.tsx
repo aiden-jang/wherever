@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { SessionFilters } from "@wherever/shared";
+import { FilterFields } from "./FilterFields";
 import {
   amenityLabel,
   cuisineLabel,
@@ -43,15 +45,53 @@ export function filterSummaryChips(filters: SessionFilters): string[] {
   return chips;
 }
 
-/** Read-only recap shown while the group is gathering. */
-export function FilterSummary({ filters }: { filters: SessionFilters }) {
-  return (
-    <div className="mt-6 flex flex-wrap justify-center gap-2">
+/**
+ * The rules, as a sentence you can tap rather than a screen of controls.
+ *
+ * Everyone sees the summary; only the host can open it. The chips are the point: they say what the deck
+ * will be in a way you read in one glance and mostly agree with, which is the honest shape for settings
+ * that are almost always already fine.
+ */
+export function FilterSummary({
+  filters,
+  editable = false,
+  onChange,
+}: {
+  filters: SessionFilters;
+  editable?: boolean;
+  onChange?: (next: SessionFilters) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const chips = (
+    <div className="flex flex-wrap justify-center gap-2">
       {filterSummaryChips(filters).map((chip) => (
         <span key={chip} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted">
           {chip}
         </span>
       ))}
+    </div>
+  );
+
+  if (!editable || !onChange) return <div className="mt-6">{chips}</div>;
+
+  return (
+    <div className="mt-6">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full rounded-2xl border border-transparent px-2 py-2 transition hover:border-white/10"
+      >
+        {chips}
+        <span className="mt-2 block text-xs font-semibold text-muted">
+          {open ? "done" : "change these"}
+        </span>
+      </button>
+      {open && (
+        <div className="mt-3 rounded-2xl border border-white/10 p-4 text-left">
+          <FilterFields filters={filters} onChange={onChange} />
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { REACTION_EMOJIS } from "./constants.js";
+import { VIBE_IDS } from "./vibes.js";
 
 export const priceTierSchema = z.union([
   z.literal(1),
@@ -98,6 +99,12 @@ const setArrivalSchema = z.object({
   travelMinutes: z.number().int().min(1).max(180).optional(),
 });
 
+const setVibeSchema = z.object({
+  type: z.literal("set_vibe"),
+  // Derived from VIBES so a new vibe cannot be added to the app and rejected at the door.
+  vibe: z.enum(VIBE_IDS).nullable(),
+});
+
 const reactSchema = z.object({
   type: z.literal("react"),
   emoji: z.enum(REACTION_EMOJIS),
@@ -114,5 +121,6 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   chooseAlternativeSchema,
   setPlanSchema,
   setArrivalSchema,
+  setVibeSchema,
   reactSchema,
 ]);

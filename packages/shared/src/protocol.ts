@@ -11,6 +11,7 @@ import type {
   VisitedPlace,
 } from "./types.js";
 import type { DecisionAlternative } from "./decision.js";
+import type { Vibe } from "./vibes.js";
 
 // ---- Client -> Server ----
 
@@ -90,6 +91,17 @@ export interface SetArrivalMessage {
   travelMinutes?: number;
 }
 
+/**
+ * Each participant owns their own vibe pick; null clears it.
+ *
+ * Lobby only. A vibe changes the deck the group is about to be dealt, so changing it mid-round would
+ * mean people were voting on two different sets of restaurants.
+ */
+export interface SetVibeMessage {
+  type: "set_vibe";
+  vibe: Vibe | null;
+}
+
 /** Throw an emoji reaction to everyone in the session. Ephemeral, not persisted. */
 export interface ReactMessage {
   type: "react";
@@ -106,6 +118,7 @@ export type ClientMessage =
   | ChooseAlternativeMessage
   | SetPlanMessage
   | SetArrivalMessage
+  | SetVibeMessage
   | ReactMessage;
 
 // ---- Server -> Client ----
@@ -210,6 +223,21 @@ export interface PlanMessage {
   planned: PlannedMeetup | null;
 }
 
+/**
+ * How the group is feeling, as tallies and nothing else.
+ *
+ * Deliberately not a map of participant to vibe. Admitting to "fancy" in a group of five is a mildly
+ * embarrassing thing, and an app that names you gets one honest round followed by four rounds of people
+ * picking what they think everyone else wants. The server never sends the map, so no client can leak it,
+ * which is the same rule swipes already follow.
+ */
+export interface VibesMessage {
+  type: "vibes";
+  counts: Partial<Record<Vibe, number>>;
+  /** This client's own pick, so the picker can show it selected after a reconnect. */
+  yours: Vibe | null;
+}
+
 export interface ArrivalsMessage {
   type: "arrivals";
   arrivals: ArrivalUpdate[];
@@ -227,4 +255,5 @@ export type ServerMessage =
   | IdentityMessage
   | PlanMessage
   | ArrivalsMessage
+  | VibesMessage
   | ReactionMessage;

@@ -1,0 +1,209 @@
+import { SELF } from 'cloudflare:test';
+import { describe, expect, it } from 'vitest';
+import type { ClientMessage, ServerMessage } from '@wherever/shared';
+
+/*
+ * The vibe vote, through the real socket.
+ *
+ * The promise this feature makes is that nobody finds out who said fancy, and that promise is only worth
+ * anything if it holds at the wire rather than in the component that happens to render it today. So these
+ * drive the actual protocol: connect, join, vote, and read what the server chose to send back.
+ */
+
+const BASE = 'https://wherever.test';
+
+async function createSession(): Promise<string> {
+  const res = await SELF.fetch(`${BASE}/api/sessions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      displayName: 'Alex',
+      filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
+    }),
+  });
+  expect(res.status).toBe(201);
+  return ((await res.json()) as { code: string }).code;
+}
+
+interface Member {
+  send: (msg: ClientMessage) => void;
+  /** Every message this socket has received, in order. */
+  seen: ServerMessage[];
+  /** Wait until this socket has received a message of `type`, returning the most recent one. */
+  next: <T extends ServerMessage['type']>(type: T, from?: number) => Promise<Extract<ServerMessage, { type: T }>>;
+  /** Wait for a message of `type` that satisfies `predicate`. */
+  until: <T extends ServerMessage['type']>(
+    type: T,
+    predicate: (msg: Extract<ServerMessage, { type: T }>) => boolean,
+  ) => Promise<Extract<ServerMessage, { type: T }>>;
+  close: () => void;
+}
+
+async function join(code: string, displayName: string): Promise<Member> {
+  const res = await SELF.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: 'websocket' } });
+  const socket = res.webSocket;
+  if (!socket) throw new Error(`no socket for ${displayName} (status ${res.status})`);
+  socket.accept();
+
+  const seen: ServerMessage[] = [];
+  socket.addEventListener('message', (event) => {
+    seen.push(JSON.parse(event.data as string) as ServerMessage);
+  });
+
+  const member: Member = {
+    send: (msg) => socket.send(JSON.stringify(msg)),
+    seen,
+    /*
+     * Polled rather than event-driven, and `until` rather than `next` wherever the state has to settle.
+     *
+     * Joining already delivers a `vibes` frame with empty counts, so "wait for the next vibes message"
+     * returns that one and asserts against a room nobody has voted in yet. The first draft of this file
+     * did exactly that and reported a working feature as broken.
+     */
+    next: async (type, from = 0) => {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const found = seen.slice(from).filter((msg) => msg.type === type);
+        if (found.length > 0) return found[found.length - 1] as never;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      throw new Error(`never received ${type}; got ${seen.map((m) => m.type).join(', ')}`);
+    },
+    until: async (type, predicate) => {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const match = seen.filter((msg) => msg.type === type).find((msg) => predicate(msg as never));
+        if (match) return match as never;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      throw new Error(`no ${type} matched; saw ${JSON.stringify(seen.filter((m) => m.type === type))}`);
+    },
+    close: () => socket.close(),
+  };
+
+  member.send({ type: 'join', code, displayName });
+  await member.next('identity');
+  return member;
+}
+
+describe('the vibe vote', () => {
+  it('tells everyone the tallies and nobody the voters', async () => {
+    const code = await createSession();
+    const alex = await join(code, 'Alex');
+    const sam = await join(code, 'Sam');
+
+    alex.send({ type: 'set_vibe', vibe: 'fancy' });
+    sam.send({ type: 'set_vibe', vibe: 'quick' });
+
+    // Both votes counted, rather than whichever frame happened to arrive first.
+    const seenBySam = await sam.until('vibes', (msg) => Object.keys(msg.counts).length === 2);
+    expect(seenBySam.counts).toEqual({ fancy: 1, quick: 1 });
+
+    /*
+     * The actual guarantee.
+     *
+     * Sam is told that somebody wants fancy and is never told it was Alex. Asserted against the raw
+     * frames rather than the parsed shape, because a leak would most likely arrive as an extra field
+     * nobody thought to type.
+     */
+    const raw = JSON.stringify(sam.seen.filter((msg) => msg.type === 'vibes'));
+    expect(raw).not.toContain('Alex');
+    expect(seenBySam).not.toHaveProperty('votes');
+    expect(seenBySam).not.toHaveProperty('byParticipant');
+
+    alex.close();
+    sam.close();
+  });
+
+  it('hands each client its own pick and only its own', async () => {
+    const code = await createSession();
+    const alex = await join(code, 'Alex');
+    const sam = await join(code, 'Sam');
+
+    alex.send({ type: 'set_vibe', vibe: 'cozy' });
+    sam.send({ type: 'set_vibe', vibe: 'chaotic' });
+
+    const settled = (member: Member) => member.until('vibes', (msg) => Object.keys(msg.counts).length === 2);
+    expect((await settled(alex)).yours).toBe('cozy');
+    expect((await settled(sam)).yours).toBe('chaotic');
+
+    alex.close();
+    sam.close();
+  });
+
+  it('lets somebody change their mind without double-counting them', async () => {
+    const code = await createSession();
+    const alex = await join(code, 'Alex');
+
+    alex.send({ type: 'set_vibe', vibe: 'fancy' });
+    await alex.next('vibes');
+    const before = alex.seen.length;
+    alex.send({ type: 'set_vibe', vibe: 'quick' });
+
+    const after = await alex.next('vibes', before);
+    expect(after.counts).toEqual({ quick: 1 });
+    expect(after.yours).toBe('quick');
+
+    alex.close();
+  });
+
+  it('lets somebody take it back', async () => {
+    const code = await createSession();
+    const alex = await join(code, 'Alex');
+    alex.send({ type: 'set_vibe', vibe: 'fancy' });
+    await alex.next('vibes');
+    const before = alex.seen.length;
+
+    alex.send({ type: 'set_vibe', vibe: null });
+    const after = await alex.next('vibes', before);
+    expect(after.counts).toEqual({});
+    expect(after.yours).toBeNull();
+
+    alex.close();
+  });
+
+  it('gives a late arrival the state instead of an empty dial', async () => {
+    const code = await createSession();
+    const alex = await join(code, 'Alex');
+    alex.send({ type: 'set_vibe', vibe: 'cozy' });
+    await alex.next('vibes');
+
+    // Sam was not in the room when the vote happened, and still has to see it.
+    const sam = await join(code, 'Sam');
+    const seen = await sam.next('vibes');
+    expect(seen.counts).toEqual({ cozy: 1 });
+    expect(seen.yours).toBeNull();
+
+    alex.close();
+    sam.close();
+  });
+
+  it('rejects a vibe that is not one of ours', async () => {
+    const code = await createSession();
+    const alex = await join(code, 'Alex');
+    // The schema is the door. A client is not trusted to only send the five.
+    alex.send({ type: 'set_vibe', vibe: 'expensive' } as unknown as ClientMessage);
+    expect((await alex.next('error')).message).toBe('Unrecognized message.');
+    alex.close();
+  });
+
+  /*
+   * Lobby only, enforced by the server.
+   *
+   * The vibe decides which deck gets fetched, so a vote landing mid-round would mean two people were
+   * swiping on different restaurants. The client stops showing the dial, but a client not showing a
+   * control has never been a rule.
+   */
+  it('ignores a vote once the round has started', async () => {
+    const code = await createSession();
+    const alex = await join(code, 'Alex');
+    alex.send({ type: 'start_round' });
+    await alex.next('deck');
+    const before = alex.seen.length;
+
+    alex.send({ type: 'set_vibe', vibe: 'chaotic' });
+    // Give the room a moment to do the wrong thing before concluding that it did not.
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(alex.seen.slice(before).filter((msg) => msg.type === 'vibes')).toHaveLength(0);
+
+    alex.close();
+  });
+});

@@ -22,6 +22,9 @@ import {
   type VisitedPlace,
   type Vote,
   type VoteMode,
+  applyVibe,
+  resolveVibe,
+  type Vibe,
 } from "@wherever/shared";
 import { createRestaurantSource, MockRestaurantSource } from "./restaurantSource.js";
 import { visitedPlaces } from "./db/schema.js";
@@ -54,6 +57,13 @@ type ClientMap = Record<string, { participantId: string; isHost: boolean }>;
 /** Votes keyed by `${participantId}:${restaurantId}` for idempotency. */
 type VoteMap = Record<string, Vote>;
 type ArrivalMap = Record<string, ArrivalUpdate>;
+/**
+ * participantId -> the vibe they picked.
+ *
+ * Never leaves this object. Clients receive tallies only, so the "nobody finds out who said fancy"
+ * promise is a property of the server rather than of every screen that renders it.
+ */
+type VibeMap = Record<string, Vibe>;
 
 /**
  * One instance per session, addressed by session code. Owns every WebSocket for
@@ -117,9 +127,55 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleSetPlan(ws, msg.planned);
       case "set_arrival":
         return this.handleSetArrival(ws, msg.status, msg.travelMinutes);
+      case "set_vibe":
+        return this.handleSetVibe(ws, msg.vibe);
       case "react":
         return this.handleReact(ws, msg.emoji);
     }
+  }
+
+  /**
+   * One person's vibe pick, tallied and fanned out without naming anybody.
+   *
+   * Lobby only: the vibe decides which deck gets fetched, so allowing changes mid-round would mean two
+   * people were voting on different restaurants. Enforced here rather than by hiding the control, since
+   * a hidden control is not a rule.
+   */
+  private async handleSetVibe(ws: WebSocket, vibe: Vibe | null): Promise<void> {
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att) return;
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta || meta.status !== "lobby") return;
+
+    const vibes = (await this.ctx.storage.get<VibeMap>("vibes")) ?? {};
+    if (vibe) vibes[att.participantId] = vibe;
+    else delete vibes[att.participantId];
+    await this.ctx.storage.put("vibes", vibes);
+    await this.broadcastVibes(vibes);
+  }
+
+  /**
+   * Send every client the tallies, and each client its own pick and nobody else's.
+   *
+   * One message per socket rather than one broadcast, because `yours` differs per recipient. That is the
+   * only per-client field, and it is the client's own answer being handed back to it.
+   */
+  private async broadcastVibes(vibes?: VibeMap): Promise<void> {
+    const map = vibes ?? (await this.ctx.storage.get<VibeMap>("vibes")) ?? {};
+    const counts: Partial<Record<Vibe, number>> = {};
+    for (const picked of Object.values(map)) counts[picked] = (counts[picked] ?? 0) + 1;
+    for (const socket of this.ctx.getWebSockets()) {
+      const att = socket.deserializeAttachment() as SocketAttachment | null;
+      if (!att) continue;
+      this.send(socket, { type: "vibes", counts, yours: map[att.participantId] ?? null });
+    }
+  }
+
+  private async vibeCounts(): Promise<Partial<Record<Vibe, number>>> {
+    const map = (await this.ctx.storage.get<VibeMap>("vibes")) ?? {};
+    const counts: Partial<Record<Vibe, number>> = {};
+    for (const picked of Object.values(map)) counts[picked] = (counts[picked] ?? 0) + 1;
+    return counts;
   }
 
   /** Fan an ephemeral emoji reaction out to everyone in the session. */
@@ -294,6 +350,10 @@ export class SessionRoom extends DurableObject<Env> {
 
     await this.broadcastState();
     this.send(ws, { type: "history", visited: await this.getVisited(meta.code) });
+
+    // Whoever just walked in needs the tallies and their own pick back, which a reconnect also relies on
+    // to re-select the button they had already chosen.
+    if (meta.status === "lobby") await this.broadcastVibes();
 
     if (meta.status === "swiping") {
       const deck = await this.getOrCreateDeck(meta);
@@ -685,6 +745,19 @@ export class SessionRoom extends DurableObject<Env> {
       }
     } else {
       source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
+    }
+
+    /*
+     * The group's mood, folded into the filters the deck is actually fetched with.
+     *
+     * Persisted onto the session rather than applied only here, so the filter summary everyone is looking
+     * at describes the deck they were dealt. No vibe leaves the host's filters exactly as they were, which
+     * is why this is opt-in: a session where nobody picks is unchanged.
+     */
+    const reading = resolveVibe(await this.vibeCounts());
+    if (reading.vibe) {
+      meta.filters = applyVibe(meta.filters, reading.vibe);
+      await this.ctx.storage.put("meta", meta);
     }
 
     const all = await source.fetchDeck(meta.filters);

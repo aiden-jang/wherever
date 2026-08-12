@@ -6,6 +6,7 @@ import type {
   PlannedMeetup,
   Restaurant,
   ServerMessage,
+  Vibe,
   Session,
   TastePulse,
   VisitedPlace,
@@ -64,6 +65,9 @@ export function useSessionSocket(code: string, displayName: string) {
   const [match, setMatch] = useState<MatchState>(null);
   const [planned, setPlanned] = useState<PlannedMeetup | null>(null);
   const [arrivals, setArrivals] = useState<ArrivalUpdate[]>([]);
+  // Tallies for the group and this client's own pick. The server never sends anybody else's.
+  const [vibeCounts, setVibeCounts] = useState<Partial<Record<Vibe, number>>>({});
+  const [myVibe, setMyVibe] = useState<Vibe | null>(null);
   const [visited, setVisited] = useState<VisitedPlace[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("connecting");
@@ -130,6 +134,9 @@ export function useSessionSocket(code: string, displayName: string) {
           return setPlanned(msg.planned);
         case "arrivals":
           return setArrivals(msg.arrivals);
+        case "vibes":
+          setVibeCounts(msg.counts);
+          return setMyVibe(msg.yours);
         case "reaction": {
           const id = crypto.randomUUID();
           setReactions((prev) => [...prev, { id, emoji: msg.emoji, from: msg.from }]);
@@ -198,5 +205,5 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, visited, error, status, everConnected, participantId, reactions, send };
+  return { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send };
 }

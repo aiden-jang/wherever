@@ -25,6 +25,7 @@ import {
   applyVibe,
   resolveVibe,
   type Vibe,
+  blockedIds,
 } from "@wherever/shared";
 import { createRestaurantSource, MockRestaurantSource } from "./restaurantSource.js";
 import { visitedPlaces } from "./db/schema.js";
@@ -129,6 +130,8 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleSetArrival(ws, msg.status, msg.travelMinutes);
       case "set_vibe":
         return this.handleSetVibe(ws, msg.vibe);
+      case "set_never_again":
+        return this.handleSetNeverAgain(msg.restaurantId, msg.neverAgain);
       case "react":
         return this.handleReact(ws, msg.emoji);
     }
@@ -176,6 +179,23 @@ export class SessionRoom extends DurableObject<Env> {
     const counts: Partial<Record<Vibe, number>> = {};
     for (const picked of Object.values(map)) counts[picked] = (counts[picked] ?? 0) + 1;
     return counts;
+  }
+
+  /**
+   * Mark somewhere as never-again, or take it back.
+   *
+   * Only touches a place the group has actually been: this is a note on a visit, not a way to blacklist
+   * arbitrary ids, and without the check anybody with the code could quietly shrink the deck.
+   */
+  private async handleSetNeverAgain(restaurantId: string, neverAgain: boolean): Promise<void> {
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta) return;
+    const db = drizzle(this.env.DB);
+    await db
+      .update(visitedPlaces)
+      .set({ neverAgain })
+      .where(and(eq(visitedPlaces.sessionCode, meta.code), eq(visitedPlaces.restaurantId, restaurantId)));
+    this.broadcast({ type: "history", visited: await this.getVisited(meta.code) });
   }
 
   /** Fan an ephemeral emoji reaction out to everyone in the session. */
@@ -761,9 +781,15 @@ export class SessionRoom extends DurableObject<Env> {
     }
 
     const all = await source.fetchDeck(meta.filters);
+    /*
+     * Everywhere the group has been, minus the ones whose cooldown has run out.
+     *
+     * This used to exclude every visited place for good, which meant a group that actually used the app
+     * shrank its own deck one dinner at a time until nothing was left. See revisit.ts.
+     */
     const visited = await this.getVisited(meta.code);
-    const seen = new Set(visited.map((v) => v.restaurantId));
-    const deck = all.filter((r) => !seen.has(r.id));
+    const blocked = blockedIds(visited);
+    const deck = all.filter((r) => !blocked.has(r.id));
     await this.ctx.storage.put("deck", deck);
     await this.ctx.storage.put("demoMode", demo);
     return deck;
@@ -784,6 +810,7 @@ export class SessionRoom extends DurableObject<Env> {
       restaurantId: r.restaurantId,
       name: r.name,
       visitedAt: r.visitedAt.toISOString(),
+      ...(r.neverAgain ? { neverAgain: true } : {}),
     }));
   }
 

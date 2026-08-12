@@ -116,12 +116,13 @@ describe('the vibe vote', () => {
     const code = await createSession();
     const alex = await join(code, 'Alex');
 
+    // `until`, not `next`: joining delivers an empty vibes frame, so a length captured after the first
+    // `next` can still predate the frame for the first vote. This test was flaky on exactly that.
     alex.send({ type: 'set_vibe', vibe: 'fancy' });
-    await alex.next('vibes');
-    const before = alex.seen.length;
+    await alex.until('vibes', (msg) => msg.counts.fancy === 1);
     alex.send({ type: 'set_vibe', vibe: 'quick' });
 
-    const after = await alex.next('vibes', before);
+    const after = await alex.until('vibes', (msg) => msg.counts.quick === 1);
     expect(after.counts).toEqual({ quick: 1 });
     expect(after.yours).toBe('quick');
 
@@ -132,11 +133,10 @@ describe('the vibe vote', () => {
     const code = await createSession();
     const alex = await join(code, 'Alex');
     alex.send({ type: 'set_vibe', vibe: 'fancy' });
-    await alex.next('vibes');
-    const before = alex.seen.length;
+    await alex.until('vibes', (msg) => msg.counts.fancy === 1);
 
     alex.send({ type: 'set_vibe', vibe: null });
-    const after = await alex.next('vibes', before);
+    const after = await alex.until('vibes', (msg) => Object.keys(msg.counts).length === 0);
     expect(after.counts).toEqual({});
     expect(after.yours).toBeNull();
 
@@ -181,6 +181,30 @@ describe('the vibe vote', () => {
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(alex.seen.slice(before).filter((msg) => msg.type === 'vibes')).toHaveLength(0);
 
+    alex.close();
+  });
+});
+
+describe("somewhere the group has been", () => {
+  it("refuses a never-again for a place they have never been to", async () => {
+    /*
+     * The check that stops this being a blacklist. Without it anybody holding the session code could
+     * quietly shrink the deck by banning ids they made up.
+     */
+    const code = await createSession();
+    const alex = await join(code, "Alex");
+    alex.send({ type: "set_never_again", restaurantId: "never-visited", neverAgain: true });
+
+    const history = await alex.until("history", () => true);
+    expect(history.visited.every((place) => place.restaurantId !== "never-visited")).toBe(true);
+    alex.close();
+  });
+
+  it("rejects a message that is not shaped like one", async () => {
+    const code = await createSession();
+    const alex = await join(code, "Alex");
+    alex.send({ type: "set_never_again", restaurantId: "x" } as unknown as ClientMessage);
+    expect((await alex.next("error")).message).toBe("Unrecognized message.");
     alex.close();
   });
 });

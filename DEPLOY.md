@@ -13,7 +13,7 @@ npx wrangler login
 
 ## 2. Apply D1 migrations
 
-The D1 database already exists and its `database_id` is committed in `packages/worker/wrangler.toml`, so there's nothing to create. Just apply the migrations to the remote database:
+`pnpm run deploy` and the CI deploy both apply pending migrations before shipping code, so this is only needed when standing the database up by hand. The `database_id` is committed in `packages/worker/wrangler.toml`, so there is nothing to create:
 
 ```bash
 npx wrangler d1 migrations apply wherever --remote

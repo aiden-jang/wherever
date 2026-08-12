@@ -2,13 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SessionFilters } from "./types.js";
 import { applyVibe, resolveVibe, VIBES, vibeBreadth, vibeOption, vibeReadingLine } from "./vibes.js";
 
-/*
- * The tie-breaking is the part worth testing hardest.
- *
- * Everything else here is tallying. But a group that splits two-two between quick and fancy has not
- * chosen; it has told the app it does not know, and which way that breaks decides whether five people
- * see most of the city or a handful of places that take reservations.
- */
+/* The tie-break is the part worth testing hardest; everything else here is tallying. */
 
 const base: SessionFilters = {
   radiusMeters: 3000,
@@ -52,12 +46,7 @@ describe("reading the group", () => {
     expect(resolveVibe({ cozy: 3, fancy: 1, quick: 1 }).vibe).toBe("cozy");
   });
 
-  /*
-   * The judgement call this file exists for.
-   *
-   * Two for quick and two for fancy is not a narrow win for either. Breaking toward the narrower one
-   * would let a coin flip hide most of the map from a group that had just said it could not decide.
-   */
+  // Two-two is not a narrow win for either, and a coin flip should not hide most of the map.
   it("breaks a tie toward the wider night, not the narrower one", () => {
     const reading = resolveVibe({ quick: 2, fancy: 2 });
     expect(reading.vibe).toBe("fancy");
@@ -87,12 +76,7 @@ describe("what the lobby says", () => {
     expect(vibeReadingLine(resolveVibe({}), 4)).toBe("No vibe yet. Somebody has to go first.");
   });
 
-  /*
-   * A group of five where one person has voted is not unanimous.
-   *
-   * The naive check is `votes === total`, which is true the instant the first person picks and reads as
-   * five people agreeing. The whole group has to have said so.
-   */
+  // `votes === total` is true the instant the first person picks, and reads as five people agreeing.
   it("only calls it unanimous when the whole group actually said so", () => {
     expect(vibeReadingLine(resolveVibe({ cozy: 1 }), 5)).not.toMatch(/unanimous/i);
     expect(vibeReadingLine(resolveVibe({ cozy: 5 }), 5)).toMatch(/^Unanimously cozy/);
@@ -140,12 +124,7 @@ describe("applying one", () => {
   });
 
   it("replaces amenities rather than accumulating them", () => {
-    /*
-     * Merging is the tempting version and it empties the deck.
-     *
-     * Going quick and then fancy would demand a place that is both takeout and reservable, and the
-     * group gets an empty round with nothing on screen explaining why.
-     */
+    // Quick then fancy would demand takeout AND reservable: an empty round with nothing explaining it.
     const applied = applyVibe(applyVibe(base, "quick"), "fancy");
     expect(applied.amenities).toEqual(["reservable"]);
   });

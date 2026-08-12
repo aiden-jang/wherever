@@ -1,14 +1,8 @@
 import { resolveVibe, VIBES, vibeOption, vibeReadingLine, type Vibe } from "@wherever/shared";
 
 /*
- * Five words, one per person, and one word back for the group.
- *
- * The bar under each word is the whole point of showing tallies at all: you can see that three people
- * want quick without finding out which three. Anything more specific and the second round becomes people
- * voting for what they think the group wants, which is the exact behaviour this app exists to break.
- *
- * Nothing here is disabled and nothing is a commitment. Changing your mind is a tap, because the moment a
- * vote feels final people stop casting honest ones.
+ * The bar shows that three people want quick without showing which three. Nothing is disabled and nothing
+ * is final: the moment a vote feels committing, people stop casting honest ones.
  */
 
 export function VibeDial({

@@ -2,13 +2,7 @@ import { SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import type { ClientMessage, ServerMessage } from '@wherever/shared';
 
-/*
- * The vibe vote, through the real socket.
- *
- * The promise this feature makes is that nobody finds out who said fancy, and that promise is only worth
- * anything if it holds at the wire rather than in the component that happens to render it today. So these
- * drive the actual protocol: connect, join, vote, and read what the server chose to send back.
- */
+/* Drives the real protocol: the "nobody finds out who said fancy" promise has to hold at the wire. */
 
 const BASE = 'https://wherever.test';
 
@@ -53,13 +47,8 @@ async function join(code: string, displayName: string): Promise<Member> {
   const member: Member = {
     send: (msg) => socket.send(JSON.stringify(msg)),
     seen,
-    /*
-     * Polled rather than event-driven, and `until` rather than `next` wherever the state has to settle.
-     *
-     * Joining already delivers a `vibes` frame with empty counts, so "wait for the next vibes message"
-     * returns that one and asserts against a room nobody has voted in yet. The first draft of this file
-     * did exactly that and reported a working feature as broken.
-     */
+    // Use `until`, not `next`: joining already delivers an empty `vibes` frame, and waiting for "the
+    // next one" returns that and asserts against a room nobody has voted in yet.
     next: async (type, from = 0) => {
       for (let attempt = 0; attempt < 100; attempt += 1) {
         const found = seen.slice(from).filter((msg) => msg.type === type);
@@ -97,13 +86,7 @@ describe('the vibe vote', () => {
     const seenBySam = await sam.until('vibes', (msg) => Object.keys(msg.counts).length === 2);
     expect(seenBySam.counts).toEqual({ fancy: 1, quick: 1 });
 
-    /*
-     * The actual guarantee.
-     *
-     * Sam is told that somebody wants fancy and is never told it was Alex. Asserted against the raw
-     * frames rather than the parsed shape, because a leak would most likely arrive as an extra field
-     * nobody thought to type.
-     */
+    // Against the raw frames, not the parsed shape: a leak arrives as a field nobody thought to type.
     const raw = JSON.stringify(sam.seen.filter((msg) => msg.type === 'vibes'));
     expect(raw).not.toContain('Alex');
     expect(seenBySam).not.toHaveProperty('votes');
@@ -185,13 +168,7 @@ describe('the vibe vote', () => {
     alex.close();
   });
 
-  /*
-   * Lobby only, enforced by the server.
-   *
-   * The vibe decides which deck gets fetched, so a vote landing mid-round would mean two people were
-   * swiping on different restaurants. The client stops showing the dial, but a client not showing a
-   * control has never been a rule.
-   */
+  // A vote mid-round would mean two people swiping different decks. A hidden control is not a rule.
   it('ignores a vote once the round has started', async () => {
     const code = await createSession();
     const alex = await join(code, 'Alex');

@@ -1,17 +1,8 @@
 import type { AmenityKey, SessionFilters } from "./types.js";
 
 /*
- * What kind of night this is, decided the same way everything else here is decided.
- *
- * The app was already good at resolving *which restaurant* and had nothing for the argument that comes
- * before it, which is the one that actually stalls a group: nobody wants to be the person who says
- * "somewhere nice" and then gets held to it. So a vibe is a vote, not a setting. Everyone picks a word,
- * the group gets one word back, and no one finds out who said fancy.
- *
- * That last part is deliberate and matches how swipes already work: the server sends tallies, never a
- * map of who picked what. A vibe is a mildly embarrassing thing to admit to in a group of five, and an
- * app that exposes it gets one honest round and then four rounds of people picking what they think the
- * others want.
+ * Tallies only on the wire, never a map of who picked what. Admitting to "fancy" in a group of five is
+ * embarrassing enough that naming people gets you one honest round and then four performative ones.
  */
 
 export type Vibe = "cozy" | "quick" | "fancy" | "chaotic" | "adventurous";
@@ -64,12 +55,7 @@ export const VIBES: VibeOption[] = [
   },
 ];
 
-/**
- * The ids, for the wire schema.
- *
- * Derived from VIBES rather than written out again, so adding a vibe cannot produce one the app offers
- * and the validator rejects. Typed as a non-empty tuple because that is what z.enum requires.
- */
+/** Derived, so adding a vibe cannot produce one the app offers and the validator rejects. */
 export const VIBE_IDS = VIBES.map((option) => option.id) as [Vibe, ...Vibe[]];
 
 const BY_ID = new Map(VIBES.map((option) => [option.id, option]));
@@ -79,12 +65,7 @@ export function vibeOption(vibe: Vibe): VibeOption {
   return BY_ID.get(vibe)!;
 }
 
-/**
- * Roughly how much of the map a vibe leaves standing.
- *
- * Derived from the filters rather than hand-assigned, so it cannot drift when a vibe is retuned. It is a
- * proxy and not a count: what matters is only the ordering, which decides who wins a tie.
- */
+/** A proxy, not a count. Derived from the filters so it cannot drift; only the ordering matters. */
 export function vibeBreadth(vibe: Vibe): number {
   const { filters } = vibeOption(vibe);
   const tiers = filters.priceTiers?.length ?? 4;
@@ -113,12 +94,8 @@ export interface VibeReading {
 }
 
 /**
- * One word for the group, from everybody's word.
- *
- * Ties break toward the broadest vibe, which is the whole judgement in this file. A group that cannot
- * agree between quick and fancy has not narrowly chosen quick; it has told you it does not know, and the
- * useful response to that is more of the map rather than less. Breaking toward the narrower option would
- * hand a coin-flip the power to hide most of the city.
+ * Ties break toward the broadest vibe. A group split between quick and fancy has not narrowly chosen
+ * quick, it has said it does not know, and a coin flip should not hide most of the city.
  */
 export function resolveVibe(counts: Partial<Record<Vibe, number>>): VibeReading {
   const tallied = VIBES.map((option) => [option.id, counts[option.id] ?? 0] as const).filter(([, n]) => n > 0);
@@ -138,13 +115,7 @@ export function resolveVibe(counts: Partial<Record<Vibe, number>>): VibeReading 
   };
 }
 
-/**
- * What the lobby says about it.
- *
- * Never names a person and never reports a count of one as agreement. "Everyone wants quick" is a lovely
- * thing to read and a lie in a group where one person has voted, so the unanimous line requires the whole
- * group to have actually said so.
- */
+/** Unanimous requires the whole group, not just everyone who has voted so far. */
 export function vibeReadingLine(reading: VibeReading, groupSize: number): string {
   if (!reading.vibe) return "No vibe yet. Somebody has to go first.";
   const option = vibeOption(reading.vibe);
@@ -161,12 +132,8 @@ export function vibeReadingLine(reading: VibeReading, groupSize: number): string
 }
 
 /**
- * The vibe's filters, laid over whatever the host already had.
- *
- * Only the keys a vibe actually names are replaced, so a host who set a neighbourhood, a cuisine or a
- * round timer keeps them: those are not opinions about the mood. Amenities replace rather than merge,
- * because accumulating them across two vibes eventually requires a place that does everything, and the
- * deck quietly empties.
+ * Only the keys a vibe names are replaced, so a neighbourhood or cuisine survives it. Amenities replace
+ * rather than merge: quick then fancy would demand takeout AND reservable, and the deck empties.
  */
 export function applyVibe(filters: SessionFilters, vibe: Vibe): SessionFilters {
   const { filters: wanted } = vibeOption(vibe);

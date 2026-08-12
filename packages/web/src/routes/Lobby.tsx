@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
+import { VibeDial } from "../components/VibeDial.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
 import { MatchScreen } from "../components/MatchScreen.js";
 import { ReactionBar, FloatingReactions } from "../components/Reactions.js";
@@ -360,7 +361,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, visited, error, status, everConnected, participantId, reactions, send } =
+  const { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
@@ -650,6 +651,17 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         </div>
         <JoinQr code={code} url={location.href} />
         {session?.filters && <FilterSummary filters={session.filters} />}
+      </div>
+
+      {/* Above the participant list, because it is the thing to do while waiting for people to arrive.
+          Below the join code, because getting everyone in still comes first. */}
+      <div className="w-full">
+        <VibeDial
+          counts={vibeCounts}
+          mine={myVibe}
+          groupSize={session?.participants.length ?? 0}
+          onPick={(vibe) => send({ type: "set_vibe", vibe })}
+        />
       </div>
 
       <HowItWorks />

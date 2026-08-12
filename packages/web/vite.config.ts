@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const apiPort = process.env.API_PORT ?? "8787";
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
@@ -9,9 +11,10 @@ export default defineConfig({
     // 5173 for plain `pnpm dev`.
     port: process.env.PORT ? Number(process.env.PORT) : 5173,
     proxy: {
-      // In dev, the Worker runs under `wrangler dev` (default :8787).
-      "/api": "http://localhost:8787",
-      "/ws": { target: "ws://localhost:8787", ws: true },
+      // In dev, the Worker runs under `wrangler dev` (default :8787). API_PORT moves it, which matters
+      // when another Workers app on this machine already holds 8787.
+      "/api": `http://localhost:${apiPort}`,
+      "/ws": { target: `ws://localhost:${apiPort}`, ws: true },
     },
   },
 });

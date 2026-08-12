@@ -79,7 +79,7 @@ function planText(
             ? " Open now."
             : " Closed right now.";
   const why = reasons.length > 0 ? `\nWhy it won: ${reasons.join(" · ")}` : "";
-  const fallback = backup ? `\nPlan B: ${backup.name} — ${mapsUrl(backup)}` : "";
+  const fallback = backup ? `\nPlan B: ${backup.name}\n${mapsUrl(backup)}` : "";
   return `Dinner plan: ${r.name}${where}${when}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}${why}${fallback}`;
 }
 

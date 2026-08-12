@@ -619,7 +619,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           {code}
         </button>
         <p className="mt-1 text-xs text-muted">
-          {codeCopied ? "Copied the code." : codeCopyFailed ? "Couldn’t copy it — select the code instead." : "Tap the code to copy it"}
+          {codeCopied ? "Copied the code." : codeCopyFailed ? "Couldn’t copy it. Select the code instead." : "Tap the code to copy it"}
         </p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <button

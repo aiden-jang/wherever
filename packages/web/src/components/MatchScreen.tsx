@@ -103,7 +103,13 @@ function icsText(value: string): string {
   return value.replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
 }
 
-function History({ visited }: { visited: VisitedPlace[] }) {
+function History({
+  visited,
+  onNeverAgain,
+}: {
+  visited: VisitedPlace[];
+  onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
+}) {
   const [shareStatus, setShareStatus] = useState<"sharing" | "shared" | "copied" | null>(null);
   if (visited.length === 0) return null;
   const ordered = [...visited].sort((a, b) => new Date(b.visitedAt).getTime() - new Date(a.visitedAt).getTime());
@@ -151,12 +157,24 @@ function History({ visited }: { visited: VisitedPlace[] }) {
         {ordered.map((v) => (
           <span
             key={v.restaurantId}
-            className="rounded-2xl bg-white/5 border border-white/10 px-3 py-1.5 text-sm text-muted"
+            className={`rounded-2xl border px-3 py-1.5 text-sm text-muted ${
+              v.neverAgain ? "border-white/5 bg-white/[0.02] opacity-60" : "border-white/10 bg-white/5"
+            }`}
           >
             <span className="block text-cream/90">{v.name}</span>
             <time dateTime={v.visitedAt} className="block text-[10px] text-muted/70">
               {new Date(v.visitedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: new Date(v.visitedAt).getFullYear() === new Date().getFullYear() ? undefined : "numeric" })}
             </time>
+            {/* The other reason to exclude a place. A visit fades on its own after a cooldown; this
+                does not, so it is a deliberate tap rather than something you can do by swiping. */}
+            <button
+              type="button"
+              onClick={() => onNeverAgain(v.restaurantId, !v.neverAgain)}
+              aria-pressed={v.neverAgain === true}
+              className="mt-0.5 block text-[10px] font-semibold text-muted/70 transition hover:text-acid"
+            >
+              {v.neverAgain ? "never again ✓" : "never again"}
+            </button>
           </span>
         ))}
       </div>
@@ -177,6 +195,7 @@ export function MatchScreen({
   onChooseAlternative,
   onPlan,
   onArrival,
+  onNeverAgain,
 }: {
   match: NonNullable<MatchState>;
   visited: VisitedPlace[];
@@ -190,6 +209,7 @@ export function MatchScreen({
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
   onArrival: (status: ArrivalStatus | null, travelMinutes?: number) => void;
+  onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
 }) {
   const navigate = useNavigate();
 
@@ -219,12 +239,12 @@ export function MatchScreen({
         ) : (
           <p className="mt-8 text-muted">Round two is the host&rsquo;s call.</p>
         )}
-        <History visited={visited} />
+        <History visited={visited} onNeverAgain={onNeverAgain} />
       </div>
     );
   }
 
-  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} planned={planned} arrivals={arrivals} participants={participants} participantId={participantId} onAgain={onAgain} onChooseAlternative={onChooseAlternative} onPlan={onPlan} onArrival={onArrival} navigate={navigate} />;
+  return <WinnerScreen match={match} visited={visited} filters={filters} isHost={isHost} planned={planned} arrivals={arrivals} participants={participants} participantId={participantId} onAgain={onAgain} onChooseAlternative={onChooseAlternative} onPlan={onPlan} onArrival={onArrival} onNeverAgain={onNeverAgain} navigate={navigate} />;
 }
 
 function WinnerScreen({
@@ -240,6 +260,7 @@ function WinnerScreen({
   onChooseAlternative,
   onPlan,
   onArrival,
+  onNeverAgain,
   navigate,
 }: {
   match: Extract<NonNullable<MatchState>, { kind: "match" }>;
@@ -254,6 +275,7 @@ function WinnerScreen({
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
   onArrival: (status: ArrivalStatus | null, travelMinutes?: number) => void;
+  onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round } = match;
@@ -786,7 +808,7 @@ function WinnerScreen({
         )}
       </div>
 
-      <History visited={visited} />
+      <History visited={visited} onNeverAgain={onNeverAgain} />
 
       {detailOpen && (
         <RestaurantDetail restaurant={restaurant} onClose={() => setDetailOpen(false)} />

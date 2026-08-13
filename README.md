@@ -92,10 +92,41 @@ feels solid or broken:
   provider change or a bad upstream response cannot silently corrupt the deck.
 - **Session lifecycle.** The full join / vote / decide / reconnect flow runs against the **real
   Workers runtime** via `@cloudflare/vitest-pool-workers`, with migrations applied to an in-memory
-  D1 per file. 54 tests in all — 16 in `shared`, 38 in the Worker — covering the decision core
+  D1 per file. 127 tests in all, 77 in `shared` and 50 in the Worker, covering the decision core
   (including super-like weighting), the filter predicates, the usage-meter cap, and the session
   lifecycle. The web package has none: everything worth asserting was pushed down into `shared` and
   the Worker so it could be tested without a browser, which is why the split is lopsided.
+
+## Talking about this
+
+**The short version.** A group decides where to eat by swiping, majority wins, and nobody has to be
+the one who picked. One Durable Object per session holds the live state over WebSockets.
+
+**The shape.** You make a session and share a code. Everyone joins over a WebSocket into the same
+Durable Object, which is the only thing that writes that session's state. Votes go in, tallies come
+out, and when a majority clears, the object decides once and tells everyone. Restaurants come from
+Google Places, cached per session so a room of eight is one upstream call rather than eight.
+
+**The call I'd defend.** The Durable Object is the single writer. I could have put votes in D1 and
+polled, but then two people swiping at the same moment race, and "decide exactly once" turns into a
+transaction problem. With one object owning the room, the decision is just a function call in
+memory. That's the reason to reach for Durable Objects at all: they turn a distributed consistency
+problem into a single-threaded one.
+
+**The bug worth telling.** Every restaurant the group picked got filtered out of future decks
+forever. `visitedAt` was recorded from the first commit and never read, so what was meant as a
+cooldown was really a tombstone, and a group that used the app slowly ate its own options. The fix
+separated two things that had been conflated: "we went last week" is about timing and expires after
+90 days, "never again" is about the place and doesn't. Nobody reported it, because it fails by the
+app quietly getting worse.
+
+**What breaks first.** Google Places quota. It's the only part that costs money and it's metered
+per month, so past the ceiling the app serves a sample deck and says so instead of erroring. Sessions
+themselves scale fine because each room is its own object and rooms don't talk to each other.
+
+**What I'd change.** Filters are one shared set owned by the host, but a winning vibe vote overwrites
+them at round start. Both behaviours are defensible and together they're confusing: the host can set
+something and watch it get replaced. I'd make one of them clearly win and say so in the UI.
 
 ## Running locally
 

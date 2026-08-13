@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   AMENITY_OPTIONS,
   CUISINE_OPTIONS,
-  FILTER_PRESETS,
   MIN_REVIEWS_OPTIONS,
   NEIGHBORHOODS,
   PRICE_OPTIONS,
@@ -15,7 +14,7 @@ import {
   type RestaurantSort,
   type SessionFilters,
 } from "@wherever/shared";
-import { DEFAULT_FILTERS, geocode } from "../api";
+import { geocode } from "../api";
 
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
@@ -279,60 +278,8 @@ export function FilterFields({
   // "House rules" = how the round runs (reveal voters + timer), folded away from the food filters.
   const rulesCount = (filters.revealVoters ? 1 : 0) + (filters.roundSeconds ? 1 : 0);
 
-  // A quick-pick preset reads as "on" when every field it sets currently matches (it replaces each
-  // field via spread, so exact match is right, and this clears the moment you tweak one of them).
-  // Gives the preset buttons the pressed feedback they were missing — tapping felt like a no-op.
-  const presetActive = (pf: Partial<SessionFilters>): boolean =>
-    Object.entries(pf).every(([k, v]) => {
-      const cur = (filters as unknown as Record<string, unknown>)[k];
-      if (Array.isArray(v))
-        return (
-          Array.isArray(cur) &&
-          cur.length === v.length &&
-          [...cur].sort().join() === [...(v as unknown[])].sort().join()
-        );
-      return cur === v;
-    });
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <FieldLabel>Quick picks</FieldLabel>
-        <div className="flex flex-wrap gap-2">
-          {FILTER_PRESETS.map((p) => {
-            const on = presetActive(p.filters);
-            // Quick picks are single-select toggles. Every field a preset can touch is reset first,
-            // so applying one can't leave another still "on" (the old multi-select bug), and tapping
-            // the active one clears back to defaults (unselect). Cuisines/rating/reviews aren't
-            // preset-managed, so they're left untouched.
-            const presetReset = {
-              priceTiers: [],
-              radiusMeters: DEFAULT_FILTERS.radiusMeters,
-              amenities: [],
-              openNow: false,
-            };
-            return (
-              <button
-                key={p.label}
-                type="button"
-                aria-pressed={on}
-                onClick={() =>
-                  onChange(on ? { ...filters, ...presetReset } : { ...filters, ...presetReset, ...p.filters })
-                }
-                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                  on
-                    ? "bg-ember text-ink border-ember font-semibold"
-                    : "border-white/10 bg-black/40 text-cream hover:border-ember hover:text-ember"
-                }`}
-              >
-                <span className="mr-1">{p.emoji}</span>
-                {p.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       <LocationPicker filters={filters} onChange={onChange} />
 
       <div className="flex flex-col gap-2">

@@ -10,3 +10,4 @@ coverage/
 .vite/
 .wrangler/
 packages/worker/.wrangler/
+*.tsbuildinfo

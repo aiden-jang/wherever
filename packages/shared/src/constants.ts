@@ -218,18 +218,6 @@ export function amenityLabel(key: AmenityKey): string {
   return AMENITY_OPTIONS.find((a) => a.key === key)?.label ?? key;
 }
 
-export interface FilterPreset {
-  label: string;
-  emoji: string;
-  /** Partial filters merged onto the current selection when the preset is tapped. */
-  filters: {
-    priceTiers?: PriceTier[];
-    radiusMeters?: number;
-    openNow?: boolean;
-    amenities?: AmenityKey[];
-  };
-}
-
 export interface RoundTimerOption {
   seconds: number;
   label: string;
@@ -243,10 +231,3 @@ export const ROUND_TIMER_OPTIONS: RoundTimerOption[] = [
   { seconds: 300, label: "5 min" },
 ];
 
-/** One-tap combos for people who don't want to fiddle with individual knobs. */
-export const FILTER_PRESETS: FilterPreset[] = [
-  { label: "Cheap & close", emoji: "🏃", filters: { priceTiers: [1, 2], radiusMeters: 1600 } },
-  { label: "Date night", emoji: "🕯️", filters: { priceTiers: [3, 4], amenities: ["reservable"] } },
-  { label: "Big group", emoji: "👥", filters: { priceTiers: [2, 3], amenities: ["goodForGroups"] } },
-  { label: "Late night", emoji: "🌙", filters: { openNow: true, amenities: ["servesCocktails"] } },
-];

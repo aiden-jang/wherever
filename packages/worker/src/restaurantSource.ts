@@ -245,11 +245,13 @@ export function formatPriceRange(
   if (!range) return null;
   const start = formatMoney(range.startPrice);
   const end = formatMoney(range.endPrice);
-  // Drop the repeated symbol on the high end when both share a currency: "$10–30", not "$10–$30".
+  // Drop the repeated symbol on the high end when both share a currency: "$10-30", not "$10-$30".
+  // Hyphen, not an en-dash: a number range reads the same and the dash characters are the single
+  // most reliable giveaway that a string was written by a machine.
   if (start && end) {
     const endBare = range.endPrice?.units ?? end;
     const sameCurrency = range.startPrice?.currencyCode === range.endPrice?.currencyCode;
-    return `${start}–${sameCurrency ? endBare : end}`;
+    return `${start}-${sameCurrency ? endBare : end}`;
   }
   if (start) return `${start}+`;
   if (end) return `Up to ${end}`;
@@ -359,7 +361,17 @@ export function mapGooglePlace(
     website: p.websiteUri ?? null,
     phone: p.nationalPhoneNumber ?? null,
     openNow: p.currentOpeningHours?.openNow ?? null,
-    hours: p.currentOpeningHours?.weekdayDescriptions ?? null,
+    /*
+     * Google's own hyphen, not Google's en-dash.
+     *
+     * `weekdayDescriptions` arrives as "Monday: 8:00 AM – 11:00 PM" and we render it verbatim, so an
+     * en-dash from an upstream API ends up sitting next to our own typography. Normalising the
+     * separator is meaning-preserving: a time range reads identically either way, and it is the one
+     * character that makes a page look machine-set.
+     *
+     * Only the separator. Nothing else about the string is rewritten.
+     */
+    hours: p.currentOpeningHours?.weekdayDescriptions?.map((line) => line.replace(/\s[–—]\s/g, " - ")) ?? null,
     businessStatus: p.businessStatus ?? null,
     priceRange: formatPriceRange(p.priceRange),
     editorialSummary: p.editorialSummary?.text ?? null,

@@ -120,7 +120,7 @@ describe("mapGooglePlace", () => {
         startPrice: { currencyCode: "EUR", units: "15" },
         endPrice: { currencyCode: "EUR", units: "40" },
       }),
-    ).toBe("€15–40");
+    ).toBe("€15-40");
   });
 
   it("keeps only the amenities Google reports (absent = unknown, not false)", () => {
@@ -159,7 +159,7 @@ describe("mapGooglePlace", () => {
     };
     const r = mapGooglePlace(p, center);
     expect(r.businessStatus).toBe("CLOSED_TEMPORARILY");
-    expect(r.priceRange).toBe("$10–30");
+    expect(r.priceRange).toBe("$10-30");
   });
 
   it("maps the detail fields when Google provides them", () => {
@@ -179,7 +179,8 @@ describe("mapGooglePlace", () => {
     expect(r.website).toBe("https://latenightdiner.example");
     expect(r.phone).toBe("(212) 555-0100");
     expect(r.openNow).toBe(true);
-    expect(r.hours).toEqual(["Monday: 8:00 AM – 11:00 PM", "Tuesday: 8:00 AM – 11:00 PM"]);
+    // Normalised on ingest: the API sends an en-dash, we render a hyphen.
+    expect(r.hours).toEqual(["Monday: 8:00 AM - 11:00 PM", "Tuesday: 8:00 AM - 11:00 PM"]);
   });
 
   it("uses a relative proxy URL when no base is given (dev)", () => {

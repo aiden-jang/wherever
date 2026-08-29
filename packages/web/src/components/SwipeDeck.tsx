@@ -12,6 +12,7 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
+import { swipeAnnouncement, undoAnnouncement } from "@wherever/shared";
 import { useLine } from "../useLine.js";
 
 const SWIPE_THRESHOLD = 110;
@@ -222,6 +223,7 @@ export function SwipeDeck({
   vetoSpent = false,
   onSwipe,
   onUndo,
+  onAnnounce,
 }: {
   restaurants: Restaurant[];
   alreadyVoted?: string[];
@@ -230,6 +232,8 @@ export function SwipeDeck({
   vetoSpent?: boolean;
   onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean, isVeto?: boolean) => void;
   onUndo: (restaurantId: string) => void;
+  /** Feeds the page's live region, so voting is not silent for a screen reader. */
+  onAnnounce?: (text: string) => void;
 }) {
   // Resume after a reconnect: start at the first card this client has not voted.
   const [index, setIndex] = useState(() => {
@@ -288,9 +292,21 @@ export function SwipeDeck({
       dismissHint();
       setExitDir(dir);
       onSwipe(current.id, dir, isSuper, isVeto);
+      // The card changes under a sighted user's eyes and silently for everyone else, so say it.
+      onAnnounce?.(
+        swipeAnnouncement({
+          direction: dir,
+          isSuper,
+          isVeto,
+          name: current.name,
+          next: restaurants[i + 1]?.name ?? null,
+          position: i + 2,
+          total: restaurants.length,
+        }),
+      );
       setIndex(i + 1);
     },
-    [restaurants, onSwipe, dismissHint],
+    [restaurants, onSwipe, onAnnounce, dismissHint],
   );
 
   const undoLast = useCallback(() => {
@@ -304,7 +320,9 @@ export function SwipeDeck({
     setCanUndo(historyRef.current.length > 0);
     buzz(8);
     onUndo(previous.restaurantId);
-  }, [onUndo]);
+    const back = restaurants[previous.index];
+    if (back) onAnnounce?.(undoAnnouncement(back.name, previous.index + 1, restaurants.length));
+  }, [onUndo, onAnnounce, restaurants]);
 
   // Don't let the hint linger if they just sit there.
   useEffect(() => {

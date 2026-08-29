@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Voting is no longer silent.** The card already had a full label, the arrow keys already worked, and
+every other realtime moment already announced itself, so the one thing missing was the vote itself:
+pressing a button swapped the card underneath with nothing said. It now announces what you did, what
+is in front of you, and where you are: "Vetoed Ellen's Stardust Diner. It is out for everyone. Next,
+LOS TACOS No.1. 4 of 19." Undo says so too, and the end of the deck says it is the end rather than
+naming a card that is not there.
+
 **Walking in mid-round says so.** Somebody who opens the link after voting has started was dropped
 straight into a deck with no sign the round was under way, while the group watched "3 of 4 done"
 become "3 of 5" for no visible reason. The deck they receive now carries how far ahead the

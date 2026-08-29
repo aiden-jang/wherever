@@ -23,6 +23,7 @@ import {
   type Vote,
   type VoteMode,
   applyVibe,
+  vibeEffectLine,
   resolveVibe,
   type Vibe,
   blockedIds,
@@ -451,7 +452,14 @@ export class SessionRoom extends DurableObject<Env> {
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
     const roundEndsAt = await this.setRoundDeadline(meta);
-    this.broadcast({ type: "deck", restaurants: deck, demo: await this.isDemoMode(), roundEndsAt });
+    const vibeEffect = await this.ctx.storage.get<string>("vibeEffect");
+    this.broadcast({
+      type: "deck",
+      restaurants: deck,
+      demo: await this.isDemoMode(),
+      roundEndsAt,
+      ...(vibeEffect ? { vibeEffect } : {}),
+    });
     await this.broadcastState();
     await this.evaluate(meta);
   }
@@ -715,7 +723,14 @@ export class SessionRoom extends DurableObject<Env> {
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
     const roundEndsAt = await this.setRoundDeadline(meta);
-    this.broadcast({ type: "deck", restaurants: deck, demo: await this.isDemoMode(), roundEndsAt });
+    const vibeEffect = await this.ctx.storage.get<string>("vibeEffect");
+    this.broadcast({
+      type: "deck",
+      restaurants: deck,
+      demo: await this.isDemoMode(),
+      roundEndsAt,
+      ...(vibeEffect ? { vibeEffect } : {}),
+    });
     await this.broadcastState();
     await this.evaluate(meta);
   }
@@ -795,8 +810,13 @@ export class SessionRoom extends DurableObject<Env> {
      */
     const reading = resolveVibe(await this.vibeCounts());
     if (reading.vibe) {
+      // Describe the change before making it: applyVibe overwrites the very filters it is measured
+      // against, and this is the only place both halves exist.
+      await this.ctx.storage.put("vibeEffect", vibeEffectLine(reading.vibe, meta.filters));
       meta.filters = applyVibe(meta.filters, reading.vibe);
       await this.ctx.storage.put("meta", meta);
+    } else {
+      await this.ctx.storage.delete("vibeEffect");
     }
 
     const all = await source.fetchDeck(meta.filters);

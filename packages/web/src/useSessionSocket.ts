@@ -58,6 +58,7 @@ export function useSessionSocket(code: string, displayName: string) {
   const [alreadyVoted, setAlreadyVoted] = useState<string[]>([]);
   // Whether this client already spent its super-like this round (seeded from the deck on reconnect).
   const [superUsed, setSuperUsed] = useState(false);
+  const [vibeEffect, setVibeEffect] = useState<string | null>(null);
   const [vetoUsed, setVetoUsed] = useState(false);
   // Absolute epoch-ms deadline when the round auto-decides (null = no timer this round).
   const [roundEndsAt, setRoundEndsAt] = useState<number | null>(null);
@@ -105,6 +106,7 @@ export function useSessionSocket(code: string, displayName: string) {
           setProgress(null);
           setDeck(msg.restaurants);
           setDemo(msg.demo ?? false);
+          setVibeEffect(msg.vibeEffect ?? null);
           setSuperUsed(msg.superUsed ?? false);
           setVetoUsed(msg.vetoUsed ?? false);
           setRoundEndsAt(msg.roundEndsAt ?? null);
@@ -206,5 +208,5 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send };
+  return { session, deck, demo, vibeEffect, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send };
 }

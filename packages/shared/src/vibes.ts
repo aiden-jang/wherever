@@ -131,6 +131,49 @@ export function vibeReadingLine(reading: VibeReading, groupSize: number): string
   return `${option.label} is ahead, ${reading.votes} of ${reading.total}.`;
 }
 
+/*
+ * What a vibe actually did to the deck, in words.
+ *
+ * Picking one silently rewrites the group's filters and the deck looks the same as any other, so the
+ * choice reads as decoration. Derived from the vibe's own filters rather than written by hand, so a
+ * vibe whose numbers change cannot end up described as something it no longer does.
+ */
+export function vibeEffect(vibe: Vibe, base: SessionFilters): string[] {
+  const { filters: wanted } = vibeOption(vibe);
+  const out: string[] = [];
+
+  if (wanted.radiusMeters !== undefined && wanted.radiusMeters !== base.radiusMeters) {
+    const km = wanted.radiusMeters / 1000;
+    const distance = km >= 1 ? `${Number.isInteger(km) ? km : km.toFixed(1)} km` : `${wanted.radiusMeters} m`;
+    out.push(`${wanted.radiusMeters > base.radiusMeters ? "widened" : "tightened"} the search to ${distance}`);
+  }
+  if (wanted.minRating !== undefined && wanted.minRating !== base.minRating) {
+    out.push(wanted.minRating === 0 ? "dropped the rating floor" : `raised the rating floor to ${wanted.minRating}`);
+  }
+  // Only a narrowing is news. The default allows every tier, so "kept $, $$, $$$, $$$$" would be
+  // reporting that nothing happened.
+  const allowed = base.priceTiers ?? [1, 2, 3, 4].filter((tier) => tier <= (base.maxPriceTier ?? 4));
+  if (wanted.priceTiers && wanted.priceTiers.length > 0 && wanted.priceTiers.length < allowed.length) {
+    out.push(`kept ${wanted.priceTiers.map((tier) => "$".repeat(tier)).join(", ")}`);
+  }
+  if (wanted.openNow && !base.openNow) out.push("only somewhere open now");
+  if (wanted.amenities && wanted.amenities.length > 0) out.push(`asked for ${wanted.amenities.join(" and ")}`);
+  return out;
+}
+
+/**
+ * One line for a toast: what the group's vibe changed.
+ *
+ * Never null. A vibe can genuinely change nothing (chaotic against wide-open defaults asks for the
+ * deck you were already getting), and somebody who just picked one is owed an answer either way.
+ */
+export function vibeEffectLine(vibe: Vibe, base: SessionFilters): string {
+  const label = vibeOption(vibe).label;
+  const parts = vibeEffect(vibe, base);
+  if (parts.length === 0) return `${label}: nothing to change, the filters were already there.`;
+  return `${label}: ${parts.slice(0, 2).join(", ")}.`;
+}
+
 /**
  * Only the keys a vibe names are replaced, so a neighbourhood or cuisine survives it. Amenities replace
  * rather than merge: quick then fancy would demand takeout AND reservable, and the deck empties.

@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The install prompt waits until it has a reason.** Asking on arrival is the thing everybody hates,
+and it is also the worst moment: nobody installs an app they have not used. So it appears once, on
+the winner screen, after a round has actually decided something, saying the only true thing there is
+to say ("next argument could take one tap"). No is remembered. It never appears in Safari, which does
+not fire `beforeinstallprompt`, because walking somebody through a share-sheet menu they did not ask
+for is worse than staying quiet.
+
 **A vibe says what it did, and the server is the only one who can say it.** Picking "chaotic" quietly
 rewrote the group's filters and then dealt a deck that looked like any other, so the choice read as
 decoration. It now arrives as a toast when the cards do: "fancy: tightened the search to 4 km, raised

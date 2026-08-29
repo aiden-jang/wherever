@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useInstallPrompt } from "../useInstallPrompt.js";
 import { line, matchReasons, type ArrivalStatus, type ArrivalUpdate, type Participant, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
@@ -304,6 +305,7 @@ function WinnerScreen({
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
   const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
+  const { offer: installOffer, install, dismiss: dismissInstall } = useInstallPrompt(round);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -809,6 +811,22 @@ function WinnerScreen({
             )}
           </div>
         </details>
+        {installOffer && (
+          /* Asked here and nowhere else: the round just ended, so there is an actual reason. */
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
+            <span className="text-muted">Next argument could take one tap.</span>
+            <button
+              type="button"
+              onClick={() => void install()}
+              className="rounded-full border border-acid/30 bg-acid/10 px-4 py-2 font-semibold text-acid transition hover:bg-acid/20 active:scale-[0.98]"
+            >
+              Add to home screen
+            </button>
+            <button type="button" onClick={dismissInstall} className="text-muted underline hover:text-cream">
+              No thanks
+            </button>
+          </div>
+        )}
         {isHost ? (
           <button
             onClick={onAgain}

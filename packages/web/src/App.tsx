@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { MotionConfig } from "framer-motion";
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import Landing from "./routes/Landing.js";
@@ -5,13 +6,27 @@ import Lobby from "./routes/Lobby.js";
 import NotFound from "./routes/NotFound.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { SoundToggle } from "./components/SoundToggle.js";
+import { useHourMood } from "./useHourMood.js";
 
 export default function App() {
+  const mood = useHourMood();
   return (
     <MotionConfig reducedMotion="user">
       <BrowserRouter>
         <div className="grain min-h-full flex flex-col">
-        <div className="aurora" aria-hidden />
+        <div
+          className="aurora"
+          aria-hidden
+          data-mood={mood.id}
+          style={
+            {
+              "--aurora-from": mood.from,
+              "--aurora-via": mood.via,
+              "--aurora-to": mood.to,
+              "--aurora-opacity": mood.opacity,
+            } as CSSProperties
+          }
+        />
 
         <header className="flex items-center justify-between px-6 py-5 max-w-6xl mx-auto w-full">
           <Link to="/" className="font-display text-lg font-extrabold tracking-tight">

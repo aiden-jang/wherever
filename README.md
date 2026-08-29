@@ -70,6 +70,14 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Walking in mid-round says so.** Somebody who opens the link after voting has started was dropped
+straight into a deck with no sign the round was under way, while the group watched "3 of 4 done"
+become "3 of 5" for no visible reason. The deck they receive now carries how far ahead the
+furthest-along person is, and they get one line: "They started without you, 3 cards in. Your votes
+still count." Counted from votes rather than from arrival time, so a reconnect that missed a stretch
+gets the same honest answer as a genuine latecomer, and it is only ever sent to the person it
+describes.
+
 **The install prompt waits until it has a reason.** Asking on arrival is the thing everybody hates,
 and it is also the worst moment: nobody installs an app they have not used. So it appears once, on
 the winner screen, after a round has actually decided something, saying the only true thing there is

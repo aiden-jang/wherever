@@ -189,13 +189,13 @@ function useHostPromotionToasts(
 }
 
 /*
- * Say what the group's vibe did to the deck, once, as the cards arrive.
+ * Say something once, when it becomes true, and never again for the same words.
  *
- * Picking "chaotic" quietly rewrites the filters and then deals a deck that looks like any other, so
- * the choice reads as decoration. A toast rather than a line on the deck: the swiping screen has to
- * fit on a laptop without pushing the reaction bar under the fold, and this is worth saying once.
+ * Used for the two things the deck screen has to explain without taking a permanent row: what the
+ * group's vibe did to the filters, and that you have walked in on a round already under way. That
+ * screen has to fit on a laptop without pushing the reaction bar under the fold.
  */
-function useVibeEffectToast(text: string | null, onEvent?: (text: string) => void): Toast[] {
+function useOneShotToast(text: string | null, onEvent?: (text: string) => void): Toast[] {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const said = useRef<string | null>(null);
   const onEventRef = useRef(onEvent);
@@ -386,7 +386,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, demo, vibeEffect, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send } =
+  const { session, deck, demo, vibeEffect, behindBy, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
@@ -431,8 +431,14 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   );
   const isHost = me?.isHost ?? false;
   const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
-  const vibeToasts = useVibeEffectToast(vibeEffect, setAnnouncement);
-  const allToasts = [...toasts, ...hostToasts, ...vibeToasts];
+  const vibeToasts = useOneShotToast(vibeEffect, setAnnouncement);
+  const behindToasts = useOneShotToast(
+    behindBy > 0
+      ? `They started without you, ${behindBy} ${behindBy === 1 ? "card" : "cards"} in. Your votes still count.`
+      : null,
+    setAnnouncement,
+  );
+  const allToasts = [...toasts, ...hostToasts, ...vibeToasts, ...behindToasts];
   const count = session?.participants.length ?? 0;
 
   const [codeCopied, setCodeCopied] = useState(false);

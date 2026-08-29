@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cardsBehind,
   countFinished,
   decideWinner,
   promoteAlternative,
@@ -34,6 +35,39 @@ function superVote(participantId: string, restaurantId: string): Vote {
 }
 
 const deck = [restaurant("a"), restaurant("b"), restaurant("c")];
+
+describe("how far behind somebody is", () => {
+  it("is zero in a round nobody has started", () => {
+    expect(cardsBehind([], "p1")).toBe(0);
+  });
+
+  it("is zero for the person who is furthest ahead", () => {
+    const votes = [vote("p1", "a", "right"), vote("p1", "b", "left"), vote("p2", "a", "right")];
+    expect(cardsBehind(votes, "p1")).toBe(0);
+  });
+
+  it("counts from the furthest-along person, not the average", () => {
+    // Walking in on a group where one person has raced ahead should say six, not three.
+    const votes = [
+      vote("p1", "a", "right"),
+      vote("p1", "b", "right"),
+      vote("p1", "c", "right"),
+      vote("p2", "a", "right"),
+    ];
+    expect(cardsBehind(votes, "p3")).toBe(3);
+  });
+
+  it("shrinks as the latecomer catches up", () => {
+    const ahead = [vote("p1", "a", "right"), vote("p1", "b", "right")];
+    expect(cardsBehind(ahead, "p2")).toBe(2);
+    expect(cardsBehind([...ahead, vote("p2", "a", "right")], "p2")).toBe(1);
+  });
+
+  it("ignores your own votes when working out who is ahead", () => {
+    const votes = [vote("p1", "a", "right"), vote("p1", "b", "right"), vote("p1", "c", "right")];
+    expect(cardsBehind(votes, "p1")).toBe(0);
+  });
+});
 
 describe("a tie", () => {
   it("is reported, not just quietly resolved by deck order", () => {

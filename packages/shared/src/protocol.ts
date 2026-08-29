@@ -168,6 +168,12 @@ export interface DeckMessage {
   roundEndsAt?: number;
   /** True when this is the sample deck served because the monthly live-data budget is spent. */
   demo?: boolean;
+  /**
+   * What the group's vibe did to the filters, in words. Computed here rather than on the client,
+   * because the vibe is folded into the session's filters before the deck is fetched, so by the
+   * time anyone sees them the before-state is gone. Absent when nobody picked a vibe.
+   */
+  vibeEffect?: string;
 }
 
 export interface ParticipantJoinedMessage {

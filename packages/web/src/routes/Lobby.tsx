@@ -188,6 +188,31 @@ function useHostPromotionToasts(
   return toasts;
 }
 
+/*
+ * Say what the group's vibe did to the deck, once, as the cards arrive.
+ *
+ * Picking "chaotic" quietly rewrites the filters and then deals a deck that looks like any other, so
+ * the choice reads as decoration. A toast rather than a line on the deck: the swiping screen has to
+ * fit on a laptop without pushing the reaction bar under the fold, and this is worth saying once.
+ */
+function useVibeEffectToast(text: string | null, onEvent?: (text: string) => void): Toast[] {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const said = useRef<string | null>(null);
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+
+  useEffect(() => {
+    if (!text || said.current === text) return;
+    said.current = text;
+    onEventRef.current?.(text);
+    const toast = { id: crypto.randomUUID(), text };
+    setToasts((t) => [...t, toast]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== toast.id)), 5000);
+  }, [text]);
+
+  return toasts;
+}
+
 function ParticipantChip({ p }: { p: Participant }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
@@ -361,7 +386,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, demo, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send } =
+  const { session, deck, demo, vibeEffect, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
@@ -406,7 +431,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   );
   const isHost = me?.isHost ?? false;
   const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
-  const allToasts = [...toasts, ...hostToasts];
+  const vibeToasts = useVibeEffectToast(vibeEffect, setAnnouncement);
+  const allToasts = [...toasts, ...hostToasts, ...vibeToasts];
   const count = session?.participants.length ?? 0;
 
   const [codeCopied, setCodeCopied] = useState(false);

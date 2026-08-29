@@ -70,6 +70,15 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**A vibe says what it did, and the server is the only one who can say it.** Picking "chaotic" quietly
+rewrote the group's filters and then dealt a deck that looked like any other, so the choice read as
+decoration. It now arrives as a toast when the cards do: "fancy: tightened the search to 4 km, raised
+the rating floor to 4.4." The line is built in the Worker at the moment the vibe is applied, because
+`applyVibe` overwrites the very filters it would be measured against and the client only ever sees the
+after. The wording is derived from the vibe's own filters rather than written by hand, so a vibe whose
+numbers change cannot end up described as something it no longer does. It also only reports a real
+change: chaotic against wide-open defaults asks for the deck you were already getting, and says so.
+
 **The background keeps the clock's hours, but not at dinner time.** The aurora behind every screen
 takes its three stops from the local hour, so 8pm is deeper than 5pm and 2am goes cold. Two rules
 keep it from being a gimmick. The 4pm-to-7pm window is the brand's exact orange-and-pink, because

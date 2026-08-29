@@ -60,6 +60,13 @@ export interface DecisionResult {
   rightSwipes: number;
   /** The next two non-vetoed choices by the same tally, ready when the winner is impractical. */
   alternatives?: DecisionAlternative[];
+  /**
+   * How many other places finished on the winner's exact score. Zero for a clean win.
+   *
+   * The tie itself is broken by deck order, which every client agrees on. Without this the group is
+   * never told a tie happened at all, and "we drew" is the most interesting thing a vote can do.
+   */
+  tiedWith: number;
 }
 
 export interface DecisionAlternative {
@@ -77,6 +84,8 @@ export function promoteAlternative(
   if (!promoted) return null;
 
   return {
+    // A promoted backup was chosen by hand, so whatever the original vote tied on no longer applies.
+    tiedWith: 0,
     restaurant: promoted.restaurant,
     rightSwipes: promoted.rightSwipes,
     alternatives: [
@@ -157,6 +166,7 @@ export function decideWinner(
     restaurant: winner.restaurant,
     rightSwipes: winner.rightSwipes,
     alternatives: rest.slice(0, 2).map(({ restaurant, rightSwipes }) => ({ restaurant, rightSwipes })),
+    tiedWith: rest.filter((candidate) => candidate.score === winner.score).length,
   };
 }
 

@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { buzz } from "../components/haptics.js";
 import { LocationPicker } from "../components/FilterFields";
 import { play } from "../components/sound.js";
+import { useLine } from "../useLine.js";
+import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
 import type { SessionFilters } from "@wherever/shared";
 import {
 } from "@wherever/shared";
@@ -16,23 +18,6 @@ import {
   DEFAULT_FILTERS,
 } from "../api.js";
 
-const DEADPAN_LINES = [
-  "It's going to be tacos. It's always tacos. Vote anyway.",
-  "You have a favorite. Say it with a swipe.",
-  "The group chat: 200 messages, zero decisions.",
-  "Someone will say 'I'm easy.' They are lying.",
-  "Nobody's driving 40 minutes. Be honest.",
-  "'Anywhere is fine.' Cool. We'll pick for you.",
-  "You already know. Just swipe.",
-  "Democracy, for dinner. Keep up.",
-  "The vegetarian remembers last time.",
-  "You're hungry and stalling. Iconic.",
-  "Whoever picked last time doesn't get a vote. Kidding. Mostly.",
-  "Six good options. You'll still say 'idk.'",
-  "This took your group 45 minutes last time. Not tonight.",
-  "No standoff. No group chat. Just swipe.",
-  "Pick fast. The hangry one is turning.",
-];
 
 interface TeaserCard {
   name: string;
@@ -54,12 +39,7 @@ const CARDS: TeaserCard[] = [
 ];
 
 function StatusLine() {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setI((n) => (n + 1) % DEADPAN_LINES.length), 2800);
-    return () => clearInterval(t);
-  }, []);
-  return <p className="mt-8 text-sm text-muted">{DEADPAN_LINES[i]}</p>;
+  return <p className="mt-8 text-sm text-muted">{useLine("landing", 2800)}</p>;
 }
 
 /** The visual body of a teaser card. The front card also shows the working Nope/Yes controls. */
@@ -277,16 +257,26 @@ function JoinForm() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || code.trim().length !== 6) return;
+    if (!name.trim() || !isCompleteCode(code)) return;
     rememberName(name.trim());
-    navigate(`/s/${code.trim().toUpperCase()}`);
+    navigate(`/s/${code}`);
   }
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
       <input className={inputClass} placeholder="Your name" value={name} maxLength={24} onChange={(e) => setName(e.target.value)} autoFocus />
-      <input className={`${inputClass} tracking-[0.4em] uppercase`} placeholder="CODE" value={code} maxLength={6} onChange={(e) => setCode(e.target.value.toUpperCase())} />
-      <button type="submit" disabled={!name.trim() || code.trim().length !== 6} className="rounded-2xl border border-white/15 px-6 py-3 text-lg font-semibold disabled:opacity-50 hover:bg-white/5 transition">
+      {/* No maxLength: a pasted invite link has to arrive whole for the parser to find the code in it. */}
+      <input
+        className={`${inputClass} tracking-[0.4em] uppercase`}
+        placeholder="CODE"
+        value={code}
+        inputMode="text"
+        autoCapitalize="characters"
+        autoCorrect="off"
+        spellCheck={false}
+        onChange={(e) => setCode(sessionCodeFrom(e.target.value))}
+      />
+      <button type="submit" disabled={!name.trim() || !isCompleteCode(code)} className="rounded-2xl border border-white/15 px-6 py-3 text-lg font-semibold disabled:opacity-50 hover:bg-white/5 transition">
         Join
       </button>
     </form>

@@ -63,6 +63,20 @@ are proxied through the Worker and edge-cached, so each unique photo is paid for
 result: the live demo cannot run up a bill even if it goes viral, and it degrades to a fully-playable
 demo rather than an error. See [ADR 0003](docs/adr/0003-usage-meter.md).
 
+**One voice, in one file, with a test that it is heard.** The landing had a rotating set of deadpan
+lines and nowhere else did, so the app opened funny and went quiet exactly where a group is bored:
+dealing, waiting on the slow one, and a dead tie. Those lines live in `shared/lines.ts` keyed by
+moment, seeded so a re-render never swaps a sentence mid-read, and a test walks the web source and
+fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
+landing-page-only sprinkle.
+
+**A tie is reported, not quietly resolved.** Ties break on deck order, which every client agrees on,
+so the winner is deterministic. Before, nobody was told it happened. `decideWinner` now returns
+`tiedWith`, and the winner screen says how many finished level and that this one was dealt first.
+The line is seeded from the winner's id, so every phone in the room shows the same sentence. What it
+does not do is pretend to flip a coin, because the tie-break is not random and saying so would be a
+lie.
+
 **Privacy is enforced on the wire, not in the UI.** "Show who's voted" is off by default, and when
 it's off the server never sends per-voter identities at all — the field is omitted from the progress
 payload, so it can't be recovered from devtools. Revealing is an explicit host opt-in. The only

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { matchReasons, type ArrivalStatus, type ArrivalUpdate, type Participant, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
+import { line, matchReasons, type ArrivalStatus, type ArrivalUpdate, type Participant, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -39,6 +39,16 @@ function appleDirectionsUrl(r: Restaurant): string {
 function wazeDirectionsUrl(r: Restaurant): string {
   const destination = `${r.name} ${r.address ?? ""}`.trim();
   return `https://www.waze.com/ul?q=${encodeURIComponent(destination)}&navigate=yes`;
+}
+
+/*
+ * Same line for everybody in the room: the seed comes from the winner's id, not a clock or a random,
+ * so two phones looking at the same result never disagree about what just happened.
+ */
+function seedFrom(id: string): number {
+  let n = 0;
+  for (const character of id) n = (n + character.charCodeAt(0)) % 997;
+  return n;
 }
 
 /** The tally is useful evidence; this is the human version of what it means. */
@@ -278,7 +288,7 @@ function WinnerScreen({
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
-  const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round } = match;
+  const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round, tiedWith = 0 } = match;
   const unavailable =
     restaurant.openNow === false ||
     restaurant.businessStatus === 'CLOSED_PERMANENTLY' ||
@@ -527,8 +537,16 @@ function WinnerScreen({
         {rightSwipes} of {totalParticipants} picked it.
       </p>
       <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
-        {consensusLine(rightSwipes, totalParticipants)}
+        {tiedWith > 0 ? line("tie", seedFrom(restaurant.id)) : consensusLine(rightSwipes, totalParticipants)}
       </p>
+      {tiedWith > 0 && (
+        // Say how it was settled. The tie-break is deck order, which is deterministic so every
+        // client lands on the same winner; pretending it was a coin toss would be a lie.
+        <p className="mt-2 text-xs text-muted">
+          {tiedWith === 1 ? "Two places finished level." : `${tiedWith + 1} places finished level.`} This
+          one was dealt first, so it takes it.
+        </p>
+      )}
       <section className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left">
         <p className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted">Why this one works</p>
         <div className="mt-2 grid grid-cols-2 gap-2">

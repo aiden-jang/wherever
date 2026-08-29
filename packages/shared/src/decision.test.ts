@@ -35,11 +35,38 @@ function superVote(participantId: string, restaurantId: string): Vote {
 
 const deck = [restaurant("a"), restaurant("b"), restaurant("c")];
 
+describe("a tie", () => {
+  it("is reported, not just quietly resolved by deck order", () => {
+    const votes = [vote("p1", "a", "right"), vote("p2", "b", "right")];
+    const result = decideWinner(deck, votes);
+    expect(result?.restaurant.id).toBe("a");
+    expect(result?.tiedWith).toBe(1);
+  });
+
+  it("counts every place level with the winner, not just the runner-up", () => {
+    const votes = [vote("p1", "a", "right"), vote("p2", "b", "right"), vote("p3", "c", "right")];
+    expect(decideWinner(deck, votes)?.tiedWith).toBe(2);
+  });
+
+  it("is zero when somebody actually won", () => {
+    const votes = [vote("p1", "a", "right"), vote("p2", "a", "right"), vote("p3", "b", "right")];
+    const result = decideWinner(deck, votes);
+    expect(result?.restaurant.id).toBe("a");
+    expect(result?.tiedWith).toBe(0);
+  });
+
+  it("ignores places nobody liked, which are all level on zero", () => {
+    const votes = [vote("p1", "a", "right")];
+    expect(decideWinner(deck, votes)?.tiedWith).toBe(0);
+  });
+});
+
 describe("promoteAlternative", () => {
   it("makes a backup the winner and keeps the old winner as a reversible Plan B", () => {
     const result = {
       restaurant: deck[0]!,
       rightSwipes: 3,
+      tiedWith: 0,
       alternatives: [
         { restaurant: deck[1]!, rightSwipes: 2 },
         { restaurant: deck[2]!, rightSwipes: 1 },
@@ -49,6 +76,7 @@ describe("promoteAlternative", () => {
     expect(promoteAlternative(result, "b")).toEqual({
       restaurant: deck[1],
       rightSwipes: 2,
+      tiedWith: 0,
       alternatives: [
         { restaurant: deck[0], rightSwipes: 3 },
         { restaurant: deck[2], rightSwipes: 1 },
@@ -57,7 +85,7 @@ describe("promoteAlternative", () => {
   });
 
   it("refuses a restaurant that was not a ranked finalist", () => {
-    expect(promoteAlternative({ restaurant: deck[0]!, rightSwipes: 2, alternatives: [] }, "ghost"))
+    expect(promoteAlternative({ restaurant: deck[0]!, rightSwipes: 2, tiedWith: 0, alternatives: [] }, "ghost"))
       .toBeNull();
   });
 });
@@ -283,6 +311,6 @@ describe("veto", () => {
 
   it("does not count toward the winner's headcount", () => {
     const votes = [yes("p1", "b"), yes("p2", "b"), veto("p3", "a")];
-    expect(decideWinner(deck, votes)).toEqual({ restaurant: deck[1], rightSwipes: 2, alternatives: [] });
+    expect(decideWinner(deck, votes)).toEqual({ restaurant: deck[1], rightSwipes: 2, alternatives: [], tiedWith: 0 });
   });
 });

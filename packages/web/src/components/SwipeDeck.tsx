@@ -12,6 +12,7 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
+import { useLine } from "../useLine.js";
 
 const SWIPE_THRESHOLD = 110;
 const HINT_KEY = "wherever:swipe-hint-seen";
@@ -193,6 +194,7 @@ function TopCard({
 
 /** Card-shaped placeholder shown while the first deck is being fetched. */
 export function DeckSkeleton() {
+  const dealingLine = useLine("dealing");
   return (
     <div className="w-full max-w-sm mx-auto">
       <div className="relative h-[clamp(288px,48dvh,360px)]">
@@ -208,7 +210,7 @@ export function DeckSkeleton() {
           </div>
         </div>
       </div>
-      <p className="mt-8 text-center text-sm text-muted">Finding places you'll still complain about...</p>
+      <p className="mt-8 text-center text-sm text-muted">{dealingLine}</p>
     </div>
   );
 }
@@ -328,6 +330,21 @@ export function SwipeDeck({
   }, [canUndo, commit, detail, superUsed, undoLast]);
 
   const done = index >= restaurants.length;
+  const waitingLine = useLine("waiting");
+
+  /*
+   * Fetch the next two cards' photos while this one is being decided.
+   *
+   * A swipe reveals the card underneath instantly, but its photo starts loading only then, so on a
+   * phone every swipe flashes the fallback gradient first. Two ahead covers a fast double-swipe
+   * without pulling the whole deck down a mobile connection.
+   */
+  useEffect(() => {
+    for (const next of restaurants.slice(index + 1, index + 3)) {
+      const url = next.imageUrl ?? next.photos?.[0];
+      if (url) new Image().src = url;
+    }
+  }, [index, restaurants]);
   const likedChoices = choices.filter((choice) => choice.direction === "right");
 
   if (done) {
@@ -336,10 +353,7 @@ export function SwipeDeck({
         <div className="text-center max-w-sm mx-auto mt-10">
           <div className="text-5xl">🧾</div>
           <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
-          <p className="mt-2 text-muted">
-            Your votes are in. Now we wait on everyone else to stop overthinking a
-            taco. This is the longest part.
-          </p>
+          <p className="mt-2 text-muted">{waitingLine}</p>
           {choices.length > 0 && (
             <details className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] text-left">
               <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">

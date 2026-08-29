@@ -198,6 +198,8 @@ export interface MatchMessage {
   alternatives?: DecisionAlternative[];
   /** How many places somebody vetoed, so the winner doesn't look arbitrary. */
   vetoedCount?: number;
+  /** How many places finished level with the winner. Optional for older rooms. */
+  tiedWith?: number;
   /**
    * Which round finally decided it, 1-based. The group's indecision is the thing this app exists
    * to end, so the number of attempts it took is worth saying out loud.

@@ -171,6 +171,23 @@ export function decideWinner(
 }
 
 /**
+ * How many cards ahead the furthest-along other person is. Zero when you are level or leading.
+ *
+ * Somebody who opens the link mid-round is dropped straight into a deck with no sign that voting
+ * started without them, while the group watches "3 of 4 done" become "3 of 5" for no visible reason.
+ * Counted from votes rather than from arrival time, so a reconnect that missed a stretch gets the
+ * same honest answer as a genuine latecomer.
+ */
+export function cardsBehind(votes: Vote[], participantId: string): number {
+  const counts = new Map<string, number>();
+  for (const v of votes) counts.set(v.participantId, (counts.get(v.participantId) ?? 0) + 1);
+  const mine = counts.get(participantId) ?? 0;
+  let furthest = 0;
+  for (const [id, n] of counts) if (id !== participantId && n > furthest) furthest = n;
+  return Math.max(0, furthest - mine);
+}
+
+/**
  * Which of the given participants have cast a vote on every deck item (i.e. finished the round).
  * Order follows participantIds. Used both to decide when the round is over and, when the host opted
  * to reveal it, to show who's already done.

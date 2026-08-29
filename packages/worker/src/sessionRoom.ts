@@ -23,6 +23,7 @@ import {
   type Vote,
   type VoteMode,
   applyVibe,
+  cardsBehind,
   vibeEffectLine,
   resolveVibe,
   type Vibe,
@@ -402,12 +403,14 @@ export class SessionRoom extends DurableObject<Env> {
       const alreadyVoted = mine.map((v) => v.restaurantId);
       const superUsed = mine.some((v) => v.super);
       const vetoUsed = mine.some((v) => v.veto);
+      const behindBy = cardsBehind(votes, identity.participantId);
       this.send(ws, {
         type: "deck",
         restaurants: deck,
         alreadyVoted,
         superUsed,
         vetoUsed,
+        ...(behindBy > 0 ? { behindBy } : {}),
         demo: await this.isDemoMode(),
         roundEndsAt: (await this.ctx.storage.get<number>("roundEndsAt")) ?? undefined,
       });

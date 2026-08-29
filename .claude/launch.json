@@ -4,8 +4,18 @@
     {
       "name": "wherever-web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev:web"],
+      "runtimeArgs": [
+        "dev:web"
+      ],
       "port": 5173
+    },
+    {
+      "name": "wherever-worker",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev:worker"
+      ],
+      "port": 8787
     }
   ]
 }

@@ -116,11 +116,17 @@ body {
   inset: -25%;
   z-index: -2;
   filter: blur(80px);
+  /* Stops come from the clock (shared/hourMood.ts); the brand colours are the fallback and the
+     dinner-hour value. The long transition means a session that crosses an hour drifts rather
+     than blinks. */
   background:
-    radial-gradient(40% 40% at 25% 30%, var(--color-ember) 0%, transparent 60%),
-    radial-gradient(38% 38% at 75% 35%, var(--color-flare) 0%, transparent 60%),
-    radial-gradient(120% 80% at 50% 100%, var(--color-grape) 0%, transparent 90%);
-  opacity: 0.55;
+    radial-gradient(40% 40% at 25% 30%, var(--aurora-from, var(--color-ember)) 0%, transparent 60%),
+    radial-gradient(38% 38% at 75% 35%, var(--aurora-via, var(--color-flare)) 0%, transparent 60%),
+    radial-gradient(120% 80% at 50% 100%, var(--aurora-to, var(--color-grape)) 0%, transparent 90%);
+  opacity: var(--aurora-opacity, 0.55);
+  transition:
+    background 2.4s ease,
+    opacity 2.4s ease;
   animation: aurora-drift 18s ease-in-out infinite;
 }
 
@@ -208,6 +214,10 @@ body {
   .aurora,
   .float {
     animation: none;
+  }
+  /* The hourly palette still changes, it just arrives instead of drifting. */
+  .aurora {
+    transition: none;
   }
   .confetti-piece {
     display: none;

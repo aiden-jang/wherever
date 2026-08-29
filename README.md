@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The background keeps the clock's hours, but not at dinner time.** The aurora behind every screen
+takes its three stops from the local hour, so 8pm is deeper than 5pm and 2am goes cold. Two rules
+keep it from being a gimmick. The 4pm-to-7pm window is the brand's exact orange-and-pink, because
+prime time is the wrong hour to stop looking like yourself, and a test pins those hex values. And
+opacity stays in a narrow band, because the aurora is a blurred wash behind body copy and anything
+brighter starts eating contrast. Reduced motion gets the palette without the drift.
+
 **A tie is reported, not quietly resolved.** Ties break on deck order, which every client agrees on,
 so the winner is deterministic. Before, nobody was told it happened. `decideWinner` now returns
 `tiedWith`, and the winner screen says how many finished level and that this one was dealt first.

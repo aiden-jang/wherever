@@ -15,6 +15,7 @@ import {
   type FoursquarePlace,
   type GooglePlace,
 } from "./restaurantSource.js";
+import { VIBES, type SessionFilters } from "@wherever/shared";
 
 describe("mapFoursquarePlace", () => {
   it("maps a full place to our domain shape", () => {
@@ -367,5 +368,45 @@ describe("MockRestaurantSource minReviews filter", () => {
     expect(deck.every((r) => (r.reviewCount ?? 0) >= 500)).toBe(true);
     expect(deck.map((r) => r.name)).toContain("Late Night Pizza Decisions"); // 3020
     expect(deck.map((r) => r.name)).not.toContain("Noodle Situation"); // 210
+  });
+});
+
+describe("the demo deck filters like the real one", () => {
+  // Not just a fixture: this is the deck a real session gets once the month's Google budget is spent.
+  const base: SessionFilters = { radiusMeters: 50_000, maxPriceTier: 4, categories: [] };
+  const deck = (extra: Partial<SessionFilters> = {}) =>
+    new MockRestaurantSource().fetchDeck({ ...base, ...extra });
+
+  it("honours 'not that'", async () => {
+    // This was dropped entirely, so a group that excluded pizza was dealt pizza.
+    const got = await deck({ excludedCategories: ["pizza"] });
+    expect(got.map((r) => r.category)).not.toContain("Pizza");
+    expect(got.length).toBeGreaterThan(0);
+  });
+
+  it("matches an exclusion whatever case it arrives in", async () => {
+    expect((await deck({ excludedCategories: ["PIZZA"] })).map((r) => r.category)).not.toContain("Pizza");
+  });
+
+  it("honours an explicit price-tier list, not just the ceiling", async () => {
+    // What a vibe sets. Only maxPriceTier was read, so "fancy" and "cozy" did nothing here.
+    const got = await deck({ priceTiers: [1] });
+    expect(got.length).toBeGreaterThan(0);
+    expect(got.every((r) => r.priceTier === 1)).toBe(true);
+  });
+
+  it("honours required amenities", async () => {
+    const got = await deck({ amenities: ["reservable"] });
+    expect(got.length).toBeGreaterThan(0);
+    expect(got.every((r) => r.amenities?.reservable === true)).toBe(true);
+  });
+
+  it("still deals something for every vibe, rather than emptying on one", async () => {
+    // An amenity filter against data with no amenities matches nothing, which would turn the demo
+    // into "nothing survived the filters" the moment anybody picked a vibe.
+    for (const vibe of VIBES) {
+      const got = await deck(vibe.filters);
+      expect(got.length, vibe.id).toBeGreaterThan(0);
+    }
   });
 });

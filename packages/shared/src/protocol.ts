@@ -133,6 +133,11 @@ export interface ReactMessage {
   emoji: string;
 }
 
+/** Host only: prod whoever has not finished the deck. */
+export interface NudgeThemMessage {
+  type: "nudge_them";
+}
+
 export type ClientMessage =
   | JoinMessage
   | StartRoundMessage
@@ -146,7 +151,8 @@ export type ClientMessage =
   | SetVibeMessage
   | SetFiltersMessage
   | SetNeverAgainMessage
-  | ReactMessage;
+  | ReactMessage
+  | NudgeThemMessage;
 
 // ---- Server -> Client ----
 
@@ -255,6 +261,16 @@ export interface IdentityMessage {
   participantId: string;
 }
 
+/**
+ * The host asking whoever has not finished to get on with it.
+ *
+ * Server-side because the client cannot know who is unfinished without being told who everybody is,
+ * which is exactly what an anonymous round does not send. Delivered only to the people it is about.
+ */
+export interface NudgeMessage {
+  type: "nudge";
+}
+
 /** A reaction someone threw, fanned out to the whole session. */
 export interface ReactionMessage {
   type: "reaction";
@@ -314,4 +330,5 @@ export type ServerMessage =
   | PlanMessage
   | ArrivalsMessage
   | VibesMessage
-  | ReactionMessage;
+  | ReactionMessage
+  | NudgeMessage;

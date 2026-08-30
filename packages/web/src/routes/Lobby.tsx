@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { decideNowWarning } from "@wherever/shared";
+import { decideNowWarning, line } from "@wherever/shared";
 import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
@@ -407,7 +407,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, demo, vibeEffect, behindBy, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send } =
+  const { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
@@ -467,6 +467,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     );
   }, [reactions]);
 
+  // A nudge is aimed at you personally, so it buzzes as well as speaks.
+  const nudgeToasts = useOneShotToast(nudges > 0 ? line("nudged", nudges) : null, setAnnouncement);
+  useEffect(() => {
+    if (nudges > 0) buzz([14, 60, 14]);
+  }, [nudges]);
+
   const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
   const vibeToasts = useOneShotToast(vibeEffect, setAnnouncement);
   const behindToasts = useOneShotToast(
@@ -475,10 +481,23 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       : null,
     setAnnouncement,
   );
-  const allToasts = [...toasts, ...hostToasts, ...vibeToasts, ...behindToasts];
+  const allToasts = [...toasts, ...hostToasts, ...vibeToasts, ...behindToasts, ...nudgeToasts];
   const count = session?.participants.length ?? 0;
 
   const [confirmDecide, setConfirmDecide] = useState(false);
+  /*
+   * Mirrors the server's cooldown so the button shows the rule instead of failing silently. The
+   * server is still the enforcement: socket errors are not rendered during a round, so a second
+   * click would otherwise do nothing visible at all.
+   */
+  const [hurriedAt, setHurriedAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hurriedAt) return;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, [hurriedAt]);
+  const hurryWait = Math.max(0, 20 - Math.floor((now - hurriedAt) / 1000));
   const [codeCopied, setCodeCopied] = useState(false);
   const [codeCopyFailed, setCodeCopyFailed] = useState(false);
   const [inviteStatus, setInviteStatus] = useState<'sharing' | 'shared' | 'copied' | 'failed' | null>(null);
@@ -666,6 +685,19 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               {progress && progress.totalParticipants > 0 && (
                 <p className="mt-3 text-sm text-muted tabular-nums">
                   {progress.finishedCount} of {progress.totalParticipants} done
+                  {isHost && progress.finishedCount < progress.totalParticipants && !confirmDecide && (
+                    <button
+                      disabled={hurryWait > 0}
+                      onClick={() => {
+                        send({ type: "nudge_them" });
+                        setHurriedAt(Date.now());
+                        setNow(Date.now());
+                      }}
+                      className="ml-3 underline transition-colors hover:text-cream disabled:cursor-default disabled:no-underline disabled:opacity-50 disabled:hover:text-muted"
+                    >
+                      {hurryWait > 0 ? `hurried (${hurryWait}s)` : "hurry them"}
+                    </button>
+                  )}
                   {isHost &&
                     progress.finishedCount < progress.totalParticipants &&
                     (confirmDecide ? (

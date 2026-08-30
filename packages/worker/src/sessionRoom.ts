@@ -55,6 +55,9 @@ const MAX_AGAIN_ROUNDS = 20;
 // stranded for long if the host genuinely leaves. Reassignment happens in alarm().
 const HOST_GRACE_MS = 15_000;
 
+/** Long enough that nudging is a decision, not a drum roll. */
+const NUDGE_COOLDOWN_MS = 20_000;
+
 /** clientId -> stable identity, so a reconnecting client keeps its votes. */
 type ClientMap = Record<string, { participantId: string; isHost: boolean }>;
 /** Votes keyed by `${participantId}:${restaurantId}` for idempotency. */
@@ -138,6 +141,8 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleSetNeverAgain(msg.restaurantId, msg.neverAgain);
       case "react":
         return this.handleReact(ws, msg.emoji);
+      case "nudge_them":
+        return this.handleNudge(ws);
     }
   }
 
@@ -217,6 +222,39 @@ export class SessionRoom extends DurableObject<Env> {
       .set({ neverAgain })
       .where(and(eq(visitedPlaces.sessionCode, meta.code), eq(visitedPlaces.restaurantId, restaurantId)));
     this.broadcast({ type: "history", visited: await this.getVisited(meta.code) });
+  }
+
+  /*
+   * Prod whoever has not finished the deck.
+   *
+   * Sent only to the sockets it is about, so nobody learns who the slow one is from a broadcast, and
+   * rate-limited on the server because a button that can be held down is not a rate limit.
+   */
+  private async handleNudge(ws: WebSocket): Promise<void> {
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att?.isHost) {
+      return this.send(ws, { type: "error", message: "Only the host can hurry people along." });
+    }
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta || meta.status !== "swiping") return;
+
+    const last = (await this.ctx.storage.get<number>("lastNudge")) ?? 0;
+    if (Date.now() - last < NUDGE_COOLDOWN_MS) {
+      return this.send(ws, { type: "error", message: "Give them a moment. You just did that." });
+    }
+    await this.ctx.storage.put("lastNudge", Date.now());
+
+    const deck = await this.getOrCreateDeck(meta);
+    const votes = await this.getVotes();
+    const participants = this.connectedParticipants();
+    const finished = new Set(
+      finishedParticipantIds(votes, participants.map((p) => p.participantId), deck.length),
+    );
+    for (const socket of this.ctx.getWebSockets()) {
+      if (socket === ws) continue; // the host has not finished either, and nudging yourself is daft
+      const who = socket.deserializeAttachment() as SocketAttachment | null;
+      if (who && !finished.has(who.participantId)) this.send(socket, { type: "nudge" });
+    }
   }
 
   /** Fan an ephemeral emoji reaction out to everyone in the session. */

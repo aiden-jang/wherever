@@ -72,6 +72,12 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**One branch left the non-host with nowhere to go.** When a round decides, a non-host gets "Show
+myself out" beside the host's "Run it back". When nobody agrees, the same person got the sentence
+"Round two is the host's call." and no action at all -- the one screen where they cannot do anything
+was also the one that offered them no way off it. Same words and the same button as the sibling
+branch, kept quieter than the host's so the default is still to wait rather than to split the group.
+
 **Two waits answered with a label instead of a sentence.** "No votes yet." was the only line on the
 screen in the moment before anybody has voted, and the app has a module whose entire job is to talk
 during a wait -- it just had no moment for this one. There is a `quiet` moment now, rotating like the

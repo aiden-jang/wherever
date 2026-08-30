@@ -70,6 +70,16 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The service worker cached failures and served them first.** Nothing checked `res.ok`, so a
+transient 404 on an asset or a 500 on a navigation was written to the cache and then served ahead of
+the network until somebody remembered to bump the version constant by hand; the offline fallback also
+returned `undefined` when there was no cached shell, which is a network error rather than a fallback,
+and that is exactly the first-visit-offline case it existed for. Static assets are now
+stale-while-revalidate instead of cache-first, which matters for everything in `public/` with no
+content hash in its name: `og.png`, the icons and the teaser photos keep their URL when their
+contents change, so the old copy used to be kept indefinitely. Vite's hashed bundles are unaffected,
+since their URL changes anyway.
+
 **The share preview had no image, which for this app is the whole front door.** `og:image` was
 relative, with a comment reasoning that it would resolve against whatever origin served the app.
 Crawlers do not do that: a relative Open Graph URL is ignored, so every link pasted into a group

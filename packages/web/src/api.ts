@@ -1,16 +1,8 @@
 import type { SessionFilters } from "@wherever/shared";
+import { DEFAULT_FILTERS } from "@wherever/shared";
 
-// Sensible defaults; the create form lets the host adjust these before starting.
-export const DEFAULT_FILTERS: SessionFilters = {
-  radiusMeters: 8000, // 5 mi
-  maxPriceTier: 4,
-  categories: [],
-  minRating: 0,
-  minReviews: 0,
-  openNow: true,
-  sort: "popularity",
-  revealVoters: true,
-};
+export { DEFAULT_FILTERS };
+
 
 // Empty in dev (Vite proxies /api to the Worker); set to the Worker origin in prod.
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";

@@ -73,7 +73,9 @@ function CardFace({
               : ""}
           </span>
           <span className="text-white/20">·</span>
-          <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
+          <span className="whitespace-nowrap" title={priceLabel(restaurant.priceTier)}>
+            {restaurant.priceRange ?? priceLabel(restaurant.priceTier)}
+          </span>
           <span className="text-white/20">·</span>
           {/* Distance is the honest number; the estimate is the one people decide on. */}
           <span className="whitespace-nowrap tabular-nums">
@@ -82,6 +84,13 @@ function CardFace({
         </div>
         {/* Shut is the one fact worth knowing before you swipe yes, not after the group has picked
             it. Null means the source had no hours, which is not the same as closed. */}
+        {/* One line of why, from the source's own summary. Desktop only: the card is a fixed height
+            and on a phone this would push the stats out of it. */}
+        {restaurant.editorialSummary && (
+          <p className="mt-2 hidden text-sm leading-snug text-white/55 line-clamp-2 lg:block">
+            {restaurant.editorialSummary}
+          </p>
+        )}
         {restaurant.openNow === false && (
           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-flare/10 px-2.5 py-1 text-xs font-semibold text-flare">
             <span aria-hidden>●</span> Closed right now

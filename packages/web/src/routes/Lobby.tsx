@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { decideNowWarning, line } from "@wherever/shared";
+import { decideNowWarning, initialsFor, line } from "@wherever/shared";
 import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
@@ -13,10 +13,6 @@ import { buzz } from "../components/haptics.js";
 import { play } from "../components/sound.js";
 import { FilterSummary } from "../components/FilterSummary.js";
 import { JoinQr } from "../components/JoinQr.js";
-
-function initials(name: string): string {
-  return name.trim().slice(0, 2).toUpperCase();
-}
 
 function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
   const [name, setName] = useState("");
@@ -244,7 +240,7 @@ function ParticipantChip({ p }: { p: Participant }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
       <span className="relative grid place-items-center h-10 w-10 rounded-full bg-gradient-to-br from-ember to-flare text-ink font-bold">
-        {initials(p.displayName)}
+        {initialsFor(p.displayName)}
         {/* Live presence: solid green pulse when connected, hollow grey when they've dropped. */}
         <span
           role="img"
@@ -300,7 +296,7 @@ function VoterAvatars({
                   : "bg-white/10 text-muted"
               }`}
             >
-              {initials(p.displayName)}
+              {initialsFor(p.displayName)}
             </span>
             {finished && (
               <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-ink bg-acid text-2xs font-bold text-ink">

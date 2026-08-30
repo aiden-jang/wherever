@@ -214,6 +214,26 @@ function useOneShotToast(text: string | null, onEvent?: (text: string) => void):
   return toasts;
 }
 
+/*
+ * The one thing on this screen that moves when somebody else does.
+ *
+ * Everything else about the group is near-static during a round: the avatars sit there, and
+ * `finishedCount` only ticks when a whole deck is done, which can be minutes apart. A plain count of
+ * votes cast changes on every swipe by anyone, so it is the only continuous sign that you are not
+ * swiping alone. Keyed on the number so the pulse restarts each time one lands.
+ */
+function LiveVotes({ count }: { count: number }) {
+  if (count <= 0) return <p className="mt-3 text-sm text-muted">No votes yet.</p>;
+  return (
+    <p className="mt-3 text-sm text-muted">
+      <span key={count} className="vote-tick inline-block font-semibold text-cream tabular-nums">
+        {count}
+      </span>{" "}
+      {count === 1 ? "vote" : "votes"} in
+    </p>
+  );
+}
+
 function ParticipantChip({ p }: { p: Participant }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
@@ -630,6 +650,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
                 <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
               )}
+              {progress && <LiveVotes count={progress.votesCast ?? 0} />}
               {progress && progress.totalParticipants > 0 && (
                 <p className="mt-3 text-sm text-muted">
                   {progress.finishedCount} of {progress.totalParticipants} done

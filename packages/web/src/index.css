@@ -238,6 +238,23 @@ body {
   will-change: transform, opacity;
 }
 
+/* A vote landed. Small on purpose: it fires constantly, so it has to be noticeable and ignorable. */
+@keyframes vote-tick {
+  0% {
+    transform: translateY(2px) scale(1);
+  }
+  40% {
+    transform: translateY(-2px) scale(1.18);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.vote-tick {
+  animation: vote-tick 0.42s var(--ease-spring, ease-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora,
   .float {
@@ -251,6 +268,9 @@ body {
   .verdict-flash {
     animation: none;
     opacity: 1;
+  }
+  .vote-tick {
+    animation: none;
   }
   .confetti-piece {
     display: none;

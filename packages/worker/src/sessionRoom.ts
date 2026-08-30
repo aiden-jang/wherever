@@ -644,6 +644,7 @@ export class SessionRoom extends DurableObject<Env> {
       type: "vote_progress",
       finishedCount: finishedIds.length,
       totalParticipants: total,
+      votesCast: votes.length,
       ...(pulse ? { tastePulse: pulse } : {}),
       // Only reveal identities when the host chose to; otherwise the field is omitted and the round
       // stays anonymous on the wire, not just in the UI.

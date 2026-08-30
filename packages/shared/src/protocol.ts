@@ -198,6 +198,12 @@ export interface VoteProgressMessage {
   finishedIds?: string[];
   /** Anonymous aggregate only: no restaurant, category, participant, or individual ballot. */
   tastePulse?: TastePulse;
+  /**
+   * Every vote cast this round, by everyone. A count and nothing else, so it says nothing about who
+   * voted or on what, but unlike `finishedCount` it moves on every single swipe — which is the only
+   * continuous proof anybody else is actually in there with you.
+   */
+  votesCast?: number;
 }
 
 export interface MatchMessage {

@@ -72,6 +72,12 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The two riskiest controls on the swiping screen were 20px tall.** "just decide now" ends the round
+for everybody and "hurry them" prods people, and on a phone both were inline links the height of
+their own text, under the 24px tap floor. Padding grows them to 36px and a matching negative margin
+takes it back out of the layout, so the line measures the same 20px it always did. The footer credit
+is still small and stays that way: it is a name in a sentence, not an action.
+
 **Nine pieces of text were under the contrast floor, from two causes.** The purple accent measured
 3.47:1 on the ink behind it, so the "· ⭐ super" hint and the veto and super-like labels were all
 under AA; it is lifted to 4.68:1 and looks like the same purple. The other seven were `text-muted`

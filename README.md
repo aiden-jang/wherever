@@ -8,7 +8,9 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
 
 - **Swipe to vote.** Left or right on each restaurant. Arrow keys work on desktop; tap a card for a photo gallery, hours, price range, amenities, and a short blurb.
 - **Group matching.** Everyone in a session votes on the same deck in real time.
-- **Majority wins.** A left swipe is a downvote, not a veto. One picky person cannot tank dinner.
+- **Majority wins.** A left swipe is a downvote, not a veto, so no amount of passing tanks a place
+  on its own. The one exception is deliberate and rationed: each person gets a single veto per round
+  that kills one place outright, anonymously, and the group is told when it took their top pick.
 - **Super-like.** One weighted pick per round that can tip a close race, with a gold flash to the whole room.
 - **Round timer (optional).** The host sets a countdown; when it's up, the votes so far decide — no more waiting on the slow one.
 - **Filter like you mean it.** Cuisines to include *or* exclude, exact price levels, amenities (outdoor seating, veg-friendly, dog-friendly, takes-reservations…), rating/review floors, and one-tap presets ("Cheap & close", "Date night").
@@ -69,6 +71,14 @@ dealing, waiting on the slow one, and a dead tie. Those lines live in `shared/li
 moment, seeded so a re-render never swaps a sentence mid-read, and a test walks the web source and
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
+
+**A veto could take the group's favourite and nobody would ever know.** Vetoed places are dropped
+from the ranking before a winner is picked, silently, so three people could agree on somewhere, one
+person could kill it, and the round would read as a clean win for second place. The winner screen now
+says a higher-scoring place was vetoed. Strictly higher, not level: a vetoed place tied with the
+winner was joint favourite, and "your top pick was vetoed" would overstate it. It is a flag on the
+result and never a name, because the veto is anonymous by design and naming what it killed narrows
+the vetoer down in a group of four; a test asserts the vetoed id appears nowhere in the payload.
 
 **The server said no and nobody heard it.** Socket errors were stored in state and rendered as a
 line of text on the create/lobby screen only. The decided screen had no error rendering and no toast

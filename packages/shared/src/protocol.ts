@@ -223,6 +223,8 @@ export interface MatchMessage {
   vetoedCount?: number;
   /** How many places finished level with the winner. Optional for older rooms. */
   tiedWith?: number;
+  /** A vetoed place outscored the winner. A flag, never a name: the veto stays anonymous. */
+  vetoedTop?: boolean;
   /**
    * Which round finally decided it, 1-based. The group's indecision is the thing this app exists
    * to end, so the number of attempts it took is worth saying out loud.

@@ -960,6 +960,7 @@ export class SessionRoom extends DurableObject<Env> {
         totalParticipants: total,
         vetoedCount,
         tiedWith: result.tiedWith,
+        vetoedTop: result.vetoedTop,
         round,
       });
     } else {
@@ -986,6 +987,7 @@ export class SessionRoom extends DurableObject<Env> {
         totalParticipants: total,
         vetoedCount,
         tiedWith: result.tiedWith,
+        vetoedTop: result.vetoedTop,
         round,
       });
     } else {

@@ -474,9 +474,15 @@ function WinnerScreen({
   return (
     <div className="relative text-center max-w-sm mx-auto w-full">
       {celebrate && <Confetti />}
-      <p className="font-display text-lg font-bold tracking-widest text-acid uppercase">
-        It&apos;s decided
-      </p>
+      {/*
+        The heading for the whole screen, not decoration. This branch had no h1 at all — only the
+        "nobody agreed" branch did — so the app's main success screen started at h2 with a minor
+        section ("1 still off the radar"). The winner's name is carried here for a screen reader
+        because on screen it is the card below, which is a button and no place for a heading.
+      */}
+      <h1 className="font-display text-lg font-bold tracking-widest text-acid uppercase">
+        It&apos;s decided<span className="sr-only">: {restaurant.name}</span>
+      </h1>
       <button
         type="button"
         onClick={() => setDetailOpen(true)}

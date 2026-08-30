@@ -647,6 +647,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
      */
     return (
       <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-4">
+        {/*
+          Hidden, because the card is the whole design and a visible title would only take space
+          from it. It still has to exist: this screen had no heading of any level, so anyone
+          navigating by headings landed in the middle of a round with nothing to orient on.
+        */}
+        <h1 className="sr-only">Swiping. Vote on tonight&apos;s places.</h1>
         {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
         <LiveRegion message={announcement} />
         <Toasts toasts={allToasts} />
@@ -764,6 +770,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
   return (
     <main className="flex-1 flex flex-col items-center px-6 pb-16 w-full max-w-md mx-auto">
+      {/* Same reason as the swiping screen: the code is the loudest thing here, but it is a button. */}
+      <h1 className="sr-only">Session {code}. Waiting to start.</h1>
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <LiveRegion message={announcement} />
       <Toasts toasts={allToasts} />

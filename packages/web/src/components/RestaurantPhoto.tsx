@@ -27,6 +27,8 @@ export function RestaurantPhoto({
       {showImage ? (
         <img
           src={imageUrl}
+          // Decorative on purpose: the name sits beside every one of these, and "photo of Carmine's"
+          // read out before the name it repeats is noise, not description.
           alt=""
           className="h-full w-full object-cover"
           onError={() => setFailed(true)}

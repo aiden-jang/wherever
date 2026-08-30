@@ -510,12 +510,17 @@ export class SessionRoom extends DurableObject<Env> {
     };
     await this.ctx.storage.put("votes", votes);
 
-    // Let the whole room feel the super-like — reuses the floating-reaction channel.
-    if (superLike) this.broadcast({ type: "reaction", emoji: "⭐", from: att.displayName });
-    // A veto is anonymous, like every other vote in a round: the room learns that one landed, never
-    // who spent it or on what. Naming it would turn "I can't eat there" into an argument, which is
-    // the conversation this app exists to avoid.
-    if (vetoing) this.broadcast({ type: "reaction", emoji: "🚫", from: "" });
+    /*
+     * Both land on the whole room, and both are anonymous.
+     *
+     * A veto is anonymous like every other vote: the room learns one landed, never who spent it or
+     * on what. Naming it would turn "I can't eat there" into an argument, which is the conversation
+     * this app exists to avoid. A super-like used to carry the sender's display name, which is the
+     * same leak wearing a friendlier face: it is a weighted vote, and "the server never sends
+     * per-voter identities" has to mean on every channel, not just the progress payload.
+     */
+    if (superLike) this.broadcast({ type: "reaction", emoji: "⭐", from: "", kind: "super" });
+    if (vetoing) this.broadcast({ type: "reaction", emoji: "🚫", from: "", kind: "veto" });
 
     await this.evaluate(meta);
   }

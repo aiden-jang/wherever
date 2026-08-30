@@ -210,6 +210,34 @@ body {
   will-change: transform, opacity;
 }
 
+/* A veto or a super-like: arrives hard, holds long enough to register, then goes. */
+@keyframes verdict-flash {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  12% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  22% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.02);
+    opacity: 0;
+  }
+}
+
+.verdict-flash {
+  animation: verdict-flash 1.8s ease-out forwards;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora,
   .float {
@@ -218,6 +246,11 @@ body {
   /* The hourly palette still changes, it just arrives instead of drifting. */
   .aurora {
     transition: none;
+  }
+  /* Still shown, and still long enough to read; it just does not lunge. */
+  .verdict-flash {
+    animation: none;
+    opacity: 1;
   }
   .confetti-piece {
     display: none;

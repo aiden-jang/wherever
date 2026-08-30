@@ -431,6 +431,22 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     participantId ? p.id === participantId : p.displayName === displayName,
   );
   const isHost = me?.isHost ?? false;
+  /*
+   * The floating overlay is aria-hidden, so a veto or a super-like was silent for a screen reader.
+   * Named neither the place nor the person, matching what goes on the wire.
+   */
+  const lastVerdict = useRef<string | null>(null);
+  useEffect(() => {
+    const verdict = [...reactions].reverse().find((r) => r.kind);
+    if (!verdict || lastVerdict.current === verdict.id) return;
+    lastVerdict.current = verdict.id;
+    setAnnouncement(
+      verdict.kind === "veto"
+        ? "Somebody vetoed a place. It is out for everyone."
+        : "Somebody super-liked one.",
+    );
+  }, [reactions]);
+
   const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
   const vibeToasts = useOneShotToast(vibeEffect, setAnnouncement);
   const behindToasts = useOneShotToast(

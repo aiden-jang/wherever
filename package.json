@@ -11,6 +11,7 @@
   "scripts": {
     "dev:web": "pnpm --filter @wherever/web dev",
     "dev:worker": "pnpm --filter @wherever/worker dev",
+    "deploy": "pnpm --filter @wherever/worker run deploy && pnpm --filter @wherever/web run deploy",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",

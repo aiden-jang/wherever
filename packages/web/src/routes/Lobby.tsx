@@ -664,6 +664,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                 key={deck.map((r) => r.id).join(",")}
                 restaurants={deck}
                 alreadyVoted={alreadyVoted}
+                visited={visited}
                 superSpent={superUsed}
                 vetoSpent={vetoUsed}
                 onSwipe={(restaurantId, direction, isSuper, isVeto) =>

@@ -70,6 +70,12 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**A place you have been before says so.** `revisitNote` was written, tested, and rendered nowhere,
+so a restaurant coming back after its ninety-day cooldown arrived looking exactly like one the group
+had never heard of. Half the value of a place returning is remembering you liked it. It now shows on
+the card and is read out with it, and a test walks the web source and fails if it stops being
+rendered, which is the only reason the gap was findable at all.
+
 **The host can hurry the slow one.** The round timer was the only pressure available, and it is
 all-or-nothing. One tap now prods whoever has not finished, in the app's own voice, with a buzz,
 because it is aimed at a person rather than announced to a room. It is sent only to the sockets it is

@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { VisitedPlace } from "./types.js";
 import { blockedIds, daysSince, REVISIT_AFTER_DAYS, revisitNote } from "./revisit.js";
@@ -87,5 +90,23 @@ describe("saying it has been here before", () => {
     for (const note of notes) {
       expect(note, note).not.toMatch(/\bdays?\b|due|overdue|time to|you should/i);
     }
+  });
+});
+
+describe("saying it out loud", () => {
+  it("renders the note somewhere in the app", () => {
+    // This existed, tested and correct, and was rendered nowhere: a place came back after three
+    // months looking exactly like one the group had never heard of. Remembering is the whole point.
+    const web = fileURLToPath(new URL("../../web/src", import.meta.url));
+    const walk = (dir: string): string[] =>
+      readdirSync(dir).flatMap((name) => {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) return walk(full);
+        return /\.tsx?$/.test(name) && !name.includes(".test.") ? [full] : [];
+      });
+    const code = walk(web)
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
+    expect(code, "revisitNote() is never rendered").toContain("revisitNote(");
   });
 });

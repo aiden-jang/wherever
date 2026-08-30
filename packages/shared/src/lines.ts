@@ -15,7 +15,9 @@ export type Moment =
   /** Two places finished level and the tie is about to be broken. */
   | "tie"
   /** The host has asked you, specifically, to get on with it. */
-  | "nudged";
+  | "nudged"
+  /** The round is running and not one person has voted yet. */
+  | "quiet";
 
 const LINES: Record<Moment, readonly string[]> = {
   landing: [
@@ -52,6 +54,12 @@ const LINES: Record<Moment, readonly string[]> = {
     "The group would like a decision this evening.",
     "You are the slow one. It has been noticed.",
     "Still you. Swipe something.",
+  ],
+  quiet: [
+    "No votes yet. The deliberation is intense.",
+    "Nothing yet. Everyone is reading every single menu.",
+    "Zero votes. Riveting stuff so far.",
+    "No votes yet. Somebody go first, it's allowed.",
   ],
   tie: [
     "Dead tie. Of course it is.",

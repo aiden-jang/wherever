@@ -86,7 +86,7 @@ export function groupJourneyPulse(
   }
   if (missing.length > 0) {
     const count = missing.length;
-    return { total, checkedIn, here, headingOut, planning, missing, overdue, latestEta, headline: `${count} still off the radar`, detail: checkedIn === 0 ? 'Nobody has checked in yet.' : `${checkedIn} of ${total} have checked in.` };
+    return { total, checkedIn, here, headingOut, planning, missing, overdue, latestEta, headline: `${count} still off the radar`, detail: checkedIn === 0 ? 'Not one check-in. The table is being optimistic.' : `${checkedIn} of ${total} have checked in.` };
   }
   if (headingOut > 0) {
     return { total, checkedIn, here, headingOut, planning, missing, overdue, latestEta, headline: planning > 0 ? 'The group is getting moving' : 'Everyone is on the move', detail: latestEta ? `Latest ETA ${clock(latestEta)}.` : `${headingOut} on the way.` };

@@ -1,6 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
-  AnimatePresence,
   motion,
   useMotionValue,
   useReducedMotion,
@@ -250,6 +249,12 @@ function TopCard({
         thrownAt.current = info.velocity.x;
         onCommit(verdict);
       }}
+      /*
+       * Kept, and currently inert: framer only reads `exit` under an AnimatePresence, and this deck
+       * no longer has one (see the note at the render site). This is the throw the card should make
+       * when it leaves, and the machinery behind it -- exitDir, thrownAt, throwDistance,
+       * throwDuration -- is all still here for whoever restores it.
+       */
       exit={
         reduce
           ? { opacity: 0, transition: { duration: 0.12 } }
@@ -585,17 +590,28 @@ export function SwipeDeck({
           ))
           .reverse()}
 
+        {/*
+          No AnimatePresence here, deliberately.
+          
+          It was wrapping this card so the outgoing one could fly off, and the exit animation never
+          ran: the presence context was correct (`isPresent: false` on the outgoing child) and the
+          `exit` prop reached the element, but framer never started the animation, so the card sat
+          there and AnimatePresence held it mounted forever waiting for an exit that never finished.
+          One card leaked per swipe, in the production build as well as in dev.
+          
+          Rendering the current card alone means React unmounts the previous one immediately, which
+          is what the screen already looked like, minus the pile of dead cards behind it. Restoring
+          the throw animation is a separate job and wants a real thumb to tune against.
+        */}
         <div className={dealing ? "deal-in absolute inset-0" : "contents"}>
-          <AnimatePresence initial={false}>
-            <TopCard
-              key={restaurants[index]!.id}
-              restaurant={restaurants[index]!}
-              exitDir={exitDir}
-              revisit={revisitNote(visited, restaurants[index]!.id)}
-              onCommit={commit}
-              onOpenDetail={setDetail}
-            />
-          </AnimatePresence>
+          <TopCard
+            key={restaurants[index]!.id}
+            restaurant={restaurants[index]!}
+            exitDir={exitDir}
+            revisit={revisitNote(visited, restaurants[index]!.id)}
+            onCommit={commit}
+            onOpenDetail={setDetail}
+          />
         </div>
       </div>
 

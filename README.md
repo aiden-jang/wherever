@@ -72,6 +72,22 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The deck leaked a card per swipe.** `AnimatePresence` was wrapping the top card so the outgoing
+one could fly off, and the exit animation never ran: `getAnimations()` returned nothing on the
+outgoing card and its transform stayed `none`. Presence itself was fine -- the outgoing
+`PresenceChild` correctly carried `isPresent: false` and the `exit` prop reached the element -- but
+framer never started the animation, so `AnimatePresence` held the card mounted forever waiting for an
+exit that would not finish. One card accumulated per vote, in the production build as well as in dev,
+at every width, going back well before this session.
+
+Rendering the current card alone fixes it: React unmounts the previous one immediately, which is what
+the screen already looked like, minus the pile of dead cards behind it. Ruled out along the way: the
+`x` MotionValue in the exit target (stripping it to opacity changed nothing), the nested stamp
+elements (giving them their own exit changed nothing), StrictMode and HMR (it reproduces in a
+production build), and `popLayout` (framer renders `PopChild` regardless and it is inert when the
+mode is unset). The throw is kept in place and documented as inert, because restoring it is a
+separate job that wants a real thumb to tune against.
+
 **One branch left the non-host with nowhere to go.** When a round decides, a non-host gets "Show
 myself out" beside the host's "Run it back". When nobody agrees, the same person got the sentence
 "Round two is the host's call." and no action at all -- the one screen where they cannot do anything

@@ -249,7 +249,21 @@ export function MatchScreen({
             Run it back
           </button>
         ) : (
-          <p className="mt-8 text-muted">Round two is the host&rsquo;s call.</p>
+          /*
+            The sibling branch (a winner was found) already offers a non-host the way out. This one
+            offered a sentence and nothing else, which left the one person who cannot act on this
+            screen with nowhere to go from it. Same words, same button, same shape.
+          */
+          <div className="mt-8 flex flex-col items-center gap-4">
+            <p className="text-muted">Round two is the host&rsquo;s call.</p>
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
+            >
+              Show myself out
+            </button>
+          </div>
         )}
         <History visited={visited} onNeverAgain={onNeverAgain} />
       </div>

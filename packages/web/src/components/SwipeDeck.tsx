@@ -59,7 +59,7 @@ function CardFace({
         {/* Category on its own line (it's the long one), then the short stats — each atomic value
             kept on one line so "3.6 mi" can never split across a wrap. */}
         <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted tabular-nums">
           <span className="whitespace-nowrap text-acid">
             {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
             {restaurant.rating && restaurant.reviewCount

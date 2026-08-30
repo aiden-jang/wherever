@@ -121,6 +121,8 @@ const reactSchema = z.object({
   emoji: z.enum(REACTION_EMOJIS),
 });
 
+const nudgeThemSchema = z.object({ type: z.literal("nudge_them") });
+
 /** Discriminated union of everything a client may send over the socket. */
 export const clientMessageSchema = z.discriminatedUnion("type", [
   joinSchema,
@@ -136,4 +138,5 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   setFiltersSchema,
   setNeverAgainSchema,
   reactSchema,
+  nudgeThemSchema,
 ]);

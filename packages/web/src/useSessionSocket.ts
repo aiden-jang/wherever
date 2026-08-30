@@ -66,6 +66,8 @@ export function useSessionSocket(code: string, displayName: string) {
   const [superUsed, setSuperUsed] = useState(false);
   const [vibeEffect, setVibeEffect] = useState<string | null>(null);
   const [behindBy, setBehindBy] = useState(0);
+  // Counter, not a boolean: a second nudge has to be distinguishable from the first.
+  const [nudges, setNudges] = useState(0);
   const [vetoUsed, setVetoUsed] = useState(false);
   // Absolute epoch-ms deadline when the round auto-decides (null = no timer this round).
   const [roundEndsAt, setRoundEndsAt] = useState<number | null>(null);
@@ -138,6 +140,8 @@ export function useSessionSocket(code: string, displayName: string) {
             tiedWith: msg.tiedWith ?? 0,
             round: msg.round ?? 1,
           });
+        case "nudge":
+          return setNudges((n) => n + 1);
         case "no_match":
           return setMatch({ kind: "none", vetoedCount: msg.vetoedCount ?? 0 });
         case "history":
@@ -226,5 +230,5 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return { session, deck, demo, vibeEffect, behindBy, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send };
+  return { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send };
 }

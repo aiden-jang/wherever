@@ -13,7 +13,9 @@ export type Moment =
   /** You are done swiping and somebody else is not. */
   | "waiting"
   /** Two places finished level and the tie is about to be broken. */
-  | "tie";
+  | "tie"
+  /** The host has asked you, specifically, to get on with it. */
+  | "nudged";
 
 const LINES: Record<Moment, readonly string[]> = {
   landing: [
@@ -44,6 +46,12 @@ const LINES: Record<Moment, readonly string[]> = {
     "Everyone's waiting on one person. It's never you, apparently.",
     "Your votes are in. The slow one knows what they did.",
     "Done. Now we find out who takes dinner seriously.",
+  ],
+  nudged: [
+    "Everyone is waiting on you. No pressure.",
+    "The group would like a decision this evening.",
+    "You are the slow one. It has been noticed.",
+    "Still you. Swipe something.",
   ],
   tie: [
     "Dead tie. Of course it is.",

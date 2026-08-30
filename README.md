@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The host can hurry the slow one.** The round timer was the only pressure available, and it is
+all-or-nothing. One tap now prods whoever has not finished, in the app's own voice, with a buzz,
+because it is aimed at a person rather than announced to a room. It is sent only to the sockets it is
+about, so nobody learns from a broadcast who the slow one is, and it skips the host, who has usually
+not finished either. Twenty-second cooldown, enforced on the server and mirrored on the button:
+socket errors are not rendered mid-round, so a refused second tap would otherwise be silent.
+
 **The card answers the two questions people actually ask.** It showed "3.1 mi", which is not a unit
 anybody argues in at dinner time, and said nothing about whether the place was open, even though
 `openNow` was already fetched and sitting on the type. It now reads "21 min drive" and carries an

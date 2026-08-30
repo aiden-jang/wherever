@@ -262,6 +262,12 @@ export interface ReactionMessage {
   /** Display name of whoever sent it. Always empty for a `kind`, which is a vote, not chatter. */
   from: string;
   /**
+   * Stable participant id of the sender, for anything that has to tell two people apart. Names
+   * cannot: the app already identifies you by id everywhere else precisely because two people in a
+   * session can both be called Sam. Absent on the anonymous system events.
+   */
+  fromId?: string;
+  /**
    * Set when this is a consequence rather than someone tapping an emoji. A veto takes a place away
    * from the whole group and a super-like weighs the tally, so neither should drift up looking like
    * a laughing face. Never says who: both are votes, and votes here are anonymous.

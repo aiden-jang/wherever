@@ -624,7 +624,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <Toasts toasts={allToasts} />
         <FloatingReactions
           reactions={reactions}
-          roster={(session?.participants ?? []).map((p) => p.displayName)}
+          roster={(session?.participants ?? []).map((p) => p.id)}
         />
         {demo && <DemoBanner />}
         {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}

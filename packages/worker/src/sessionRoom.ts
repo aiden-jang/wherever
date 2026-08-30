@@ -223,7 +223,7 @@ export class SessionRoom extends DurableObject<Env> {
   private handleReact(ws: WebSocket, emoji: string): void {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att) return;
-    this.broadcast({ type: "reaction", emoji, from: att.displayName });
+    this.broadcast({ type: "reaction", emoji, from: att.displayName, fromId: att.participantId });
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {

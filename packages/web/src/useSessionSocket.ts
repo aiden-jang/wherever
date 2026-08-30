@@ -34,6 +34,8 @@ export interface FloatingReaction {
   id: string;
   emoji: string;
   from: string;
+  /** Stable id of the sender, so two people with one name still get their own lane. */
+  fromId?: string;
   /** A consequence rather than chatter, and shown as one. */
   kind?: "veto" | "super";
 }
@@ -151,7 +153,13 @@ export function useSessionSocket(code: string, displayName: string) {
           const id = crypto.randomUUID();
           setReactions((prev) => [
             ...prev,
-            { id, emoji: msg.emoji, from: msg.from, ...(msg.kind ? { kind: msg.kind } : {}) },
+            {
+              id,
+              emoji: msg.emoji,
+              from: msg.from,
+              ...(msg.fromId ? { fromId: msg.fromId } : {}),
+              ...(msg.kind ? { kind: msg.kind } : {}),
+            },
           ]);
           // Drop it after the float animation so the list can't grow unbounded.
           setTimeout(() => setReactions((prev) => prev.filter((r) => r.id !== id)), 2600);

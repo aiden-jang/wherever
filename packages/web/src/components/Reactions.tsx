@@ -35,7 +35,7 @@ export function FloatingReactions({
   roster = [],
 }: {
   reactions: FloatingReaction[];
-  /** Display names in seat order, so each person gets a lane of their own. */
+  /** Participant ids in seat order, so each person gets a lane of their own. */
   roster?: readonly string[];
 }) {
   return (
@@ -52,7 +52,7 @@ export function FloatingReactions({
           <span
             key={r.id}
             className="reaction-rise absolute bottom-28 flex flex-col items-center drop-shadow-lg"
-            style={{ left: `${reactionLane(r.from, r.id, roster)}%` }}
+            style={{ left: `${reactionLane(r.fromId ?? r.from, r.id, roster)}%` }}
           >
             <span className="text-4xl">{r.emoji}</span>
             {r.from && (

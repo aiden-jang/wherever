@@ -55,6 +55,12 @@ export const createSessionSchema = z.object({
   filters: sessionFiltersSchema,
 });
 
+/*
+ * One definition, because it was bounded in one message and unbounded in three: a swipe could carry a
+ * megabyte of id, and the vote map it keys is Durable Object storage.
+ */
+const restaurantId = z.string().min(1).max(200);
+
 const joinSchema = z.object({
   type: z.literal("join"),
   code: z.string().trim().length(6),
@@ -66,7 +72,7 @@ const startRoundSchema = z.object({ type: z.literal("start_round") });
 
 const swipeSchema = z.object({
   type: z.literal("swipe"),
-  restaurantId: z.string().min(1),
+  restaurantId,
   direction: z.union([z.literal("left"), z.literal("right")]),
   super: z.boolean().optional(),
   veto: z.boolean().optional(),
@@ -74,7 +80,7 @@ const swipeSchema = z.object({
 
 const undoSwipeSchema = z.object({
   type: z.literal("undo_swipe"),
-  restaurantId: z.string().min(1),
+  restaurantId,
 });
 
 const decideNowSchema = z.object({ type: z.literal("decide_now") });
@@ -83,7 +89,7 @@ const againSchema = z.object({ type: z.literal("again") });
 
 const chooseAlternativeSchema = z.object({
   type: z.literal("choose_alternative"),
-  restaurantId: z.string().min(1),
+  restaurantId,
 });
 
 const setPlanSchema = z.object({
@@ -113,7 +119,7 @@ const setFiltersSchema = z.object({
 
 const setNeverAgainSchema = z.object({
   type: z.literal("set_never_again"),
-  restaurantId: z.string().min(1).max(200),
+  restaurantId,
   neverAgain: z.boolean(),
 });
 

@@ -72,6 +72,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**A client could finish the deck without seeing it.** Who has finished is counted as how many
+distinct restaurant ids that person has voted on, and the ids come from the client, so sending as
+many made-up ids as there are cards marked you finished without a single real vote -- and every one
+of those ids became a key in the vote map, which is Durable Object storage. Swipes are now checked
+against the dealt deck. The id itself was also bounded to 200 characters in one message and unbounded
+in three others; there is one definition now, so they cannot drift apart again.
+
 **A long restaurant name broke out of the backups panel.** The runner-up rows are a grid, and grid
 columns floor at min-content: a bare `1fr` on desktop and the implicit `auto` column on mobile both
 grew to fit the longest name rather than letting the `truncate` inside them do anything, so the row

@@ -527,6 +527,16 @@ export class SessionRoom extends DurableObject<Env> {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att) return;
 
+    /*
+     * The vote has to be for a card that was actually dealt.
+     *
+     * "Finished the deck" is counted as distinct restaurant ids voted, so without this a client
+     * could send `deckSize` made-up ids and be finished without seeing a single real card -- and
+     * every one of those ids becomes a key in the vote map, which is Durable Object storage.
+     */
+    const deck = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
+    if (!deck.some((r) => r.id === restaurantId)) return;
+
     const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
     // One super-like per participant per round (server-enforced): a super only sticks on a right
     // swipe, and only if they haven't already spent it on a still-standing vote. Otherwise it's a

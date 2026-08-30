@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The keyboard worked and nobody was told.** Arrows voted, up super-liked, backspace undid, and the
+only hint on screen said "tap for details, drag or tap below to vote", which is phone language on a
+machine with no touchscreen. The veto was the one action with no key at all. It has one now, and
+desktop gets a persistent row of key caps under the counter rather than a hint that fades after five
+seconds, because a key nobody knows about is a feature nobody has. Spent actions dim instead of
+disappearing, so the row does not reflow under the counter mid-round.
+
 **The anonymous default was only anonymous in the docs.** This README claimed twice that votes are
 anonymous by default and enforced server-side, and the toggle beside the setting read "Off. Votes
 stay anonymous", while the client shipped `revealVoters: true`, so every session ever created

@@ -72,6 +72,15 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Three filters worked against Google and silently did nothing in the demo deck.** The mock source
+is not only a test fixture: it is what a real session is dealt once the month's Google budget is
+spent. It dropped "not that" exclusions entirely, ignored the explicit price-tier list in favour of
+the ceiling alone, and never checked amenities, which is most of what a vibe does. Making it filter
+like the real source then exposed the next layer: every mock place was tier 1 or 2 and none carried
+amenities, so "fancy" emptied the deck outright and the old bug had been hiding it. The deck now
+carries amenities and one upscale entry, and a test asserts every vibe the app offers still deals
+something. Opening hours stay the one honest exception, since the mock data has none.
+
 **A client could finish the deck without seeing it.** Who has finished is counted as how many
 distinct restaurant ids that person has voted on, and the ids come from the client, so sending as
 many made-up ids as there are cards marked you finished without a single real vote -- and every one

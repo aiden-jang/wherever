@@ -72,27 +72,47 @@ export function passesAmenities(
   return required.every((key) => amenities?.[key] === true);
 }
 
+/*
+ * Amenities are carried here because the vibes ask for them: "quick" requires takeout and "fancy"
+ * requires reservable. Without them every amenity filter matches nothing, and a demo deck that goes
+ * empty the moment somebody picks a vibe is worse than one that ignores the filter.
+ */
 const MOCK_DECK: Restaurant[] = [
-  { id: "mock-1", name: "The Usual", category: "Burgers", priceTier: 2, rating: 4.3, reviewCount: 820, distanceMeters: 400, imageUrl: null, address: "12 Main St" },
-  { id: "mock-2", name: "Probably Fine Tacos", category: "Tacos", priceTier: 1, rating: 4.6, reviewCount: 1540, distanceMeters: 750, imageUrl: null, address: "88 2nd Ave" },
-  { id: "mock-3", name: "Noodle Situation", category: "Ramen", priceTier: 2, rating: 4.1, reviewCount: 210, distanceMeters: 1100, imageUrl: null, address: "5 Bowl Ln" },
-  { id: "mock-4", name: "Salad, I Guess", category: "Healthy", priceTier: 2, rating: 3.9, reviewCount: 47, distanceMeters: 300, imageUrl: null, address: "200 Green St" },
-  { id: "mock-5", name: "Late Night Pizza Decisions", category: "Pizza", priceTier: 1, rating: 4.4, reviewCount: 3020, distanceMeters: 950, imageUrl: null, address: "1 Slice Blvd" },
+  { id: "mock-1", name: "The Usual", category: "Burgers", priceTier: 2, rating: 4.3, reviewCount: 820, distanceMeters: 400, imageUrl: null, address: "12 Main St", amenities: { takeout: true, delivery: true, goodForGroups: true, goodForChildren: true } },
+  { id: "mock-2", name: "Probably Fine Tacos", category: "Tacos", priceTier: 1, rating: 4.6, reviewCount: 1540, distanceMeters: 750, imageUrl: null, address: "88 2nd Ave", amenities: { takeout: true, delivery: true, outdoorSeating: true } },
+  { id: "mock-3", name: "Noodle Situation", category: "Ramen", priceTier: 2, rating: 4.1, reviewCount: 210, distanceMeters: 1100, imageUrl: null, address: "5 Bowl Ln", amenities: { takeout: true, reservable: true, servesVegetarianFood: true } },
+  { id: "mock-4", name: "Salad, I Guess", category: "Healthy", priceTier: 2, rating: 3.9, reviewCount: 47, distanceMeters: 300, imageUrl: null, address: "200 Green St", amenities: { takeout: true, delivery: true, servesVegetarianFood: true, outdoorSeating: true } },
+  { id: "mock-5", name: "Late Night Pizza Decisions", category: "Pizza", priceTier: 1, rating: 4.4, reviewCount: 3020, distanceMeters: 950, imageUrl: null, address: "1 Slice Blvd", amenities: { takeout: true, delivery: true, goodForGroups: true } },
+  // Every other entry is tier 1 or 2, so "fancy" (tiers 3-4, 4.4 stars, reservable) matched nothing
+  // and emptied the demo deck the moment a group picked it. The deck has to be able to answer every
+  // vibe the app offers.
+  { id: "mock-6", name: "The Reservation", category: "Italian", priceTier: 4, rating: 4.7, reviewCount: 1180, distanceMeters: 1900, imageUrl: null, address: "9 Tablecloth Row", amenities: { reservable: true, servesCocktails: true, goodForGroups: true } },
 ];
 
-/** Returns seeded data, filtered just enough to behave like the real thing. */
+/*
+ * Seeded data, filtered the same way the real source filters.
+ *
+ * This is not only a test fixture: it is the deck a real session gets when the month's Google budget
+ * is spent, so a filter that works against Google and not here is a filter that silently stops
+ * working in front of people. Three did. Exclusions ("not that") were dropped entirely, the explicit
+ * price-tier list was ignored in favour of the max alone, and amenities were never checked, which is
+ * most of what a vibe does.
+ *
+ * Opening hours are the one honest exception: the mock data has none, so openNow cannot be applied
+ * and everything is treated as open.
+ */
 export class MockRestaurantSource implements RestaurantSource {
   async fetchDeck(filters: SessionFilters): Promise<Restaurant[]> {
-    // Mock data has no opening hours, so the openNow filter is a no-op here (all treated as open).
+    const excluded = new Set((filters.excludedCategories ?? []).map((c) => c.toLowerCase()));
     return MOCK_DECK.filter((r) => {
-      if (r.priceTier > filters.maxPriceTier) return false;
+      const category = r.category.toLowerCase();
+      if (excluded.has(category)) return false;
+      if (!passesPrice(r.priceTier, filters.priceTiers, filters.maxPriceTier)) return false;
       if (r.distanceMeters > filters.radiusMeters) return false;
       if (!passesRating(r.rating, filters.minRating)) return false;
       if (!passesReviews(r.reviewCount, filters.minReviews)) return false;
-      if (
-        filters.categories.length > 0 &&
-        !filters.categories.some((c) => c.toLowerCase() === r.category.toLowerCase())
-      ) {
+      if (!passesAmenities(r.amenities, filters.amenities)) return false;
+      if (filters.categories.length > 0 && !filters.categories.some((c) => c.toLowerCase() === category)) {
         return false;
       }
       return true;

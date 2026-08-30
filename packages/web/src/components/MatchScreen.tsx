@@ -472,7 +472,7 @@ function WinnerScreen({
   };
 
   return (
-    <div className="relative text-center max-w-sm mx-auto w-full">
+    <div className="relative w-full">
       {celebrate && <Confetti />}
       {/*
         The heading for the whole screen, not decoration. This branch had no h1 at all — only the
@@ -480,413 +480,426 @@ function WinnerScreen({
         section ("1 still off the radar"). The winner's name is carried here for a screen reader
         because on screen it is the card below, which is a button and no place for a heading.
       */}
-      <h1 className="font-display text-lg font-bold tracking-widest text-acid uppercase">
-        It&apos;s decided<span className="sr-only">: {restaurant.name}</span>
-      </h1>
-      <button
-        type="button"
-        onClick={() => setDetailOpen(true)}
-        aria-label={`See details for ${restaurant.name}`}
-        className="pop-in relative mt-5 block w-full text-left rounded-[28px] bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
-      >
-        <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
-        <span className="pointer-events-none absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm">
-          i
-        </span>
-        <div className="p-5">
-          <div className="font-display text-3xl font-extrabold leading-tight line-clamp-2">
-            {restaurant.name}
-          </div>
-          {/* Category on its own line, stats below with each value kept whole — same treatment as
-              the deck card so the winner never wraps mid-value on a phone. */}
-          <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
-          <div className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted">
-            <span className="whitespace-nowrap text-acid">
-              {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
-              {restaurant.rating && restaurant.reviewCount
-                ? ` (${reviewCountLabel(restaurant.reviewCount)})`
-                : ""}
-            </span>
-            <span className="text-white/20">·</span>
-            <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
-            {/* Same weight as on the card: getting there is the live question on this screen. */}
-            {distanceText(restaurant.distanceMeters) && (
-              <>
-                <span className="text-white/20">·</span>
-                <span className="whitespace-nowrap font-semibold text-cream tabular-nums">
-                  {distanceText(restaurant.distanceMeters)}
-                </span>
-              </>
-            )}
-          </div>
-          {/*
-            Whether it is open, on the winner itself.
-            The detail sheet has said this all along, but only after a tap, and this is the one fact
-            that can undo the decision the group just made: a closed door after everyone has agreed
-            and started walking is the failure this screen exists to prevent. Permanent closure
-            outranks today's hours, same order the detail sheet uses.
-          */}
-          {(() => {
-            const shut =
-              restaurant.businessStatus === "CLOSED_PERMANENTLY"
-                ? "Permanently closed"
-                : restaurant.businessStatus === "CLOSED_TEMPORARILY"
-                  ? "Temporarily closed"
-                  : null;
-            if (shut) return <p className="mt-2 text-sm font-semibold text-flare">{shut}</p>;
-            if (restaurant.openNow == null) return null;
-            return (
-              <p className={`mt-2 text-sm font-semibold ${restaurant.openNow ? "text-acid" : "text-flare"}`}>
-                {restaurant.openNow ? "Open now" : "Closed right now"}
-              </p>
-            );
-          })()}
-          {restaurant.address && (
-            <p className="mt-3 truncate text-sm text-muted" title={restaurant.address}>
-              {restaurant.address}
-            </p>
-          )}
-        <p className="mt-3 text-xs text-muted">Tap for hours, contact details &amp; directions</p>
-        </div>
-      </button>
-
-      <p className="mt-4 text-muted tabular-nums">
-        {rightSwipes} of {totalParticipants} picked it.
-      </p>
-      <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
-        {tiedWith > 0 ? line("tie", seedFrom(restaurant.id)) : consensusLine(rightSwipes, totalParticipants)}
-      </p>
-      {tiedWith === 0 && nearMiss && (
-        // Only when it was actually close, and never alongside the tie line, which is its own story.
-        <p className="mt-2 text-xs text-muted">{nearMiss}</p>
-      )}
-      {tiedWith > 0 && (
-        // Say how it was settled. The tie-break is deck order, which is deterministic so every
-        // client lands on the same winner; pretending it was a coin toss would be a lie.
-        <p className="mt-2 text-xs text-muted">
-          {tiedWith === 1 ? "Two places finished level." : `${tiedWith + 1} places finished level.`} This
-          one was dealt first, so it takes it.
-        </p>
-      )}
-      {vetoedTop && (
-        /*
-         * The group agreed on somewhere else and somebody killed it. Vetoed places are dropped from
-         * the ranking before a winner is picked, so without this the round reads as a clean win for
-         * second place. No name and no place: the veto is anonymous by design, and naming what it
-         * killed narrows the vetoer down in a group of four.
-         */
-        <p className="mt-2 text-xs text-flare">Something scored higher. Somebody vetoed it.</p>
-      )}
-      <section className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left">
-        <p className="px-1 text-2xs font-bold uppercase tracking-[0.16em] text-muted">Why this one works</p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {reasons.map((reason) => (
-            <div key={`${reason.icon}-${reason.label}`} className="flex min-w-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-black/15 px-2.5 py-2">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-acid/10 text-xs font-bold text-acid" aria-hidden>
-                {reason.icon}
-              </span>
-              <span className="text-xs font-medium leading-tight text-cream/90">{reason.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-      {planned && (
+      {/*
+        Two columns from lg: what happened on the left, what to do about it on the right.
+        This screen carries a winner, a tally, the reasons, a meetup plan, arrival status, the
+        receipt, the backups and the history, and all of it was a 384px column no matter how
+        wide the window -- a phone screen with a thousand pixels of dark either side. One cut,
+        so a phone still reads it top to bottom in exactly the order it always did.
+      */}
+      <div className="mx-auto w-full max-w-sm text-center lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-start lg:gap-10">
+        <div className="min-w-0">
+        <h1 className="font-display text-lg font-bold tracking-widest text-acid uppercase">
+          It&apos;s decided<span className="sr-only">: {restaurant.name}</span>
+        </h1>
         <button
           type="button"
-          onClick={() => {
-            if (!isHost) return;
-            setPlanStart(localDateTime(new Date(planned.start)));
-            setPlanDuration(planned.duration);
-            setPlannerOpen(true);
-          }}
-          className={`mx-auto mt-3 flex max-w-full items-center gap-3 rounded-2xl border border-acid/20 bg-acid/10 px-4 py-3 text-left transition ${isHost ? "hover:border-acid/40 active:scale-[0.99]" : "cursor-default"}`}
-          aria-label={isHost ? "Change meetup time" : "Meetup time set by the host"}
+          onClick={() => setDetailOpen(true)}
+          aria-label={`See details for ${restaurant.name}`}
+          className="pop-in relative mt-5 block w-full text-left rounded-[28px] bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-acid/15 text-lg" aria-hidden>
-            ◷
+          <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
+          <span className="pointer-events-none absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm">
+            i
           </span>
-          <span className="min-w-0">
-            <span className="block text-2xs font-bold uppercase tracking-[0.16em] text-acid">meet there</span>
-            <span className="block truncate text-sm font-semibold text-cream">
-              {new Date(planned.start).toLocaleString(undefined, {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-            </span>
-            <span className="block text-xs text-muted">
-              {planned.duration} minutes · {isHost ? "tap to change" : "set by the host"}
-            </span>
-          </span>
-        </button>
-      )}
-      <ArrivalPulse
-        destination={restaurant.name}
-        participants={participants}
-        arrivals={arrivals}
-        planned={planned}
-        participantId={participantId}
-        onArrival={onArrival}
-      />
-      <div
-        className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10"
-        role="progressbar"
-        aria-label="Group agreement"
-        aria-valuemin={0}
-        aria-valuemax={totalParticipants}
-        aria-valuenow={rightSwipes}
-        aria-valuetext={`${rightSwipes} of ${totalParticipants} people picked this place`}
-      >
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-ember to-acid transition-[width] duration-500"
-          style={{ width: `${Math.max(0, Math.min(100, (rightSwipes / Math.max(1, totalParticipants)) * 100))}%` }}
-        />
-      </div>
-      {/* Without this a vetoed favourite just silently isn't here, which reads as the tally being
-          wrong rather than as somebody having used their one no. Count only — who spent it stays
-          private, the same as every other vote in a round. */}
-      {vetoedCount > 0 && (
-        <p className="mt-1 text-sm text-muted">
-          🚫 {vetoedCount} {vetoedCount === 1 ? "place was" : "places were"} vetoed out of the running.
-        </p>
-      )}
-      {/* Only once the group has genuinely laboured. Round 1 is just dinner; saying "round 1" about
-          it would be noise, and the joke below only earns itself if the number is real. */}
-      {round >= 2 && (
-        <p className="mt-1 text-sm italic text-muted">
-          {round >= 4
-            ? `${round} rounds to pick one place. The group chat would have been faster.`
-            : `Round ${round}. Worth the wait, presumably.`}
-        </p>
-      )}
-
-      {filters && (
-        <details className="group mt-5 rounded-2xl border border-white/10 bg-white/[0.035] text-left">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-cream marker:content-none">
-            <span>
-              <span className="mr-2" aria-hidden>🧾</span>
-              Decision receipt
-            </span>
-            <span className="text-xs font-medium text-muted transition group-open:rotate-180" aria-hidden>⌄</span>
-          </summary>
-          <div className="flex flex-wrap gap-2 border-t border-white/10 px-4 py-3">
-            {filterSummaryChips(filters).map((chip) => (
-              <span key={chip} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-muted">
-                {chip}
+          <div className="p-5">
+            <div className="font-display text-3xl font-extrabold leading-tight line-clamp-2">
+              {restaurant.name}
+            </div>
+            {/* Category on its own line, stats below with each value kept whole — same treatment as
+                the deck card so the winner never wraps mid-value on a phone. */}
+            <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted">
+              <span className="whitespace-nowrap text-acid">
+                {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
+                {restaurant.rating && restaurant.reviewCount
+                  ? ` (${reviewCountLabel(restaurant.reviewCount)})`
+                  : ""}
               </span>
+              <span className="text-white/20">·</span>
+              <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
+              {/* Same weight as on the card: getting there is the live question on this screen. */}
+              {distanceText(restaurant.distanceMeters) && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <span className="whitespace-nowrap font-semibold text-cream tabular-nums">
+                    {distanceText(restaurant.distanceMeters)}
+                  </span>
+                </>
+              )}
+            </div>
+            {/*
+              Whether it is open, on the winner itself.
+              The detail sheet has said this all along, but only after a tap, and this is the one fact
+              that can undo the decision the group just made: a closed door after everyone has agreed
+              and started walking is the failure this screen exists to prevent. Permanent closure
+              outranks today's hours, same order the detail sheet uses.
+            */}
+            {(() => {
+              const shut =
+                restaurant.businessStatus === "CLOSED_PERMANENTLY"
+                  ? "Permanently closed"
+                  : restaurant.businessStatus === "CLOSED_TEMPORARILY"
+                    ? "Temporarily closed"
+                    : null;
+              if (shut) return <p className="mt-2 text-sm font-semibold text-flare">{shut}</p>;
+              if (restaurant.openNow == null) return null;
+              return (
+                <p className={`mt-2 text-sm font-semibold ${restaurant.openNow ? "text-acid" : "text-flare"}`}>
+                  {restaurant.openNow ? "Open now" : "Closed right now"}
+                </p>
+              );
+            })()}
+            {restaurant.address && (
+              <p className="mt-3 truncate text-sm text-muted" title={restaurant.address}>
+                {restaurant.address}
+              </p>
+            )}
+          <p className="mt-3 text-xs text-muted">Tap for hours, contact details &amp; directions</p>
+          </div>
+        </button>
+
+        <p className="mt-4 text-muted tabular-nums">
+          {rightSwipes} of {totalParticipants} picked it.
+        </p>
+        <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
+          {tiedWith > 0 ? line("tie", seedFrom(restaurant.id)) : consensusLine(rightSwipes, totalParticipants)}
+        </p>
+        {tiedWith === 0 && nearMiss && (
+          // Only when it was actually close, and never alongside the tie line, which is its own story.
+          <p className="mt-2 text-xs text-muted">{nearMiss}</p>
+        )}
+        {tiedWith > 0 && (
+          // Say how it was settled. The tie-break is deck order, which is deterministic so every
+          // client lands on the same winner; pretending it was a coin toss would be a lie.
+          <p className="mt-2 text-xs text-muted">
+            {tiedWith === 1 ? "Two places finished level." : `${tiedWith + 1} places finished level.`} This
+            one was dealt first, so it takes it.
+          </p>
+        )}
+        {vetoedTop && (
+          /*
+           * The group agreed on somewhere else and somebody killed it. Vetoed places are dropped from
+           * the ranking before a winner is picked, so without this the round reads as a clean win for
+           * second place. No name and no place: the veto is anonymous by design, and naming what it
+           * killed narrows the vetoer down in a group of four.
+           */
+          <p className="mt-2 text-xs text-flare">Something scored higher. Somebody vetoed it.</p>
+        )}
+        <section className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left">
+          <p className="px-1 text-2xs font-bold uppercase tracking-[0.16em] text-muted">Why this one works</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {reasons.map((reason) => (
+              <div key={`${reason.icon}-${reason.label}`} className="flex min-w-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-black/15 px-2.5 py-2">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-acid/10 text-xs font-bold text-acid" aria-hidden>
+                  {reason.icon}
+                </span>
+                <span className="text-xs font-medium leading-tight text-cream/90">{reason.label}</span>
+              </div>
             ))}
           </div>
-        </details>
-      )}
-
-      {alternatives.length > 0 && (
-        <details
-          className="group mt-3 rounded-2xl border border-white/10 bg-white/[0.035] text-left"
-          open={unavailable || undefined}
-        >
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:content-none">
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-cream">
-                {unavailable ? "The doors are shut. Try a backup." : "If the wait is ridiculous"}
-              </span>
-              <span className="block truncate text-xs text-muted">
-                Plan B: {alternatives[0]!.restaurant.name}
-              </span>
-            </span>
-            <span className="shrink-0 text-xs text-muted transition group-open:rotate-180" aria-hidden>⌄</span>
-          </summary>
-          <ol className="space-y-2 border-t border-white/10 p-3">
-            {alternatives.map((choice, index) => (
-              /* minmax(0,1fr) in both templates, and the base one is not optional: grid columns floor
-                 at min-content, whether they are a bare 1fr or the implicit auto column a single-column
-                 grid gets. Either way a long restaurant name widened the column instead of letting the
-                 truncate inside it do its job, and the row ran out past the panel. */
-              <li
-                key={choice.restaurant.id}
-                className="grid gap-2 grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto]"
-              >
-                <a
-                  href={mapsUrl(choice.restaurant)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/15 p-2 transition hover:border-white/25 hover:bg-white/5 active:scale-[0.99]"
-                >
-                  <span className="w-5 shrink-0 text-center font-display text-sm font-bold text-ember">
-                    {index + 2}
-                  </span>
-                  <RestaurantPhoto
-                    imageUrl={choice.restaurant.imageUrl}
-                    category={choice.restaurant.category}
-                    className="h-12 w-12 shrink-0 rounded-lg"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <strong className="block truncate text-sm text-cream">{choice.restaurant.name}</strong>
-                    <span className="block truncate text-xs text-muted">
-                      {choice.rightSwipes} liked it
-                      {distanceText(choice.restaurant.distanceMeters)
-                        ? ` · ${distanceText(choice.restaurant.distanceMeters)}`
-                        : ""}{" "}
-                      · {priceLabel(choice.restaurant.priceTier)}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-sm text-muted" aria-hidden>↗</span>
-                </a>
-                {isHost && (
-                  <button
-                    type="button"
-                    // There is one of these per runner-up, so the visible label alone is heard as
-                    // "Make Plan A" twice with nothing to tell them apart.
-                    aria-label={`Make ${choice.restaurant.name} Plan A`}
-                    onClick={() => onChooseAlternative(choice.restaurant.id)}
-                    className="rounded-xl border border-acid/25 bg-acid/10 px-4 py-2 text-xs font-bold text-acid transition hover:border-acid/50 hover:bg-acid/15 active:scale-[0.98]"
-                  >
-                    Make Plan A
-                  </button>
-                )}
-              </li>
-            ))}
-          </ol>
-        </details>
-      )}
-
-      <div className="mt-8 flex flex-col gap-3">
-        {unavailable ? (
-          <a
-            href={mapsUrl(restaurant)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
-          >
-            {mapsAction}
-          </a>
-        ) : (
+        </section>
+        </div>
+        <div className="min-w-0">
+        {planned && (
           <button
             type="button"
-            onClick={() => setDirectionsOpen(true)}
-            className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
+            onClick={() => {
+              if (!isHost) return;
+              setPlanStart(localDateTime(new Date(planned.start)));
+              setPlanDuration(planned.duration);
+              setPlannerOpen(true);
+            }}
+            className={`mx-auto mt-3 flex max-w-full items-center gap-3 rounded-2xl border border-acid/20 bg-acid/10 px-4 py-3 text-left transition ${isHost ? "hover:border-acid/40 active:scale-[0.99]" : "cursor-default"}`}
+            aria-label={isHost ? "Change meetup time" : "Meetup time set by the host"}
           >
-            {mapsAction}
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-acid/15 text-lg" aria-hidden>
+              ◷
+            </span>
+            <span className="min-w-0">
+              <span className="block text-2xs font-bold uppercase tracking-[0.16em] text-acid">meet there</span>
+              <span className="block truncate text-sm font-semibold text-cream">
+                {new Date(planned.start).toLocaleString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </span>
+              <span className="block text-xs text-muted">
+                {planned.duration} minutes · {isHost ? "tap to change" : "set by the host"}
+              </span>
+            </span>
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => void sharePlan()}
-          disabled={shareResult !== null}
-          aria-label={
-            shareResult === "sharing"
-              ? "Opening dinner plan sharing"
-              : shareResult === "shared"
-                ? "Dinner plan shared"
-                : shareResult === "copied"
-                  ? "Dinner plan copied"
-                  : "Share dinner plan"
-          }
-          className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
+        <ArrivalPulse
+          destination={restaurant.name}
+          participants={participants}
+          arrivals={arrivals}
+          planned={planned}
+          participantId={participantId}
+          onArrival={onArrival}
+        />
+        <div
+          className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10"
+          role="progressbar"
+          aria-label="Group agreement"
+          aria-valuemin={0}
+          aria-valuemax={totalParticipants}
+          aria-valuenow={rightSwipes}
+          aria-valuetext={`${rightSwipes} of ${totalParticipants} people picked this place`}
         >
-          {shareResult === "sharing" ? "Opening…" : shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Send the plan"}
-        </button>
-        <details className="group rounded-2xl border border-white/10 bg-white/[0.025] text-left">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-muted transition hover:text-cream marker:content-none">
-            More ways to plan
-            <span className="transition group-open:rotate-180" aria-hidden>⌄</span>
-          </summary>
-          <div className="grid gap-2 border-t border-white/10 p-3">
-            {(restaurant.phone || restaurant.website) && (
-              <div className={`grid gap-2 ${restaurant.phone && restaurant.website ? "grid-cols-2" : "grid-cols-1"}`}>
-                {restaurant.phone && (
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-ember to-acid transition-[width] duration-500"
+            style={{ width: `${Math.max(0, Math.min(100, (rightSwipes / Math.max(1, totalParticipants)) * 100))}%` }}
+          />
+        </div>
+        {/* Without this a vetoed favourite just silently isn't here, which reads as the tally being
+            wrong rather than as somebody having used their one no. Count only — who spent it stays
+            private, the same as every other vote in a round. */}
+        {vetoedCount > 0 && (
+          <p className="mt-1 text-sm text-muted">
+            🚫 {vetoedCount} {vetoedCount === 1 ? "place was" : "places were"} vetoed out of the running.
+          </p>
+        )}
+        {/* Only once the group has genuinely laboured. Round 1 is just dinner; saying "round 1" about
+            it would be noise, and the joke below only earns itself if the number is real. */}
+        {round >= 2 && (
+          <p className="mt-1 text-sm italic text-muted">
+            {round >= 4
+              ? `${round} rounds to pick one place. The group chat would have been faster.`
+              : `Round ${round}. Worth the wait, presumably.`}
+          </p>
+        )}
+
+        {filters && (
+          <details className="group mt-5 rounded-2xl border border-white/10 bg-white/[0.035] text-left">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-cream marker:content-none">
+              <span>
+                <span className="mr-2" aria-hidden>🧾</span>
+                Decision receipt
+              </span>
+              <span className="text-xs font-medium text-muted transition group-open:rotate-180" aria-hidden>⌄</span>
+            </summary>
+            <div className="flex flex-wrap gap-2 border-t border-white/10 px-4 py-3">
+              {filterSummaryChips(filters).map((chip) => (
+                <span key={chip} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-muted">
+                  {chip}
+                </span>
+              ))}
+            </div>
+          </details>
+        )}
+
+        {alternatives.length > 0 && (
+          <details
+            className="group mt-3 rounded-2xl border border-white/10 bg-white/[0.035] text-left"
+            open={unavailable || undefined}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:content-none">
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-cream">
+                  {unavailable ? "The doors are shut. Try a backup." : "If the wait is ridiculous"}
+                </span>
+                <span className="block truncate text-xs text-muted">
+                  Plan B: {alternatives[0]!.restaurant.name}
+                </span>
+              </span>
+              <span className="shrink-0 text-xs text-muted transition group-open:rotate-180" aria-hidden>⌄</span>
+            </summary>
+            <ol className="space-y-2 border-t border-white/10 p-3">
+              {alternatives.map((choice, index) => (
+                /* minmax(0,1fr) in both templates, and the base one is not optional: grid columns floor
+                   at min-content, whether they are a bare 1fr or the implicit auto column a single-column
+                   grid gets. Either way a long restaurant name widened the column instead of letting the
+                   truncate inside it do its job, and the row ran out past the panel. */
+                <li
+                  key={choice.restaurant.id}
+                  className="grid gap-2 grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto]"
+                >
                   <a
-                    href={`tel:${restaurant.phone}`}
-                    className="rounded-full border border-white/15 px-4 py-2.5 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"
-                  >
-                    Call the place
-                  </a>
-                )}
-                {restaurant.website && (
-                  <a
-                    href={restaurant.website}
+                    href={mapsUrl(choice.restaurant)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full border border-white/15 px-4 py-2.5 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"
+                    className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/15 p-2 transition hover:border-white/25 hover:bg-white/5 active:scale-[0.99]"
                   >
-                    Website ↗
+                    <span className="w-5 shrink-0 text-center font-display text-sm font-bold text-ember">
+                      {index + 2}
+                    </span>
+                    <RestaurantPhoto
+                      imageUrl={choice.restaurant.imageUrl}
+                      category={choice.restaurant.category}
+                      className="h-12 w-12 shrink-0 rounded-lg"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate text-sm text-cream">{choice.restaurant.name}</strong>
+                      <span className="block truncate text-xs text-muted">
+                        {choice.rightSwipes} liked it
+                        {distanceText(choice.restaurant.distanceMeters)
+                          ? ` · ${distanceText(choice.restaurant.distanceMeters)}`
+                          : ""}{" "}
+                        · {priceLabel(choice.restaurant.priceTier)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-sm text-muted" aria-hidden>↗</span>
                   </a>
-                )}
-              </div>
-            )}
-            {restaurant.address && (
-              <button
-                type="button"
-                onClick={() => void copyAddress()}
-                disabled={addressCopied}
-                className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-muted transition hover:border-white/20 hover:text-cream disabled:cursor-default disabled:opacity-70"
-              >
-                {addressCopied ? 'Address copied' : 'Copy address'}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => void saveWinnerCard()}
-              disabled={cardResult !== null}
-              className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98] disabled:cursor-default disabled:opacity-70"
-            >
-              {cardResult === "making" ? "Making winner card…" : cardResult === "shared" ? "Winner card shared" : cardResult === "saved" ? "Winner card saved" : "Save the winner card"}
-            </button>
-            {isHost && (
-              <button
-                type="button"
-                onClick={() => setPlannerOpen(true)}
-                className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98]"
-              >
-                {planned ? "Change meetup time" : "Set meetup time"}
-              </button>
-            )}
-            {!isHost && planned && (
-              <button
-                type="button"
-                onClick={() => downloadCalendar(new Date(planned.start), planned.duration)}
-                className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98]"
-              >
-                Add meetup to my calendar
-              </button>
-            )}
-          </div>
-        </details>
-        {installOffer && (
-          /* Asked here and nowhere else: the round just ended, so there is an actual reason. */
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
-            <span className="text-muted">Next argument could take one tap.</span>
-            <button
-              type="button"
-              onClick={() => void install()}
-              className="rounded-full border border-acid/30 bg-acid/10 px-4 py-2 font-semibold text-acid transition hover:bg-acid/20 active:scale-[0.98]"
-            >
-              Add to home screen
-            </button>
-            <button type="button" onClick={dismissInstall} className="text-muted underline hover:text-cream">
-              No thanks
-            </button>
-          </div>
+                  {isHost && (
+                    <button
+                      type="button"
+                      // There is one of these per runner-up, so the visible label alone is heard as
+                      // "Make Plan A" twice with nothing to tell them apart.
+                      aria-label={`Make ${choice.restaurant.name} Plan A`}
+                      onClick={() => onChooseAlternative(choice.restaurant.id)}
+                      className="rounded-xl border border-acid/25 bg-acid/10 px-4 py-2 text-xs font-bold text-acid transition hover:border-acid/50 hover:bg-acid/15 active:scale-[0.98]"
+                    >
+                      Make Plan A
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </details>
         )}
-        {isHost ? (
-          <button
-            onClick={onAgain}
-            className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
-          >
-            Run it back (this one&apos;s out)
-          </button>
-        ) : (
-          <button
-            onClick={() => navigate("/")}
-            className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
-          >
-            Show myself out
-          </button>
-        )}
-      </div>
 
-      <History visited={visited} onNeverAgain={onNeverAgain} />
+        <div className="mt-8 flex flex-col gap-3">
+          {unavailable ? (
+            <a
+              href={mapsUrl(restaurant)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
+            >
+              {mapsAction}
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDirectionsOpen(true)}
+              className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
+            >
+              {mapsAction}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void sharePlan()}
+            disabled={shareResult !== null}
+            aria-label={
+              shareResult === "sharing"
+                ? "Opening dinner plan sharing"
+                : shareResult === "shared"
+                  ? "Dinner plan shared"
+                  : shareResult === "copied"
+                    ? "Dinner plan copied"
+                    : "Share dinner plan"
+            }
+            className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
+          >
+            {shareResult === "sharing" ? "Opening…" : shareResult === "shared" ? "Plan shared" : shareResult === "copied" ? "Plan copied" : "Send the plan"}
+          </button>
+          <details className="group rounded-2xl border border-white/10 bg-white/[0.025] text-left">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-muted transition hover:text-cream marker:content-none">
+              More ways to plan
+              <span className="transition group-open:rotate-180" aria-hidden>⌄</span>
+            </summary>
+            <div className="grid gap-2 border-t border-white/10 p-3">
+              {(restaurant.phone || restaurant.website) && (
+                <div className={`grid gap-2 ${restaurant.phone && restaurant.website ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {restaurant.phone && (
+                    <a
+                      href={`tel:${restaurant.phone}`}
+                      className="rounded-full border border-white/15 px-4 py-2.5 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"
+                    >
+                      Call the place
+                    </a>
+                  )}
+                  {restaurant.website && (
+                    <a
+                      href={restaurant.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full border border-white/15 px-4 py-2.5 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"
+                    >
+                      Website ↗
+                    </a>
+                  )}
+                </div>
+              )}
+              {restaurant.address && (
+                <button
+                  type="button"
+                  onClick={() => void copyAddress()}
+                  disabled={addressCopied}
+                  className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-medium text-muted transition hover:border-white/20 hover:text-cream disabled:cursor-default disabled:opacity-70"
+                >
+                  {addressCopied ? 'Address copied' : 'Copy address'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void saveWinnerCard()}
+                disabled={cardResult !== null}
+                className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98] disabled:cursor-default disabled:opacity-70"
+              >
+                {cardResult === "making" ? "Making winner card…" : cardResult === "shared" ? "Winner card shared" : cardResult === "saved" ? "Winner card saved" : "Save the winner card"}
+              </button>
+              {isHost && (
+                <button
+                  type="button"
+                  onClick={() => setPlannerOpen(true)}
+                  className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98]"
+                >
+                  {planned ? "Change meetup time" : "Set meetup time"}
+                </button>
+              )}
+              {!isHost && planned && (
+                <button
+                  type="button"
+                  onClick={() => downloadCalendar(new Date(planned.start), planned.duration)}
+                  className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98]"
+                >
+                  Add meetup to my calendar
+                </button>
+              )}
+            </div>
+          </details>
+          {installOffer && (
+            /* Asked here and nowhere else: the round just ended, so there is an actual reason. */
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
+              <span className="text-muted">Next argument could take one tap.</span>
+              <button
+                type="button"
+                onClick={() => void install()}
+                className="rounded-full border border-acid/30 bg-acid/10 px-4 py-2 font-semibold text-acid transition hover:bg-acid/20 active:scale-[0.98]"
+              >
+                Add to home screen
+              </button>
+              <button type="button" onClick={dismissInstall} className="text-muted underline hover:text-cream">
+                No thanks
+              </button>
+            </div>
+          )}
+          {isHost ? (
+            <button
+              onClick={onAgain}
+              className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
+            >
+              Run it back (this one&apos;s out)
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate("/")}
+              className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
+            >
+              Show myself out
+            </button>
+          )}
+        </div>
+
+        <History visited={visited} onNeverAgain={onNeverAgain} />
+        </div>
+      </div>
 
       {detailOpen && (
         <RestaurantDetail restaurant={restaurant} onClose={() => setDetailOpen(false)} />

@@ -72,6 +72,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The decided screen was a 384px column at any window size.** It is the densest screen in the app --
+winner, tally, the reasons, a meetup plan, arrival status, the receipt, the backups, the history --
+and it had no `lg` treatment at all, so on a laptop it was a phone-width ribbon with a thousand
+pixels of dark either side. Two columns from `lg`: what happened on the left, what to do about it on
+the right. One cut rather than a rearrangement, so a phone reads it top to bottom in exactly the
+order it always did. 492px each, 695px and 862px tall, where it used to be one column of about 1550.
+
 **Half the swiping screen was holding one line of text.** At 1440px the deck ran 416x662 and the
 column beside it held 128px: "no votes yet" and the reaction bar. Everything else about the round --
 where you are in the deck, what the keys do, whether you can undo -- was stacked underneath a card

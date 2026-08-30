@@ -707,6 +707,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               {progress && progress.totalParticipants > 0 && (
                 <p className="mt-3 text-sm text-muted tabular-nums">
                   {progress.finishedCount} of {progress.totalParticipants} done
+                  {/* -my-2 py-2 on the inline actions here: 20px tall is under the 24px tap floor on a
+                      phone, and these hurry or end a round. The negative margin keeps the line as it was. */}
                   {isHost && progress.finishedCount < progress.totalParticipants && !confirmDecide && (
                     <button
                       disabled={hurryWait > 0}
@@ -715,7 +717,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                         setHurriedAt(Date.now());
                         setNow(Date.now());
                       }}
-                      className="ml-3 underline transition-colors hover:text-cream disabled:cursor-default disabled:no-underline disabled:opacity-50 disabled:hover:text-muted"
+                      className="ml-3 -my-2 py-2 underline transition-colors hover:text-cream disabled:cursor-default disabled:no-underline disabled:opacity-50 disabled:hover:text-muted"
                     >
                       {hurryWait > 0 ? `hurried (${hurryWait}s)` : "hurry them"}
                     </button>
@@ -740,7 +742,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                         </button>
                         <button
                           onClick={() => setConfirmDecide(false)}
-                          className="ml-3 underline hover:text-cream transition-colors"
+                          className="ml-3 -my-2 py-2 underline hover:text-cream transition-colors"
                         >
                           Wait
                         </button>
@@ -748,7 +750,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                     ) : (
                       <button
                         onClick={() => setConfirmDecide(true)}
-                        className="ml-3 underline hover:text-cream transition-colors"
+                        className="ml-3 -my-2 py-2 underline hover:text-cream transition-colors"
                       >
                         just decide now
                       </button>

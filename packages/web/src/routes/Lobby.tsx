@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { decideNowWarning } from "@wherever/shared";
 import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
@@ -441,6 +442,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   const allToasts = [...toasts, ...hostToasts, ...vibeToasts, ...behindToasts];
   const count = session?.participants.length ?? 0;
 
+  const [confirmDecide, setConfirmDecide] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [codeCopyFailed, setCodeCopyFailed] = useState(false);
   const [inviteStatus, setInviteStatus] = useState<'sharing' | 'shared' | 'copied' | 'failed' | null>(null);
@@ -605,14 +607,39 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             {progress && progress.totalParticipants > 0 && (
               <p className="mt-3 text-sm text-muted">
                 {progress.finishedCount} of {progress.totalParticipants} done
-                {isHost && progress.finishedCount < progress.totalParticipants && (
-                  <button
-                    onClick={() => send({ type: "decide_now" })}
-                    className="ml-3 underline hover:text-cream transition-colors"
-                  >
-                    just decide now
-                  </button>
-                )}
+                {isHost &&
+                  progress.finishedCount < progress.totalParticipants &&
+                  (confirmDecide ? (
+                    /* Two steps in the same row: this ends the round for everybody, and the screen
+                       cannot afford another line. */
+                    <>
+                      <span className="ml-3 text-cream">
+                        {decideNowWarning(progress.finishedCount, progress.totalParticipants)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setConfirmDecide(false);
+                          send({ type: "decide_now" });
+                        }}
+                        className="ml-3 font-semibold text-acid underline hover:text-cream transition-colors"
+                      >
+                        Decide anyway
+                      </button>
+                      <button
+                        onClick={() => setConfirmDecide(false)}
+                        className="ml-3 underline hover:text-cream transition-colors"
+                      >
+                        Wait
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDecide(true)}
+                      className="ml-3 underline hover:text-cream transition-colors"
+                    >
+                      just decide now
+                    </button>
+                  ))}
               </p>
             )}
             <div className="mt-3">

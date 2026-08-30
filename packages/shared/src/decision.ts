@@ -171,6 +171,19 @@ export function decideWinner(
 }
 
 /**
+ * What ending the round early actually does, for the host about to do it.
+ *
+ * "just decide now" was a bare underlined link that decided instantly on the votes so far. It is the
+ * one control here that acts on everybody else's behalf, and it read like a shortcut rather than the
+ * thing it is: the unfinished cards simply never count.
+ */
+export function decideNowWarning(finishedCount: number, totalParticipants: number): string {
+  const waiting = Math.max(0, totalParticipants - finishedCount);
+  const who = waiting === 1 ? "1 person is" : `${waiting} people are`;
+  return `${who} still swiping. Their unvoted cards will not count.`;
+}
+
+/**
  * How many cards ahead the furthest-along other person is. Zero when you are level or leading.
  *
  * Somebody who opens the link mid-round is dropped straight into a deck with no sign that voting

@@ -3,6 +3,7 @@ import {
   cardsBehind,
   countFinished,
   decideNowWarning,
+  nearMissLine,
   decideWinner,
   promoteAlternative,
   tallyRightSwipes,
@@ -36,6 +37,32 @@ function superVote(participantId: string, restaurantId: string): Vote {
 }
 
 const deck = [restaurant("a"), restaurant("b"), restaurant("c")];
+
+describe("a near miss", () => {
+  const alt = (id: string, n: number) => ({ restaurant: restaurant(id), rightSwipes: n });
+
+  it("says who lost by one", () => {
+    expect(nearMissLine("a", 3, [alt("b", 2)])).toBe("b lost by one.");
+  });
+
+  it("stays quiet about a comfortable win, which is not a story", () => {
+    expect(nearMissLine("a", 5, [alt("b", 2)])).toBeNull();
+  });
+
+  it("stays quiet when there was no runner-up at all", () => {
+    expect(nearMissLine("a", 3, [])).toBeNull();
+    expect(nearMissLine("a", 3, undefined)).toBeNull();
+  });
+
+  it("leaves a dead tie to the tie line rather than claiming a margin", () => {
+    // Level on headcount is `tiedWith`'s story; saying "lost by one" there would be wrong.
+    expect(nearMissLine("a", 3, [alt("b", 3)])).toBeNull();
+  });
+
+  it("only reads the closest runner-up, not the rest of the field", () => {
+    expect(nearMissLine("a", 3, [alt("b", 2), alt("c", 0)])).toBe("b lost by one.");
+  });
+});
 
 describe("ending the round early", () => {
   it("counts the people it is about to decide for", () => {

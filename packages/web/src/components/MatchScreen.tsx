@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInstallPrompt } from "../useInstallPrompt.js";
-import { line, matchReasons, type ArrivalStatus, type ArrivalUpdate, type Participant, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
+import { line, matchReasons, nearMissLine, type ArrivalStatus, type ArrivalUpdate, type Participant, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -306,6 +306,7 @@ function WinnerScreen({
   const [addressCopied, setAddressCopied] = useState(false);
   const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
   const { offer: installOffer, install, dismiss: dismissInstall } = useInstallPrompt(round);
+  const nearMiss = nearMissLine(restaurant.name, rightSwipes, alternatives);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -541,6 +542,10 @@ function WinnerScreen({
       <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
         {tiedWith > 0 ? line("tie", seedFrom(restaurant.id)) : consensusLine(rightSwipes, totalParticipants)}
       </p>
+      {tiedWith === 0 && nearMiss && (
+        // Only when it was actually close, and never alongside the tie line, which is its own story.
+        <p className="mt-2 text-xs text-muted">{nearMiss}</p>
+      )}
       {tiedWith > 0 && (
         // Say how it was settled. The tie-break is deck order, which is deterministic so every
         // client lands on the same winner; pretending it was a coin toss would be a lie.

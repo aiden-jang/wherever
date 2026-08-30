@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**A one-vote win says so.** The tally and the runners-up were already computed for the Plan B list,
+but the margin was never said, so "2 of 2 picked it" read the same whether the group agreed or whether
+one swipe decided the night. When the runner-up came within a single vote the winner screen now names
+it: "Din Tai Fung lost by one." Only at exactly one, because "won by six" is not a story, and never
+alongside the tie line, which is its own. Counted in right-swipes, the headcount people can check
+against each other, rather than the weighted score a super-like inflates.
+
 **A reaction comes from a person.** Reactions already floated, but from a lane derived from the
 reaction's own random id, and the sender's name was on the wire and never used — so the same person's
 emoji appeared somewhere new every time and the whole thing read as weather. Each person now keeps one

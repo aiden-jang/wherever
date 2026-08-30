@@ -4,6 +4,7 @@ import { AMENITY_OPTIONS } from "@wherever/shared";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { useScrollLock } from "../useScrollLock.js";
+import { useDialogFocus } from "../useDialogFocus.js";
 import { useSwipeToDismiss } from "../useSwipeToDismiss.js";
 
 const chipClass =
@@ -38,6 +39,7 @@ export function RestaurantDetail({
   // (desktop always shows all — see the responsive classes below).
   const [hoursExpanded, setHoursExpanded] = useState(false);
   const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const focusPanel = useDialogFocus();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -73,7 +75,9 @@ export function RestaurantDetail({
       <div
         ref={(el) => {
           scrollRef.current = el;
+          focusPanel(el);
         }}
+        tabIndex={-1}
         className="relative w-full max-w-sm max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 bg-ink-soft shadow-raised sm:rounded-3xl"
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,
@@ -82,6 +86,8 @@ export function RestaurantDetail({
         onClick={(e) => e.stopPropagation()}
         {...handlers}
         role="dialog"
+        // Same claim the other overlay makes, and now equally true: the keyboard cannot leave.
+        aria-modal="true"
         aria-label={`${restaurant.name} details`}
       >
         <button

@@ -584,8 +584,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     return (
       <main className="flex-1 flex items-center justify-center px-6 text-center">
         <div className="max-w-sm">
-          <div className="text-6xl">🫥</div>
-          <h1 className="mt-4 font-display text-4xl font-bold">This code leads nowhere.</h1>
+          <div className="text-glyph">🫥</div>
+          <h1 className="mt-4 font-display text-state font-bold">This code leads nowhere.</h1>
           <p className="mt-3 text-muted">{error}</p>
           <Link
             to="/"
@@ -760,8 +760,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           </>
         ) : deck ? (
           <div className="text-center max-w-sm">
-            <div className="text-6xl">🍽️</div>
-            <h1 className="mt-4 font-display text-3xl font-bold">Nothing survived the filters.</h1>
+            <div className="text-glyph">🍽️</div>
+            <h1 className="mt-4 font-display text-state font-bold">Nothing survived the filters.</h1>
             <p className="mt-2 text-muted">
               Your standards met this neighborhood and won. Try again with a wider radius or fewer
               filters.

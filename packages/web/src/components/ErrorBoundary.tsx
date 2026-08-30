@@ -28,8 +28,8 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <main className="flex-1 flex items-center justify-center px-6 text-center">
         <div className="max-w-sm">
-          <div className="text-6xl">🤕</div>
-          <h1 className="mt-4 font-display text-4xl font-bold">Well, that broke.</h1>
+          <div className="text-glyph">🤕</div>
+          <h1 className="mt-4 font-display text-state font-bold">Well, that broke.</h1>
           <p className="mt-3 text-muted">
             Something went sideways on our end. Not your fault, and definitely not the vegetarian's.
             A reload usually sorts it.

@@ -171,6 +171,28 @@ export function decideWinner(
 }
 
 /**
+ * How close the runner-up came, when it came close.
+ *
+ * The tally is already computed and the runners-up are already carried for the Plan B list, but the
+ * margin was never said, so "1 of 2 picked it" reads the same whether the group agreed or whether
+ * one swipe decided the night. Null when it was not close, because "won by six" is not a story.
+ *
+ * Counted in right-swipes, the headcount people can check against each other, rather than the
+ * weighted score a super-like inflates.
+ */
+export function nearMissLine(
+  winnerName: string,
+  winnerRightSwipes: number,
+  alternatives: DecisionAlternative[] | undefined,
+): string | null {
+  const runnerUp = alternatives?.[0];
+  if (!runnerUp) return null;
+  const margin = winnerRightSwipes - runnerUp.rightSwipes;
+  if (margin < 1 || margin > 1) return null;
+  return `${runnerUp.restaurant.name} lost by one.`;
+}
+
+/**
  * What ending the round early actually does, for the host about to do it.
  *
  * "just decide now" was a bare underlined link that decided instantly on the votes so far. It is the

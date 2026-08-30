@@ -62,9 +62,17 @@ p {
 
 /* Keyboard focus indicator across every interactive control (mouse clicks stay ring-free via
    :focus-visible). Outline follows border-radius in modern browsers, so rounded buttons get a
-   rounded ring. */
+   rounded ring.
+
+   <summary> and <select> are focusable without a tabindex, so neither was matched by the list below
+   and both fell back to the browser's own ring. The app uses four disclosures and a duration picker.
+   The text inputs are the deliberate exception: they set outline-none and answer focus with a border
+   colour instead, which is a decision, not an omission. */
 button:focus-visible,
 a:focus-visible,
+summary:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
 [tabindex]:focus-visible,
 input:focus-visible {
   outline: 2px solid var(--color-acid);

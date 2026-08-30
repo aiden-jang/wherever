@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   cardsBehind,
   countFinished,
+  decideNowWarning,
   decideWinner,
   promoteAlternative,
   tallyRightSwipes,
@@ -35,6 +36,26 @@ function superVote(participantId: string, restaurantId: string): Vote {
 }
 
 const deck = [restaurant("a"), restaurant("b"), restaurant("c")];
+
+describe("ending the round early", () => {
+  it("counts the people it is about to decide for", () => {
+    expect(decideNowWarning(1, 4)).toBe("3 people are still swiping. Their unvoted cards will not count.");
+  });
+
+  it("says person, not people, for one", () => {
+    expect(decideNowWarning(3, 4)).toContain("1 person is still swiping");
+  });
+
+  it("says what actually happens to the votes nobody cast", () => {
+    // The round decides on the votes so far; the rest are simply never counted.
+    expect(decideNowWarning(1, 4)).toContain("will not count");
+  });
+
+  it("does not go negative if the counts disagree", () => {
+    // finishedCount can briefly exceed the connected total when somebody drops mid-round.
+    expect(decideNowWarning(5, 4)).toContain("0 people are");
+  });
+});
 
 describe("how far behind somebody is", () => {
   it("is zero in a round nobody has started", () => {

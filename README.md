@@ -70,6 +70,12 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Ending the round early asks first.** "just decide now" was a bare underlined link that decided
+instantly. It is the one control that acts on everybody else's behalf, and it read like a shortcut
+rather than what it is. It now takes two steps and says the consequence in between: "2 people are
+still swiping. Their unvoted cards will not count." The confirm replaces the link in the same row,
+because that screen cannot afford another line.
+
 **Voting is no longer silent.** The card already had a full label, the arrow keys already worked, and
 every other realtime moment already announced itself, so the one thing missing was the vote itself:
 pressing a button swapped the card underneath with nothing said. It now announces what you did, what

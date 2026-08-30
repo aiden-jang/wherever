@@ -10,6 +10,8 @@
   --color-flare: #ff2d78;
   --color-grape: #7c3aed;
   --color-acid: #d7ff3e;
+  /* The orange between ember and gold. Used by the confetti and the teaser fan. */
+  --color-flame: #ff8a3d;
 
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;

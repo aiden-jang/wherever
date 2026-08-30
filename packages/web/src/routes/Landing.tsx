@@ -33,9 +33,9 @@ interface TeaserCard {
 }
 
 const CARDS: TeaserCard[] = [
-  { name: "Late Night Pizza Decisions", category: "Pizza", emoji: "🍕", image: "/teaser-pizza.jpg", price: "$", rating: "4.4", distance: "0.9 mi", gradient: "linear-gradient(135deg, #ff5e2c, #ff2d78)", rotation: "-8deg", offset: "translate(-38px, 26px)" },
-  { name: "Noodle Situation", category: "Ramen", emoji: "🍜", image: "/teaser-ramen.jpg", price: "$$", rating: "4.1", distance: "1.1 mi", gradient: "linear-gradient(135deg, #7c3aed, #ff2d78)", rotation: "5deg", offset: "translate(30px, 12px)" },
-  { name: "Probably Fine Tacos", category: "Tacos", emoji: "🌮", image: "/teaser-tacos.jpg", price: "$", rating: "4.6", distance: "0.5 mi", gradient: "linear-gradient(135deg, #ff8a3d, #ff5e2c)", rotation: "-1deg", offset: "translate(0, 0)" },
+  { name: "Late Night Pizza Decisions", category: "Pizza", emoji: "🍕", image: "/teaser-pizza.jpg", price: "$", rating: "4.4", distance: "0.9 mi", gradient: "linear-gradient(135deg, var(--color-ember), var(--color-flare))", rotation: "-8deg", offset: "translate(-38px, 26px)" },
+  { name: "Noodle Situation", category: "Ramen", emoji: "🍜", image: "/teaser-ramen.jpg", price: "$$", rating: "4.1", distance: "1.1 mi", gradient: "linear-gradient(135deg, var(--color-grape), var(--color-flare))", rotation: "5deg", offset: "translate(30px, 12px)" },
+  { name: "Probably Fine Tacos", category: "Tacos", emoji: "🌮", image: "/teaser-tacos.jpg", price: "$", rating: "4.6", distance: "0.5 mi", gradient: "linear-gradient(135deg, var(--color-flame), var(--color-ember))", rotation: "-1deg", offset: "translate(0, 0)" },
 ];
 
 function StatusLine() {

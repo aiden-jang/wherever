@@ -9,7 +9,7 @@ import type { Restaurant } from "@wherever/shared";
 const GRADIENTS = {
   ember: "linear-gradient(135deg, #ff5e2c, #ff2d78)",
   warm: "linear-gradient(135deg, #ff8a3d, #ff2d78)",
-  grape: "linear-gradient(135deg, #7c3aed, #ff2d78)",
+  grape: "linear-gradient(135deg, #8b5cf6, #ff2d78)",
   ocean: "linear-gradient(135deg, #2c9cff, #7c3aed)",
   forest: "linear-gradient(135deg, #12b886, #7c3aed)",
   gold: "linear-gradient(135deg, #ffd43b, #ff8a3d)",

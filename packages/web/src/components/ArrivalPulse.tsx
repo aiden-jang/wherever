@@ -140,7 +140,7 @@ export function ArrivalPulse({
                 <li
                   key={participant.id}
                   title={arrival ? `${participant.displayName}: ${timing?.label}` : `${participant.displayName}: not checked in`}
-                  className={`flex min-w-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-2 text-2xs ${late ? "border-flare/30 bg-flare/10 text-flare" : arrival ? "border-white/10 bg-black/15 text-cream/90" : "border-dashed border-white/15 text-muted/70"}`}
+                  className={`flex min-w-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-2 text-2xs ${late ? "border-flare/30 bg-flare/10 text-flare" : arrival ? "border-white/10 bg-black/15 text-cream/90" : "border-dashed border-white/15 text-muted"}`}
                 >
                   <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-2xs font-bold ${arrival?.status === "here" ? "bg-acid text-ink" : arrival?.status === "heading_out" ? "bg-ember/20 text-ember" : arrival?.status === "planning" ? "bg-grape/20 text-purple-300" : "bg-white/[0.06] text-muted"}`}>
                     {initials(participant.displayName)}
@@ -206,7 +206,7 @@ export function ArrivalPulse({
               </button>
             ))}
           </div>
-          <p className="mt-2 text-center text-2xs text-muted/60">Self-reported only. Wherever never tracks your location.</p>
+          <p className="mt-2 text-center text-2xs text-muted">Self-reported only. Wherever never tracks your location.</p>
         </div>
       )}
     </section>

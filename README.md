@@ -72,6 +72,17 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Nine pieces of text were under the contrast floor, from two causes.** The purple accent measured
+3.47:1 on the ink behind it, so the "· ⭐ super" hint and the veto and super-like labels were all
+under AA; it is lifted to 4.68:1 and looks like the same purple. The other seven were `text-muted`
+dimmed further with an opacity modifier: muted on its own is 7.56:1, which is the entire point of it,
+but `/70` measured 4.05 and `/60` measured 3.38. The modifiers are gone and the token carries the
+rule, since size and weight were already doing the work of the hierarchy. The keyboard legend now
+dims only the key cap and not the word beside it, because dimming the word put it under too and
+dimming it far enough to read would have erased the difference it exists to show. Measured with the
+sRGB conversion, not by eye: Tailwind emits `oklab()` for opacity-modified colours, and a naive
+parser reports nonsense for them.
+
 **Distance changed unit system at a kilometre.** It printed metres under 1000 and miles over, so two
 cards a block apart could be measured in different systems in an app whose audience reads miles. It
 is feet below a tenth of a mile and miles above it now. The same function also produced "NaN mi" from

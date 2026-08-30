@@ -636,9 +636,11 @@ export function SwipeDeck({
       <p className="mt-3 hidden items-center justify-center gap-2 text-2xs text-muted lg:flex">
         <Key>←</Key> pass
         <Key>→</Key> eat
-        <Key dim={superUsed}>↑</Key> <span className={superUsed ? "text-muted/40" : ""}>super</span>
-        <Key dim={vetoUsed}>↓</Key> <span className={vetoUsed ? "text-muted/40" : ""}>veto</span>
-        <Key dim={!canUndo}>⌫</Key> <span className={canUndo ? "" : "text-muted/40"}>undo</span>
+        {/* The cap dims, the word does not: fading the word too put it under 4.5:1, and dimming it
+            far enough to be legible would have erased the difference it exists to show. */}
+        <Key dim={superUsed}>↑</Key> super
+        <Key dim={vetoUsed}>↓</Key> veto
+        <Key dim={!canUndo}>⌫</Key> undo
       </p>
       {canUndo && (
         <button

@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect } from "react";
 import { useScrollLock } from "../useScrollLock";
+import { useDialogFocus } from "../useDialogFocus";
 import { useSwipeToDismiss } from "../useSwipeToDismiss";
 
 interface ModalProps {
@@ -22,12 +23,8 @@ export function Modal({ title, onClose, children }: ModalProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Return focus to whatever opened the modal (the trigger button) when it closes, so keyboard and
-  // screen-reader users aren't dumped at the top of the page.
-  useEffect(() => {
-    const trigger = document.activeElement as HTMLElement | null;
-    return () => trigger?.focus?.();
-  }, []);
+  // Moves focus in on open, keeps Tab inside, and puts it back on the trigger on close.
+  const focusPanel = useDialogFocus();
 
   return (
     <div
@@ -37,7 +34,9 @@ export function Modal({ title, onClose, children }: ModalProps) {
       <div
         ref={(el) => {
           scrollRef.current = el;
+          focusPanel(el);
         }}
+        tabIndex={-1}
         className="relative w-full max-w-sm max-h-[85dvh] overflow-y-auto overscroll-contain rounded-3xl bg-ink-soft border border-white/10 p-6 shadow-raised"
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,

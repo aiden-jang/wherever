@@ -72,6 +72,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Both overlays claimed the page behind them was inert, and neither made it true.** The modal
+declared `aria-modal="true"`, which tells a screen reader everything else is unavailable, while focus
+stayed on the button that opened it: pressing Tab walked through the whole page underneath a
+full-screen overlay. The card's detail sheet did not even claim it. One hook now moves focus in on
+open, wraps Tab at both ends, pulls focus back if it is outside, and returns it to the trigger on
+close; both overlays use it and both now declare what is true.
+
 **Three filters worked against Google and silently did nothing in the demo deck.** The mock source
 is not only a test fixture: it is what a real session is dealt once the month's Google budget is
 spent. It dropped "not that" exclusions entirely, ignored the explicit price-tier list in favour of

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { decideNowWarning, initialsFor, line } from "@wherever/shared";
 import type { Participant, TastePulse } from "@wherever/shared";
@@ -6,7 +6,15 @@ import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
 import { VibeDial } from "../components/VibeDial.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
-import { MatchScreen } from "../components/MatchScreen.js";
+/*
+  * The decided screen is the largest thing in the app -- the winner, the plan, the arrival pulse, the
+  * receipt, the backups, and a canvas that draws a share card -- and none of it is reachable until a
+  * round ends. Split out, and then fetched while people are still swiping, so it is already in cache
+  * by the time it is needed and the reveal never waits on a network round trip.
+  */
+const MatchScreen = lazy(() =>
+  import("../components/MatchScreen.js").then((m) => ({ default: m.MatchScreen })),
+);
 import { ReactionBar, FloatingReactions } from "../components/Reactions.js";
 import { LiveRegion } from "../components/LiveRegion.js";
 import { buzz } from "../components/haptics.js";
@@ -393,6 +401,11 @@ function DemoBanner() {
 
 export default function Lobby() {
   const { code = "" } = useParams();
+
+  // Fetch the decided screen during the round, so its reveal is never a loading state.
+  useEffect(() => {
+    void import("../components/MatchScreen.js");
+  }, []);
   const [name, setName] = useState(recallName());
 
   if (!name) {
@@ -608,6 +621,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           reactions={reactions}
           roster={(session?.participants ?? []).map((p) => p.id)}
         />
+        <Suspense fallback={<p className="text-muted">Counting…</p>}>
         <MatchScreen
           key={match.kind === "match" ? match.restaurant.id : "no-match"}
           match={match}
@@ -635,6 +649,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             ...(travelMinutes ? { travelMinutes } : {}),
           })}
         />
+        </Suspense>
         {/* The one moment everyone is looking at the same thing, and the reaction bar used to
             disappear exactly then. */}
         <div className="mt-4">

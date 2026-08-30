@@ -34,6 +34,7 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
         <input
           className="mt-6 w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors"
           placeholder="Your name"
+          autoComplete="name"
           value={name}
           maxLength={24}
           autoFocus

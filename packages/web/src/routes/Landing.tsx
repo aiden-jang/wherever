@@ -234,7 +234,7 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      <input className={inputClass} placeholder="Your name" value={name} maxLength={24} onChange={(e) => setName(e.target.value)} autoFocus />
+      <input className={inputClass} placeholder="Your name" value={name} maxLength={24} autoComplete="name" onChange={(e) => setName(e.target.value)} autoFocus />
       {/* Location only. Everything else is set in the lobby, where the group can see it and where
           somebody is waiting for people to join anyway. */}
       <LocationPicker filters={filters} onChange={setFilters} />
@@ -264,11 +264,13 @@ function JoinForm() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <input className={inputClass} placeholder="Your name" value={name} maxLength={24} onChange={(e) => setName(e.target.value)} autoFocus />
+      <input className={inputClass} placeholder="Your name" value={name} maxLength={24} autoComplete="name" onChange={(e) => setName(e.target.value)} autoFocus />
       {/* No maxLength: a pasted invite link has to arrive whole for the parser to find the code in it. */}
       <input
         className={`${inputClass} tracking-[0.4em] uppercase`}
         placeholder="CODE"
+        // Not a field any password manager or address book has a value for.
+        autoComplete="off"
         value={code}
         inputMode="text"
         autoCapitalize="characters"

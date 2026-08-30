@@ -135,6 +135,9 @@ export function LocationPicker({
                 runSearch();
               }
             }}
+            // Takes a town too, but the zip is the case a phone can fill for you.
+            autoComplete="postal-code"
+            enterKeyHint="search"
             placeholder="Zip or town"
             maxLength={120}
             className={`${inputClass} min-w-0 flex-1 !py-2 !text-base`}

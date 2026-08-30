@@ -60,11 +60,24 @@ export async function geocode(
   } | null;
 }
 
-/** displayName is kept per-tab so a refresh in the lobby does not lose it. */
+/*
+ * displayName is kept per-tab so a refresh in the lobby does not lose it.
+ *
+ * Guarded like every localStorage call in this app: reading storage at all throws where a browser
+ * has blocked site data, and forgetting a name is not worth a blank page.
+ */
 export function rememberName(name: string): void {
-  sessionStorage.setItem("displayName", name);
+  try {
+    sessionStorage.setItem("displayName", name);
+  } catch {
+    // Storage blocked. They will be asked for a name again after a refresh.
+  }
 }
 
 export function recallName(): string {
-  return sessionStorage.getItem("displayName") ?? "";
+  try {
+    return sessionStorage.getItem("displayName") ?? "";
+  } catch {
+    return "";
+  }
 }

@@ -139,7 +139,7 @@ export class SessionRoom extends DurableObject<Env> {
       case "set_filters":
         return this.handleSetFilters(ws, msg.filters);
       case "set_never_again":
-        return this.handleSetNeverAgain(msg.restaurantId, msg.neverAgain);
+        return this.handleSetNeverAgain(ws, msg.restaurantId, msg.neverAgain);
       case "react":
         return this.handleReact(ws, msg.emoji);
       case "nudge_them":
@@ -214,7 +214,16 @@ export class SessionRoom extends DurableObject<Env> {
    * Only touches a place the group has actually been: this is a note on a visit, not a way to blacklist
    * arbitrary ids, and without the check anybody with the code could quietly shrink the deck.
    */
-  private async handleSetNeverAgain(restaurantId: string, neverAgain: boolean): Promise<void> {
+  private async handleSetNeverAgain(
+    ws: WebSocket,
+    restaurantId: string,
+    neverAgain: boolean,
+  ): Promise<void> {
+    // Anyone in the room may set this -- it is the group's memory, not the host's. But it was the one
+    // mutation that never looked at who was asking, so a socket that opened and never joined could
+    // block a restaurant from every future deck. Not host-only; joined.
+    const att = ws.deserializeAttachment() as SocketAttachment | null;
+    if (!att) return;
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta) return;
     const db = drizzle(this.env.DB);

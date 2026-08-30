@@ -13,4 +13,5 @@ export * from "./installNudge.js";
 export * from "./swipeAnnouncement.js";
 export * from "./reactionLane.js";
 export * from "./throw.js";
+export * from "./travel.js";
 export * from "./revisit.js";

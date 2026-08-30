@@ -70,6 +70,17 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The card answers the two questions people actually ask.** It showed "3.1 mi", which is not a unit
+anybody argues in at dinner time, and said nothing about whether the place was open, even though
+`openNow` was already fetched and sitting on the type. It now reads "21 min drive" and carries an
+open or closed marker, and the screen-reader description says the same. The estimate is honest about
+being one: straight-line distance with the usual correction for a city grid, no routing API, because
+none is worth paying for to decide where six people eat.
+
+**A reaction knows which person sent it, not just which name.** Lanes were keyed on display name, and
+`indexOf` returns the first match, so two people called Sam shared one. The app already identifies
+people by a stable id everywhere else for exactly this reason; the reaction channel now does too.
+
 **The button says "Deal the cards", so they get dealt.** They used to simply exist. The three visible
 cards now arrive staggered 90ms apart with a short riffle from the same synth as the votes. It runs
 once per deck, on a timed window rather than on mount, because the background cards are keyed by

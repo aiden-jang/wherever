@@ -12,7 +12,14 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
-import { swipeAnnouncement, throwDistance, throwDuration, throwVerdict, undoAnnouncement } from "@wherever/shared";
+import {
+  swipeAnnouncement,
+  throwDistance,
+  throwDuration,
+  throwVerdict,
+  travelLabel,
+  undoAnnouncement,
+} from "@wherever/shared";
 import { useLine } from "../useLine.js";
 
 const HINT_KEY = "wherever:swipe-hint-seen";
@@ -62,8 +69,23 @@ function CardFace({
           <span className="text-white/20">·</span>
           <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
           <span className="text-white/20">·</span>
-          <span className="whitespace-nowrap">{distanceLabel(restaurant.distanceMeters)}</span>
+          {/* Distance is the honest number; the estimate is the one people decide on. */}
+          <span className="whitespace-nowrap tabular-nums">
+            {travelLabel(restaurant.distanceMeters) ?? distanceLabel(restaurant.distanceMeters)}
+          </span>
         </div>
+        {/* Shut is the one fact worth knowing before you swipe yes, not after the group has picked
+            it. Null means the source had no hours, which is not the same as closed. */}
+        {restaurant.openNow === false && (
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-flare/10 px-2.5 py-1 text-xs font-semibold text-flare">
+            <span aria-hidden>●</span> Closed right now
+          </div>
+        )}
+        {restaurant.openNow === true && (
+          <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-acid">
+            <span aria-hidden>●</span> Open now
+          </div>
+        )}
       </div>
     </>
   );
@@ -79,7 +101,9 @@ function cardDescription(r: Restaurant): string {
         : `${r.rating} stars`,
     );
   }
-  parts.push(priceLabel(r.priceTier), distanceLabel(r.distanceMeters));
+  parts.push(priceLabel(r.priceTier), travelLabel(r.distanceMeters) ?? distanceLabel(r.distanceMeters));
+  // Closed is worth hearing before you vote, same as seeing it.
+  if (r.openNow === false) parts.push("closed right now");
   return parts.filter(Boolean).join(", ");
 }
 

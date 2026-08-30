@@ -59,6 +59,13 @@ describe("where a reaction rises from", () => {
     expect(reactionLane("Ghost", "x", ["Aiden"])).toBe(reactionLane("Ghost", "y", []));
   });
 
+  it("keeps two people with the same name in different lanes", () => {
+    // The bug this signature exists to prevent. Both are called Sam; only their ids differ, and the
+    // app already identifies people by id everywhere else for exactly this reason.
+    const roster = ["p-one", "p-two"];
+    expect(reactionLane("p-one", "x", roster)).not.toBe(reactionLane("p-two", "y", roster));
+  });
+
   it("does not collapse names that are anagrams of each other", () => {
     // A plain char-code sum gives "Sam" and "mas" the same lane; the position weight avoids that.
     expect(reactionLane("Sam", "x")).not.toBe(reactionLane("mas", "x"));

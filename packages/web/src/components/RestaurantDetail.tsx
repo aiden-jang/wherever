@@ -158,7 +158,9 @@ export function RestaurantDetail({
             {distanceText(restaurant.distanceMeters) && (
               <>
                 <span className="text-white/20">·</span>
-                <span className="whitespace-nowrap">{distanceText(restaurant.distanceMeters)}</span>
+                <span className="whitespace-nowrap font-semibold text-cream tabular-nums">
+                  {distanceText(restaurant.distanceMeters)}
+                </span>
               </>
             )}
           </div>

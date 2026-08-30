@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -114,6 +114,22 @@ function CardFace({
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * One key cap in the desktop legend. Dimmed rather than hidden when spent, so the row does not
+ * reflow under the counter every time somebody uses their super-like.
+ */
+function Key({ children, dim = false }: { children: ReactNode; dim?: boolean }) {
+  return (
+    <kbd
+      className={`rounded border px-1.5 py-0.5 font-sans not-italic ${
+        dim ? "border-white/10 text-white/25" : "border-white/20 bg-white/5 text-cream"
+      }`}
+    >
+      {children}
+    </kbd>
   );
 }
 
@@ -407,10 +423,11 @@ export function SwipeDeck({
       } else if (e.key === "ArrowLeft") commit("left");
       else if (e.key === "ArrowRight") commit("right");
       else if (e.key === "ArrowUp" && !superUsed) commit("right", true);
+      else if (e.key === "ArrowDown" && !vetoUsed) commit("left", false, true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canUndo, commit, detail, superUsed, undoLast]);
+  }, [canUndo, commit, detail, superUsed, undoLast, vetoUsed]);
 
   const done = index >= restaurants.length;
   const waitingLine = useLine("waiting");
@@ -551,7 +568,7 @@ export function SwipeDeck({
       </div>
 
       {showHint && (
-        <p className="mt-4 text-center text-xs text-muted animate-pulse">
+        <p className="mt-4 text-center text-xs text-muted animate-pulse lg:hidden">
           Tap for details, drag or tap below to vote. <span className="text-flare">✕ pass</span>
           {" · "}
           <span className="text-acid">♥ eat</span>
@@ -608,6 +625,15 @@ export function SwipeDeck({
         {index + 1} / {restaurants.length}
         {!superUsed && <span className="ml-2 text-grape">· ⭐ super</span>}
         {!vetoUsed && <span className="ml-2 text-flare">· 🚫 veto, kills it</span>}
+      </p>
+      {/* Every one of these already worked; nothing said so, and a key nobody knows about is a
+          feature nobody has. Desktop only: there is no keyboard to speak of on the phone layout. */}
+      <p className="mt-3 hidden items-center justify-center gap-2 text-2xs text-muted lg:flex">
+        <Key>←</Key> pass
+        <Key>→</Key> eat
+        <Key dim={superUsed}>↑</Key> <span className={superUsed ? "text-muted/40" : ""}>super</span>
+        <Key dim={vetoUsed}>↓</Key> <span className={vetoUsed ? "text-muted/40" : ""}>veto</span>
+        <Key dim={!canUndo}>⌫</Key> <span className={canUndo ? "" : "text-muted/40"}>undo</span>
       </p>
       {canUndo && (
         <button

@@ -297,7 +297,7 @@ function VoterAvatars({
               {initials(p.displayName)}
             </span>
             {finished && (
-              <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-ink bg-acid text-[9px] font-bold text-ink">
+              <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-ink bg-acid text-2xs font-bold text-ink">
                 ✓
               </span>
             )}

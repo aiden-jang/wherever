@@ -13,6 +13,11 @@
   /* The orange between ember and gold. Used by the confetti and the teaser fan. */
   --color-flame: #ff8a3d;
 
+  /* The label tier under text-xs. It was written inline fourteen times as text-[10px], plus a
+     stray 9px and 11px; one name keeps the small print one size. */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1.15;
+
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 

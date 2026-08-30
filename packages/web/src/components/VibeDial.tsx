@@ -61,14 +61,14 @@ export function VibeDial({
                 <span className="font-display text-sm font-bold">{option.label}</span>
                 {votes > 0 && <span className="ml-auto text-xs tabular-nums text-white/50">{votes}</span>}
               </span>
-              <span className="relative mt-0.5 block text-[11px] leading-snug text-white/45">{option.blurb}</span>
+              <span className="relative mt-0.5 block text-2xs leading-snug text-white/45">{option.blurb}</span>
             </button>
           );
         })}
       </div>
 
       {reading.vibe && (
-        <p className="mt-2.5 text-[11px] text-white/40">
+        <p className="mt-2.5 text-2xs text-white/40">
           {/* Said before the round starts, because the deck is about to change and a surprise deck reads
               as a bug. */}
           Starting the round will search for somewhere {vibeOption(reading.vibe).label}.

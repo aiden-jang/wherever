@@ -213,7 +213,7 @@ function TopCard({
 
   return (
     <motion.div
-      className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-grab active:cursor-grabbing"
       role="group"
       aria-roledescription="restaurant card"
       aria-label={cardDescription(restaurant, revisit)}
@@ -298,10 +298,10 @@ export function DeckSkeleton() {
     <div className="w-full max-w-sm mx-auto lg:max-w-none">
       <div className="relative h-[clamp(288px,48dvh,360px)] lg:h-[clamp(360px,64dvh,520px)]">
         <div
-          className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden animate-pulse"
+          className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 overflow-hidden animate-pulse"
           style={{ transform: "scale(0.95) translateY(14px)" }}
         />
-        <div className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden animate-pulse">
+        <div className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 overflow-hidden animate-pulse">
           <div className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,340px)] bg-white/5" />
           <div className="p-5 space-y-3">
             <div className="h-6 w-2/3 rounded bg-white/10" />
@@ -567,7 +567,7 @@ export function SwipeDeck({
               style={dealing ? { animationDelay: `${(i + 1) * 90}ms` } : undefined}
             >
               <div
-                className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden transition-transform duration-200"
+                className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 overflow-hidden transition-transform duration-200"
                 style={{
                   transform: `scale(${1 - (i + 1) * 0.05}) translateY(${(i + 1) * 14}px)`,
                   zIndex: -i - 1,

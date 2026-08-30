@@ -72,6 +72,24 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Two roles were written inline instead of named, and one had drifted.** Five screens share a
+full-screen state -- no such session, nothing survived the filters, 404, a crash, nobody agreed --
+built each time as a big glyph over a heading. Four used a 36px heading and the fifth had drifted to
+30px, which is only visible if you happen to see two of them in a row. Both halves are tokens now, so
+the five are one thing.
+
+The glyph is deliberately a separate token from the type scale. Every one of these pictographs was
+sized off `text-6xl`, meaning something that is not text at all was riding on a token meant for text:
+a heading size changed later would silently resize a 60px shrug. Six of them share that size, so it
+earns a name; the one-off glyph sizes elsewhere are left alone, because a name used once is not a
+scale.
+
+**The card corner was an arbitrary value, and one panel disagreed with it.** `rounded-[28px]` was
+written inline six times -- the one radius in the app deliberately off Tailwind's scale, sitting
+between 3xl and 4xl -- and is now `--radius-card`. The join-QR panel used a 32px radius while nested
+inside a 24px modal, so its corner was rounder than the thing containing it, which reads as a mistake
+however briefly you look at it. It takes the app's panel radius now.
+
 **The decided screen was a 384px column at any window size.** It is the densest screen in the app --
 winner, tally, the reasons, a meetup plan, arrival status, the receipt, the backups, the history --
 and it had no `lg` treatment at all, so on a laptop it was a phone-width ribbon with a thousand

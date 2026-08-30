@@ -27,6 +27,28 @@
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 1.15;
 
+  /*
+   * The full-screen state: a big glyph, a heading, a line of explanation. Five screens use it -- no
+   * such session, nothing survived the filters, 404, a crash, nobody agreed -- and it was written
+   * inline each time, so one of the five had drifted a step smaller than its four peers.
+   *
+   * The glyph has its own name on purpose. These pictographs were all sized off the type scale,
+   * which is not text riding on a token meant for text: changing a heading size later would
+   * silently resize a 60px shrug. This is the one glyph size that repeats (six of them, counting
+   * the teaser cards); the handful of one-off sizes elsewhere are left as they are, because a name
+   * used once is not a scale.
+   */
+  --text-state: 2.25rem;
+  --text-state--line-height: 1.1;
+  --text-glyph: 3.75rem;
+  --text-glyph--line-height: 1;
+
+  /*
+   * The card corner. Written inline as rounded-[28px] six times, and it is the one radius in the app
+   * that is not on Tailwind's scale, sitting deliberately between 3xl (24px) and 4xl (32px).
+   */
+  --radius-card: 28px;
+
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 

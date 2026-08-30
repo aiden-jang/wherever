@@ -38,7 +38,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
         ref={(el) => {
           scrollRef.current = el;
         }}
-        className="relative w-full max-w-sm max-h-[85dvh] overflow-y-auto overscroll-contain rounded-3xl bg-ink-soft border border-white/10 p-6 shadow-2xl"
+        className="relative w-full max-w-sm max-h-[85dvh] overflow-y-auto overscroll-contain rounded-3xl bg-ink-soft border border-white/10 p-6 shadow-raised"
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragY ? "none" : "transform 0.2s ease",

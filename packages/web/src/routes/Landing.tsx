@@ -53,7 +53,7 @@ function TeaserCardFace({
   onVote?: (dir: "left" | "right") => void;
 }) {
   return (
-    <div className="rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">
+    <div className="rounded-[28px] bg-ink-soft border border-white/10 shadow-raised overflow-hidden">
       {/* Real (CC0) food photo over the gradient. If the image fails to load, it hides itself and
           the gradient + emoji underneath show through. */}
       <div className="relative h-36" style={{ background: card.gradient }}>

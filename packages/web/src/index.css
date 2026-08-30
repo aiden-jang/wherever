@@ -10,6 +10,11 @@
   --color-flare: #ff2d78;
   --color-grape: #7c3aed;
   --color-acid: #d7ff3e;
+
+  /* One light source. The aurora is warm, so a raised surface casts a warm near-black rather than
+     the neutral grey Tailwind's default gives you, which reads as a second lamp in the room. */
+  --shadow-raised: 0 24px 60px -16px rgb(38 10 4 / 0.72);
+  --shadow-lifted: 0 8px 24px -8px rgb(38 10 4 / 0.6);
   /* The orange between ember and gold. Used by the confetti and the teaser fan. */
   --color-flame: #ff8a3d;
 

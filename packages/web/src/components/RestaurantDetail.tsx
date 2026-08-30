@@ -74,7 +74,7 @@ export function RestaurantDetail({
         ref={(el) => {
           scrollRef.current = el;
         }}
-        className="relative w-full max-w-sm max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 bg-ink-soft shadow-2xl sm:rounded-3xl"
+        className="relative w-full max-w-sm max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 bg-ink-soft shadow-raised sm:rounded-3xl"
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragY ? "none" : "transform 0.2s ease",

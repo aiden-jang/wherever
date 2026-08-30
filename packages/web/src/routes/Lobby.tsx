@@ -112,7 +112,7 @@ function Toasts({ toasts }: { toasts: Toast[] }) {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="pop-in rounded-full bg-ink-soft/95 border border-white/10 px-4 py-2 text-sm font-medium shadow-lg"
+          className="pop-in rounded-full bg-ink-soft/95 border border-white/10 px-4 py-2 text-sm font-medium shadow-lifted"
         >
           {t.text}
         </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VIBE_IDS, vibeEffect, vibeEffectLine } from "./vibes.js";
+import { VIBE_IDS, vibeEffect, vibeEffectLine, vibeOption } from "./vibes.js";
 import type { SessionFilters } from "./types.js";
 
 // The host's defaults, which is what a vibe is measured against.
@@ -22,11 +22,18 @@ describe("what a vibe did to the deck", () => {
     }
   });
 
+  it("gives chaotic something to actually do", () => {
+    // Its filters ask for every price, the widest radius and no floors, which is the default
+    // already, so for a long time picking it changed nothing at all and the deck came back in the
+    // same best-first order. The shuffle is the part that keeps the promise.
+    expect(vibeEffect("chaotic", base).join(" ")).toContain("no particular order");
+  });
+
   it("admits when a vibe changed nothing", () => {
-    // chaotic asks for every price, the widest radius and no floors, which is the default already.
-    // Saying "kept $, $$, $$$, $$$$" there would be reporting a change that did not happen.
-    expect(vibeEffect("chaotic", base)).toEqual([]);
-    expect(vibeEffectLine("chaotic", base)).toContain("nothing to change");
+    // The honest answer when a group picks a vibe they were effectively already on.
+    const already = { ...base, ...vibeOption("chaotic").filters };
+    expect(vibeEffect("chaotic", already)).toEqual([]);
+    expect(vibeEffectLine("chaotic", already)).toContain("nothing to change");
   });
 
   it("reports a narrowing of price, never a full house", () => {

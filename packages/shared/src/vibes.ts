@@ -44,7 +44,7 @@ export const VIBES: VibeOption[] = [
     label: "chaotic",
     emoji: "🎲",
     blurb: "Everything is on the table. Good luck.",
-    filters: { priceTiers: [1, 2, 3, 4], radiusMeters: 8000, minRating: 0, minReviews: 0 },
+    filters: { priceTiers: [1, 2, 3, 4], radiusMeters: 8000, minRating: 0, minReviews: 0, shuffle: true },
   },
   {
     id: "adventurous",
@@ -156,6 +156,7 @@ export function vibeEffect(vibe: Vibe, base: SessionFilters): string[] {
   if (wanted.priceTiers && wanted.priceTiers.length > 0 && wanted.priceTiers.length < allowed.length) {
     out.push(`kept ${wanted.priceTiers.map((tier) => "$".repeat(tier)).join(", ")}`);
   }
+  if (wanted.shuffle && !base.shuffle) out.push("dealt the deck in no particular order");
   if (wanted.openNow && !base.openNow) out.push("only somewhere open now");
   if (wanted.amenities && wanted.amenities.length > 0) out.push(`asked for ${wanted.amenities.join(" and ")}`);
   return out;

@@ -26,6 +26,7 @@ import {
   cardsBehind,
   vibeEffectLine,
   resolveVibe,
+  shuffleDeck,
   type Vibe,
   blockedIds,
 } from "@wherever/shared";
@@ -875,7 +876,9 @@ export class SessionRoom extends DurableObject<Env> {
      */
     const visited = await this.getVisited(meta.code);
     const blocked = blockedIds(visited);
-    const deck = all.filter((r) => !blocked.has(r.id));
+    const filtered = all.filter((r) => !blocked.has(r.id));
+    // Seeded on the code so the same session always deals the same chaos, which is debuggable.
+    const deck = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
     await this.ctx.storage.put("deck", deck);
     await this.ctx.storage.put("demoMode", demo);
     return deck;

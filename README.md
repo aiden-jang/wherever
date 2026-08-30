@@ -70,6 +70,15 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Chaotic does something now.** Its filters asked for every price, the widest radius and no rating
+floor, which is the host's default already, so picking it changed nothing and the toast said as much
+out loud. Breadth was never its promise anyway; adventurous already covers that. It now deals the
+deck in no particular order, which is the only thing that makes "everything is on the table" true:
+the source ranks best-first, so the same safe handful was always on top and the interesting places
+sat behind swipes nobody made. Expressed as a filter rather than a special case, so `vibeEffect`
+keeps deriving its own copy instead of having it written by hand. Seeded on the session code, so a
+bad deal can be reproduced from the code alone.
+
 **A place you have been before says so.** `revisitNote` was written, tested, and rendered nowhere,
 so a restaurant coming back after its ninety-day cooldown arrived looking exactly like one the group
 had never heard of. Half the value of a place returning is remembering you liked it. It now shows on

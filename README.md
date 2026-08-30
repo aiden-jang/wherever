@@ -70,6 +70,14 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Something on screen moves when somebody else does.** During a round every signal about the group
+was near-static: the avatars sit there, and `finishedCount` only ticks when a whole deck is done,
+which can be minutes apart. So the app's central promise, that everyone is voting on this together
+right now, was invisible. `vote_progress` already fanned out on every swipe, so it now carries a
+plain count of every vote cast, which moves each time anybody swipes and pulses when it lands. A
+count and nothing else: it says nothing about who voted or on what, so it holds in an anonymous
+session exactly as it does in a revealed one.
+
 **The deck stops being a small card in a void.** On a laptop the swiping screen was a 384px card
 centred in 1280px of empty gradient, with the group's avatars, progress and reactions stacked under
 it and fighting for the vertical space this screen never has. From `lg` up they sit beside the deck

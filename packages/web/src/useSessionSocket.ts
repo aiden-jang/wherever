@@ -20,6 +20,8 @@ export interface Progress {
   /** Ids of participants who've finished; present only in reveal-voters sessions. */
   finishedIds?: string[];
   tastePulse?: TastePulse;
+  /** Every vote cast this round, by anyone. Moves on every swipe. */
+  votesCast?: number;
 }
 
 export type MatchState =
@@ -121,6 +123,7 @@ export function useSessionSocket(code: string, displayName: string) {
             totalParticipants: msg.totalParticipants,
             finishedIds: msg.finishedIds,
             tastePulse: msg.tastePulse,
+            votesCast: msg.votesCast,
           });
         case "match":
           return setMatch({

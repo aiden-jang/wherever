@@ -509,10 +509,11 @@ function WinnerScreen({
             </span>
             <span className="text-white/20">·</span>
             <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
+            {/* Same weight as on the card: getting there is the live question on this screen. */}
             {distanceText(restaurant.distanceMeters) && (
               <>
                 <span className="text-white/20">·</span>
-                <span className="whitespace-nowrap tabular-nums">
+                <span className="whitespace-nowrap font-semibold text-cream tabular-nums">
                   {distanceText(restaurant.distanceMeters)}
                 </span>
               </>

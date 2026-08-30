@@ -72,6 +72,12 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The card's stats row had no hierarchy.** Rating, price and travel time sat at one weight, so the
+number the vote actually turns on read exactly like the price tier. The rating keeps its accent
+because it answers "is it any good", the price stays muted because it is a detail, and the travel
+estimate now carries the row: it is what somebody is agreeing to when they swipe right. Applied to
+all three places the row appears, so the card, the winner and the detail sheet say it the same way.
+
 **An interrupted drag left the sheet stuck open and pushed down.** Drag-to-dismiss handled start,
 move and end, but not cancel, and the OS takes a touch away often enough to matter -- an incoming
 call, a system edge gesture, the browser claiming the gesture. `touchend` never arrives in that case,

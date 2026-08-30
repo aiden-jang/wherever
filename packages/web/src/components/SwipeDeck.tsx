@@ -87,12 +87,17 @@ function CardFace({
           <span className="whitespace-nowrap" title={priceLabel(restaurant.priceTier)}>
             {restaurant.priceRange ?? priceLabel(restaurant.priceTier)}
           </span>
-          {/* The estimate people decide on, the raw distance if there is no estimate, and no
-              dangling separator when the source gave no distance at all. */}
+          {/*
+            Carries the weight of the row, because it is the number the vote turns on: the rating is
+            whether it is any good and the price is a detail, but "24 min drive" is what somebody is
+            actually agreeing to. It read at exactly the same weight as the price tier before.
+
+            Null when the source gave no distance, and the separator goes with it.
+          */}
           {distanceText(restaurant.distanceMeters) && (
             <>
               <span className="text-white/20">·</span>
-              <span className="whitespace-nowrap tabular-nums">
+              <span className="whitespace-nowrap font-semibold text-cream tabular-nums">
                 {distanceText(restaurant.distanceMeters)}
               </span>
             </>

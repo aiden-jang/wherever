@@ -80,6 +80,7 @@ export function useSessionSocket(code: string, displayName: string) {
   const [myVibe, setMyVibe] = useState<Vibe | null>(null);
   const [visited, setVisited] = useState<VisitedPlace[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [errorSeq, setErrorSeq] = useState(0);
   const [status, setStatus] = useState<Status>("connecting");
   const [everConnected, setEverConnected] = useState(false);
   const [participantId, setParticipantId] = useState<string | null>(null);
@@ -172,7 +173,12 @@ export function useSessionSocket(code: string, displayName: string) {
         case "identity":
           return setParticipantId(msg.participantId);
         case "error":
-          return setError(msg.message);
+          setError(msg.message);
+          // Bumped so the same refusal twice in a row is still two events. Screens that show errors
+          // as a toast dedupe on this; without it, "pick a time that hasn't happened yet" would
+          // appear once and then stay silent however many times the host tried it.
+          setErrorSeq((n) => n + 1);
+          return;
       }
     };
 
@@ -230,5 +236,5 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send };
+  return { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, errorSeq, status, everConnected, participantId, reactions, send };
 }

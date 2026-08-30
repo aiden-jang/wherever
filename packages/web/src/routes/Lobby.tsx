@@ -196,20 +196,25 @@ function useHostPromotionToasts(
  * group's vibe did to the filters, and that you have walked in on a round already under way. That
  * screen has to fit on a laptop without pushing the reaction bar under the fold.
  */
-function useOneShotToast(text: string | null, onEvent?: (text: string) => void): Toast[] {
+function useOneShotToast(
+  text: string | null,
+  onEvent?: (text: string) => void,
+  /** What counts as "the same thing again". Defaults to the words; errors key on a counter instead. */
+  key: string | null = text,
+): Toast[] {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const said = useRef<string | null>(null);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
   useEffect(() => {
-    if (!text || said.current === text) return;
-    said.current = text;
+    if (!text || !key || said.current === key) return;
+    said.current = key;
     onEventRef.current?.(text);
     const toast = { id: crypto.randomUUID(), text };
     setToasts((t) => [...t, toast]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== toast.id)), 5000);
-  }, [text]);
+  }, [key, text]);
 
   return toasts;
 }
@@ -407,7 +412,7 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, status, everConnected, participantId, reactions, send } =
+  const { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, errorSeq, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
@@ -482,6 +487,15 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setAnnouncement,
   );
   const allToasts = [...toasts, ...hostToasts, ...vibeToasts, ...behindToasts, ...nudgeToasts];
+  /*
+   * The server's refusals, on the screens that had nowhere to put them.
+   *
+   * `error` is rendered as a line of text on the create/lobby screen only. Everywhere else it was
+   * set and never shown: a host picking a meetup time in the past, or hitting the round limit on
+   * "run it back", pressed a button and watched nothing happen with no reason given.
+   */
+  const errorToasts = useOneShotToast(error, setAnnouncement, error ? `error-${errorSeq}` : null);
+  const screenToasts = [...allToasts, ...errorToasts];
   const count = session?.participants.length ?? 0;
 
   const [confirmDecide, setConfirmDecide] = useState(false);
@@ -592,6 +606,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     return (
       <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
         <LiveRegion message={announcement} />
+        <Toasts toasts={screenToasts} />
         <FloatingReactions
           reactions={reactions}
           roster={(session?.participants ?? []).map((p) => p.id)}
@@ -655,7 +670,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <h1 className="sr-only">Swiping. Vote on tonight&apos;s places.</h1>
         {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
         <LiveRegion message={announcement} />
-        <Toasts toasts={allToasts} />
+        <Toasts toasts={screenToasts} />
         <FloatingReactions
           reactions={reactions}
           roster={(session?.participants ?? []).map((p) => p.id)}

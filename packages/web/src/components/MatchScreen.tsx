@@ -174,7 +174,7 @@ function History({
             }`}
           >
             <span className="block text-cream/90">{v.name}</span>
-            <time dateTime={v.visitedAt} className="block text-2xs text-muted/70">
+            <time dateTime={v.visitedAt} className="block text-2xs text-muted">
               {new Date(v.visitedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: new Date(v.visitedAt).getFullYear() === new Date().getFullYear() ? undefined : "numeric" })}
             </time>
             {/* The other reason to exclude a place. A visit fades on its own after a cooldown; this
@@ -183,7 +183,7 @@ function History({
               type="button"
               onClick={() => onNeverAgain(v.restaurantId, !v.neverAgain)}
               aria-pressed={v.neverAgain === true}
-              className="mt-0.5 block text-2xs font-semibold text-muted/70 transition hover:text-acid"
+              className="mt-0.5 block text-2xs font-semibold text-muted transition hover:text-acid"
             >
               {v.neverAgain ? "never again ✓" : "never again"}
             </button>
@@ -647,14 +647,14 @@ function WinnerScreen({
           wrong rather than as somebody having used their one no. Count only — who spent it stays
           private, the same as every other vote in a round. */}
       {vetoedCount > 0 && (
-        <p className="mt-1 text-sm text-muted/70">
+        <p className="mt-1 text-sm text-muted">
           🚫 {vetoedCount} {vetoedCount === 1 ? "place was" : "places were"} vetoed out of the running.
         </p>
       )}
       {/* Only once the group has genuinely laboured. Round 1 is just dinner; saying "round 1" about
           it would be noise, and the joke below only earns itself if the number is real. */}
       {round >= 2 && (
-        <p className="mt-1 text-sm italic text-muted/70">
+        <p className="mt-1 text-sm italic text-muted">
           {round >= 4
             ? `${round} rounds to pick one place. The group chat would have been faster.`
             : `Round ${round}. Worth the wait, presumably.`}
@@ -1034,7 +1034,7 @@ function WinnerScreen({
               setPlannerOpen(false);
               setCalendarError(null);
             }}
-            className="mt-2 w-full rounded-full px-5 py-2 text-xs font-semibold text-muted/80 hover:text-cream transition"
+            className="mt-2 w-full rounded-full px-5 py-2 text-xs font-semibold text-muted hover:text-cream transition"
           >
             Save for everyone
           </button>

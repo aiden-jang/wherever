@@ -70,6 +70,15 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The server said no and nobody heard it.** Socket errors were stored in state and rendered as a
+line of text on the create/lobby screen only. The decided screen had no error rendering and no toast
+container at all, and the swiping screen had a container but never put errors in it, so a host
+picking a meetup time in the past, or hitting the round limit on "run it back", pressed a button and
+watched nothing happen with no reason given. Refusals now surface as a toast on both, keyed on a
+counter rather than on their own words: the same refusal twice in a row is two events, and deduping
+on the text would have shown "pick a time that hasn't happened yet" once and then stayed silent
+however many times the host tried it.
+
 **Denver was being offered Williamsburg.** `isInNYC` exists, with a comment stating the rule it was
 written for -- the neighbourhood shortcuts only make sense inside the city, so the UI shows them only
 when the location falls in the box -- and it was called from nowhere and covered by nothing. The

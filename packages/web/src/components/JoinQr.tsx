@@ -57,7 +57,7 @@ export function JoinQr({ code, url }: JoinQrProps) {
         role="region"
         aria-label="Join room QR code"
         hidden={!open}
-        className="mt-2 overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-2xl shadow-black/20"
+        className="mt-2 overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lifted"
       >
         <div className="flex flex-col items-center rounded-3xl bg-[#fff8e8] px-5 py-5 text-[#18151f]">
           {failed ? (

@@ -480,7 +480,7 @@ function WinnerScreen({
         type="button"
         onClick={() => setDetailOpen(true)}
         aria-label={`See details for ${restaurant.name}`}
-        className="pop-in relative mt-5 block w-full text-left rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/60 overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
+        className="pop-in relative mt-5 block w-full text-left rounded-[28px] bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
       >
         <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
         <span className="pointer-events-none absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm">

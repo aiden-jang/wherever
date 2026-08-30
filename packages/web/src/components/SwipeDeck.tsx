@@ -148,7 +148,7 @@ function TopCard({
 
   return (
     <motion.div
-      className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 shadow-2xl shadow-black/60 overflow-hidden cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-grab active:cursor-grabbing"
       role="group"
       aria-roledescription="restaurant card"
       aria-label={cardDescription(restaurant)}

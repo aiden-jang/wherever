@@ -93,7 +93,7 @@ export function ArrivalPulse({
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-acid">
+            <span className="block text-2xs font-bold uppercase tracking-[0.18em] text-acid">
               live arrival pulse
             </span>
             <h2 className="mt-1 font-display text-xl font-bold leading-tight text-cream">{pulse.headline}</h2>
@@ -103,7 +103,7 @@ export function ArrivalPulse({
             type="button"
             onClick={() => void sharePulse()}
             disabled={shareStatus !== null}
-            className="shrink-0 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-[10px] font-bold text-muted transition hover:border-acid/30 hover:text-acid disabled:opacity-70"
+            className="shrink-0 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-2xs font-bold text-muted transition hover:border-acid/30 hover:text-acid disabled:opacity-70"
           >
             {shareStatus === "sharing" ? "Opening…" : shareStatus === "shared" ? "Shared ✓" : shareStatus === "copied" ? "Copied ✓" : "Share pulse"}
           </button>
@@ -123,9 +123,9 @@ export function ArrivalPulse({
           <span className="h-full bg-grape transition-[width] duration-500" style={{ width: `${pulse.planning / denominator * 100}%` }} />
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-          <span className="rounded-xl bg-acid/10 px-2 py-2 text-[10px] font-bold text-acid"><strong className="block text-base leading-none">{pulse.here}</strong>here</span>
-          <span className="rounded-xl bg-ember/10 px-2 py-2 text-[10px] font-bold text-ember"><strong className="block text-base leading-none">{pulse.headingOut}</strong>moving</span>
-          <span className="rounded-xl bg-grape/15 px-2 py-2 text-[10px] font-bold text-purple-300"><strong className="block text-base leading-none">{pulse.planning}</strong>getting ready</span>
+          <span className="rounded-xl bg-acid/10 px-2 py-2 text-2xs font-bold text-acid"><strong className="block text-base leading-none">{pulse.here}</strong>here</span>
+          <span className="rounded-xl bg-ember/10 px-2 py-2 text-2xs font-bold text-ember"><strong className="block text-base leading-none">{pulse.headingOut}</strong>moving</span>
+          <span className="rounded-xl bg-grape/15 px-2 py-2 text-2xs font-bold text-purple-300"><strong className="block text-base leading-none">{pulse.planning}</strong>getting ready</span>
         </div>
 
         {participants.length > 0 && (
@@ -140,9 +140,9 @@ export function ArrivalPulse({
                 <li
                   key={participant.id}
                   title={arrival ? `${participant.displayName}: ${timing?.label}` : `${participant.displayName}: not checked in`}
-                  className={`flex min-w-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-2 text-[10px] ${late ? "border-flare/30 bg-flare/10 text-flare" : arrival ? "border-white/10 bg-black/15 text-cream/90" : "border-dashed border-white/15 text-muted/70"}`}
+                  className={`flex min-w-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-2 text-2xs ${late ? "border-flare/30 bg-flare/10 text-flare" : arrival ? "border-white/10 bg-black/15 text-cream/90" : "border-dashed border-white/15 text-muted/70"}`}
                 >
-                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[8px] font-bold ${arrival?.status === "here" ? "bg-acid text-ink" : arrival?.status === "heading_out" ? "bg-ember/20 text-ember" : arrival?.status === "planning" ? "bg-grape/20 text-purple-300" : "bg-white/[0.06] text-muted"}`}>
+                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-2xs font-bold ${arrival?.status === "here" ? "bg-acid text-ink" : arrival?.status === "heading_out" ? "bg-ember/20 text-ember" : arrival?.status === "planning" ? "bg-grape/20 text-purple-300" : "bg-white/[0.06] text-muted"}`}>
                     {initials(participant.displayName)}
                   </span>
                   <span className="max-w-20 truncate">{participant.displayName}</span>
@@ -160,7 +160,7 @@ export function ArrivalPulse({
             <div className="mb-2.5 rounded-2xl border border-white/10 bg-black/15 p-3">
               <div className="flex items-center justify-between gap-3">
                 <span>
-                  <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-muted">My trip</span>
+                  <span className="block text-2xs font-bold uppercase tracking-[0.12em] text-muted">My trip</span>
                   <span className="mt-0.5 block text-xs text-cream">
                     {journeyTiming(planned, "planning", travelMinutes, undefined, clockNow).label}
                   </span>
@@ -172,7 +172,7 @@ export function ArrivalPulse({
                       type="button"
                       aria-pressed={travelMinutes === minutes}
                       onClick={() => setTravelMinutes(minutes)}
-                      className={`rounded-full border px-2 py-1 text-[10px] font-bold transition ${travelMinutes === minutes ? "border-acid bg-acid text-ink" : "border-white/10 text-muted hover:text-cream"}`}
+                      className={`rounded-full border px-2 py-1 text-2xs font-bold transition ${travelMinutes === minutes ? "border-acid bg-acid text-ink" : "border-white/10 text-muted hover:text-cream"}`}
                     >
                       {minutes}m
                     </button>
@@ -187,7 +187,7 @@ export function ArrivalPulse({
                 {myArrival === "planning" ? "Leave-by shared ✓" : "Share my leave-by"}
               </button>
               {myTiming?.overdueMinutes ? (
-                <p className="mt-2 text-center text-[11px] font-semibold text-flare" role="status">
+                <p className="mt-2 text-center text-2xs font-semibold text-flare" role="status">
                   Leave-by passed {myTiming.overdueMinutes}m ago. Still getting ready?
                 </p>
               ) : null}
@@ -206,7 +206,7 @@ export function ArrivalPulse({
               </button>
             ))}
           </div>
-          <p className="mt-2 text-center text-[10px] text-muted/60">Self-reported only. Wherever never tracks your location.</p>
+          <p className="mt-2 text-center text-2xs text-muted/60">Self-reported only. Wherever never tracks your location.</p>
         </div>
       )}
     </section>

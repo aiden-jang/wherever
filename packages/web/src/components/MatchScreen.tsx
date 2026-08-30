@@ -173,7 +173,7 @@ function History({
             }`}
           >
             <span className="block text-cream/90">{v.name}</span>
-            <time dateTime={v.visitedAt} className="block text-[10px] text-muted/70">
+            <time dateTime={v.visitedAt} className="block text-2xs text-muted/70">
               {new Date(v.visitedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: new Date(v.visitedAt).getFullYear() === new Date().getFullYear() ? undefined : "numeric" })}
             </time>
             {/* The other reason to exclude a place. A visit fades on its own after a cooldown; this
@@ -182,7 +182,7 @@ function History({
               type="button"
               onClick={() => onNeverAgain(v.restaurantId, !v.neverAgain)}
               aria-pressed={v.neverAgain === true}
-              className="mt-0.5 block text-[10px] font-semibold text-muted/70 transition hover:text-acid"
+              className="mt-0.5 block text-2xs font-semibold text-muted/70 transition hover:text-acid"
             >
               {v.neverAgain ? "never again ✓" : "never again"}
             </button>
@@ -555,7 +555,7 @@ function WinnerScreen({
         </p>
       )}
       <section className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left">
-        <p className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted">Why this one works</p>
+        <p className="px-1 text-2xs font-bold uppercase tracking-[0.16em] text-muted">Why this one works</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           {reasons.map((reason) => (
             <div key={`${reason.icon}-${reason.label}`} className="flex min-w-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-black/15 px-2.5 py-2">
@@ -583,7 +583,7 @@ function WinnerScreen({
             ◷
           </span>
           <span className="min-w-0">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-acid">meet there</span>
+            <span className="block text-2xs font-bold uppercase tracking-[0.16em] text-acid">meet there</span>
             <span className="block truncate text-sm font-semibold text-cream">
               {new Date(planned.start).toLocaleString(undefined, {
                 weekday: "short",

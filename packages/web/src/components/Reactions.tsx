@@ -56,7 +56,7 @@ export function FloatingReactions({
           >
             <span className="text-4xl">{r.emoji}</span>
             {r.from && (
-              <span className="mt-0.5 max-w-24 truncate text-[10px] font-semibold text-cream/80">
+              <span className="mt-0.5 max-w-24 truncate text-2xs font-semibold text-cream/80">
                 {r.from}
               </span>
             )}

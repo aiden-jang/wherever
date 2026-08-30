@@ -72,6 +72,14 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Two waits answered with a label instead of a sentence.** "No votes yet." was the only line on the
+screen in the moment before anybody has voted, and the app has a module whose entire job is to talk
+during a wait -- it just had no moment for this one. There is a `quiet` moment now, rotating like the
+others, and the reachability test covers it the same way. The arrival panel's "Nobody has checked in
+yet." was hand-written next to hand-written neighbours ("A gentle nudge might save the reservation"),
+so it was rewritten in place rather than pushed through the module. The rest of the empty states were
+left alone: they already had a voice.
+
 **The verdict arrives in the order it is read.** Everything on the decided screen used to land in
 the same frame, which is a lot to take in at the one moment the group looks up from their phones: the
 headline, the place, the tally and the reasons all at once. It is staggered now -- "it's decided",

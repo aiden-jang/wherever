@@ -4,6 +4,7 @@ import { decideNowWarning, initialsFor, line } from "@wherever/shared";
 import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
+import { useLine } from "../useLine.js";
 import { VibeDial } from "../components/VibeDial.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
 /*
@@ -233,7 +234,10 @@ function useOneShotToast(
  * swiping alone. Keyed on the number so the pulse restarts each time one lands.
  */
 function LiveVotes({ count }: { count: number }) {
-  if (count <= 0) return <p className="mt-3 text-sm text-muted">No votes yet.</p>;
+  // Before anybody has voted this is the one line on the screen, and "No votes yet." was the only
+  // place in the app that answered a wait with a label instead of a sentence.
+  const quiet = useLine("quiet");
+  if (count <= 0) return <p className="mt-3 text-sm text-muted">{quiet}</p>;
   return (
     <p className="mt-3 text-sm text-muted">
       <span key={count} className="vote-tick inline-block font-semibold text-cream tabular-nums">

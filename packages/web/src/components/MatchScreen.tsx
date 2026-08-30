@@ -536,7 +536,7 @@ function WinnerScreen({
         </div>
       </button>
 
-      <p className="mt-4 text-muted">
+      <p className="mt-4 text-muted tabular-nums">
         {rightSwipes} of {totalParticipants} picked it.
       </p>
       <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">

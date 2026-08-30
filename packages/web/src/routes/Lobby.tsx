@@ -655,7 +655,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               )}
               {progress && <LiveVotes count={progress.votesCast ?? 0} />}
               {progress && progress.totalParticipants > 0 && (
-                <p className="mt-3 text-sm text-muted">
+                <p className="mt-3 text-sm text-muted tabular-nums">
                   {progress.finishedCount} of {progress.totalParticipants} done
                   {isHost &&
                     progress.finishedCount < progress.totalParticipants &&

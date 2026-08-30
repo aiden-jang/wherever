@@ -133,7 +133,7 @@ export function RestaurantDetail({
           <div className="font-display text-2xl font-bold leading-tight">{restaurant.name}</div>
           <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
 
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted tabular-nums">
             <span className="whitespace-nowrap text-acid">
               {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
               {restaurant.rating && restaurant.reviewCount

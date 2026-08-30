@@ -72,6 +72,14 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The Foursquare source is gone.** It was a second full restaurant source that nothing could reach:
+`RESTAURANT_SOURCE` is `"google"`, no key was ever configured for it, and it had drifted out of step
+with the filtering rules the other two sources share, ignoring exclusions, the explicit price-tier
+list and amenities. An alternate implementation that cannot run is not a fallback, it is a second
+definition of the rules that nobody is checking. The `RestaurantSource` interface stays and is still
+earning its keep, because the mock behind it is what a real session gets when the month's Google
+budget is spent. 125 lines out.
+
 **The whole app was one 506kB chunk.** This is opened on a phone, outside, on cellular, so first
 paint is the part of the experience nobody thinks of as design. The decided screen is the largest
 thing in the app -- winner, plan, arrival pulse, receipt, backups, and a canvas that draws a share

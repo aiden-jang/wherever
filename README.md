@@ -72,6 +72,15 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The share card had the same long-name problem, on an image people post.** Its wrapper only broke
+between words, so a single word wider than the card was drawn straight off both edges; a name too
+long for two lines was cut mid-word with nothing to say so, which reads as the whole name of a
+different restaurant; and the meta row was drawn with no width limit at all. The wrapping is now a
+pure function in shared, measured through a callback instead of a canvas context so it can be tested
+without a browser, which is where the rest of this app's logic already lives. It breaks over-long
+words by character, marks a truncation with an ellipsis, and keeps the ellipsis inside the width. The
+card's distance also now matches the winner screen's estimate rather than disagreeing with it.
+
 **Both overlays claimed the page behind them was inert, and neither made it true.** The modal
 declared `aria-modal="true"`, which tells a screen reader everything else is unavailable, while focus
 stayed on the button that opened it: pressing Tab walked through the whole page underneath a

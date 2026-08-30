@@ -4,6 +4,7 @@ import { useInstallPrompt } from "../useInstallPrompt.js";
 import { line, matchReasons, nearMissLine, type ArrivalStatus, type ArrivalUpdate, type Participant, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { travelLabel } from "@wherever/shared";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
@@ -503,7 +504,10 @@ function WinnerScreen({
             <span className="text-white/20">·</span>
             <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
             <span className="text-white/20">·</span>
-            <span className="whitespace-nowrap">{distanceLabel(restaurant.distanceMeters)}</span>
+            {/* Same order as the card: the estimate people decide on, not the raw straight line. */}
+            <span className="whitespace-nowrap tabular-nums">
+              {travelLabel(restaurant.distanceMeters) ?? distanceLabel(restaurant.distanceMeters)}
+            </span>
           </div>
           {/*
             Whether it is open, on the winner itself.
@@ -694,7 +698,10 @@ function WinnerScreen({
                   <span className="min-w-0 flex-1">
                     <strong className="block truncate text-sm text-cream">{choice.restaurant.name}</strong>
                     <span className="block truncate text-xs text-muted">
-                      {choice.rightSwipes} liked it · {distanceLabel(choice.restaurant.distanceMeters)} · {priceLabel(choice.restaurant.priceTier)}
+                      {choice.rightSwipes} liked it ·{" "}
+                      {travelLabel(choice.restaurant.distanceMeters) ??
+                        distanceLabel(choice.restaurant.distanceMeters)}{" "}
+                      · {priceLabel(choice.restaurant.priceTier)}
                     </span>
                   </span>
                   <span className="shrink-0 text-sm text-muted" aria-hidden>↗</span>
@@ -702,6 +709,9 @@ function WinnerScreen({
                 {isHost && (
                   <button
                     type="button"
+                    // There is one of these per runner-up, so the visible label alone is heard as
+                    // "Make Plan A" twice with nothing to tell them apart.
+                    aria-label={`Make ${choice.restaurant.name} Plan A`}
                     onClick={() => onChooseAlternative(choice.restaurant.id)}
                     className="rounded-xl border border-acid/25 bg-acid/10 px-4 py-2 text-xs font-bold text-acid transition hover:border-acid/50 hover:bg-acid/15 active:scale-[0.98]"
                   >

@@ -70,6 +70,12 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The winner screen went back to straight-line miles.** The card says "23 min drive" because that is
+the number people decide on; the screen where the group is deciding how to get there still said "3.2
+mi". Both the winner and its runners-up now use the same estimate the card does. The runner-up list
+also had one "Make Plan A" button per place, so a screen reader heard the same name twice with
+nothing to tell them apart; each now names its restaurant.
+
 **The keyboard worked and nobody was told.** Arrows voted, up super-liked, backspace undid, and the
 only hint on screen said "tap for details, drag or tap below to vote", which is phone language on a
 machine with no touchscreen. The veto was the one action with no key at all. It has one now, and

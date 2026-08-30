@@ -35,9 +35,20 @@ export function useSwipeToDismiss(onClose: () => void) {
     setDragY(0);
   };
 
+  /*
+   * The OS can take a touch away mid-drag -- an incoming call, a system edge gesture, the browser
+   * claiming it. `touchend` never arrives in that case, so without this the offset stayed frozen at
+   * wherever the finger got to and the sheet sat pushed down until the next touch. Reset, and never
+   * dismiss: a cancelled gesture is not a decision.
+   */
+  const onTouchCancel = () => {
+    startY.current = null;
+    setDragY(0);
+  };
+
   return {
     dragY,
     scrollRef,
-    handlers: { onTouchStart, onTouchMove, onTouchEnd },
+    handlers: { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel },
   };
 }

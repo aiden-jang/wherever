@@ -1,4 +1,5 @@
 import type { Restaurant } from "@wherever/shared";
+import { travelLabel, wrapToWidth } from "@wherever/shared";
 import { distanceLabel, priceLabel, styleFor } from "./cardStyle.js";
 
 export interface WinnerCardDetails {
@@ -15,21 +16,9 @@ function gradientStops(css: string): [string, string] {
   return [hexes?.[0] ?? "#ff5e2c", hexes?.[1] ?? "#ff2d78"];
 }
 
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let line = "";
-  for (const w of words) {
-    const next = line ? `${line} ${w}` : w;
-    if (ctx.measureText(next).width > maxWidth && line) {
-      lines.push(line);
-      line = w;
-    } else {
-      line = next;
-    }
-  }
-  if (line) lines.push(line);
-  return lines.slice(0, 3);
+/** Measured with whatever font is currently set on the context. */
+function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines = 3): string[] {
+  return wrapToWidth(text, maxWidth, (s) => ctx.measureText(s).width, { maxLines });
 }
 
 /**
@@ -96,7 +85,7 @@ export async function renderShareCard(
   // Restaurant name (wrapped, up to 2 lines so the actual plan still fits below it).
   ctx.fillStyle = "#f6f1e7";
   ctx.font = "800 76px 'Bricolage Grotesque', Inter, sans-serif";
-  const lines = wrap(ctx, r.name, S - 170).slice(0, 2);
+  const lines = wrap(ctx, r.name, S - 170, 2);
   let y = 570;
   for (const line of lines) {
     ctx.fillText(line, S / 2, y);
@@ -108,11 +97,13 @@ export async function renderShareCard(
     r.category,
     r.rating ? `★ ${r.rating}` : "new",
     priceLabel(r.priceTier),
-    distanceLabel(r.distanceMeters),
+    // The same estimate the winner screen shows, so the picture and the page agree.
+    travelLabel(r.distanceMeters) ?? distanceLabel(r.distanceMeters),
   ].join("   ·   ");
   ctx.fillStyle = "#a8a097";
   ctx.font = "500 32px Inter, sans-serif";
-  ctx.fillText(meta, S / 2, y + 5);
+  // maxWidth, so a long category squeezes instead of running off both edges of a shared image.
+  ctx.fillText(meta, S / 2, y + 5, S - 120);
   y += 55;
 
   if (details?.reasons?.length) {
@@ -122,7 +113,7 @@ export async function renderShareCard(
     y += 34;
     ctx.fillStyle = "#f6f1e7";
     ctx.font = "500 29px Inter, sans-serif";
-    for (const line of wrap(ctx, details.reasons.slice(0, 3).join("  ·  "), S - 180).slice(0, 2)) {
+    for (const line of wrap(ctx, details.reasons.slice(0, 3).join("  ·  "), S - 180, 2)) {
       ctx.fillText(line, S / 2, y);
       y += 34;
     }

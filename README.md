@@ -70,6 +70,12 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The button says "Deal the cards", so they get dealt.** They used to simply exist. The three visible
+cards now arrive staggered 90ms apart with a short riffle from the same synth as the votes. It runs
+once per deck, on a timed window rather than on mount, because the background cards are keyed by
+restaurant: a new one mounts on every swipe, and animating those would make the stack twitch on every
+vote. Reduced motion skips it.
+
 **A flick counts, and the card leaves like it was thrown.** A swipe was decided on distance alone, so
 a fast flick that did not travel 110px did nothing: you threw the card and it sat there. On a phone
 that is most of the gesture, because a quick flick covers less ground than a slow drag of the same

@@ -359,6 +359,19 @@ export function SwipeDeck({
   const waitingLine = useLine("waiting");
 
   /*
+   * "Deal the cards" is what the button says, so deal them.
+   *
+   * A short window rather than a mount-only flag: the background cards are keyed by restaurant, so a
+   * new one mounts on every swipe, and animating those would make the stack twitch on each vote.
+   */
+  const [dealing, setDealing] = useState(true);
+  useEffect(() => {
+    play("deal");
+    const t = setTimeout(() => setDealing(false), 700);
+    return () => clearTimeout(t);
+  }, []);
+
+  /*
    * Fetch the next two cards' photos while this one is being decided.
    *
    * A swipe reveals the card underneath instantly, but its photo starts loading only then, so on a
@@ -439,28 +452,38 @@ export function SwipeDeck({
         {/* Background cards, peeking behind the top one. */}
         {upcoming
           .map((r, i) => (
+            /* Two elements on purpose: the wrapper carries the deal animation, the inner one carries
+               the stack's own transform. One element cannot do both, because the animation ends at
+               `transform: none` and would drop the card out of the stack as it landed. */
             <div
               key={r.id}
-              className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden transition-transform duration-200"
-              style={{
-                transform: `scale(${1 - (i + 1) * 0.05}) translateY(${(i + 1) * 14}px)`,
-                zIndex: -i - 1,
-              }}
+              className={`absolute inset-0 ${dealing ? "deal-in" : ""}`}
+              style={dealing ? { animationDelay: `${(i + 1) * 90}ms` } : undefined}
             >
-              <CardFace restaurant={r} photoUrl={r.imageUrl} photoCount={0} photoIdx={0} />
+              <div
+                className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden transition-transform duration-200"
+                style={{
+                  transform: `scale(${1 - (i + 1) * 0.05}) translateY(${(i + 1) * 14}px)`,
+                  zIndex: -i - 1,
+                }}
+              >
+                <CardFace restaurant={r} photoUrl={r.imageUrl} photoCount={0} photoIdx={0} />
+              </div>
             </div>
           ))
           .reverse()}
 
-        <AnimatePresence initial={false}>
-          <TopCard
-            key={restaurants[index]!.id}
-            restaurant={restaurants[index]!}
-            exitDir={exitDir}
-            onCommit={commit}
-            onOpenDetail={setDetail}
-          />
-        </AnimatePresence>
+        <div className={dealing ? "deal-in absolute inset-0" : "contents"}>
+          <AnimatePresence initial={false}>
+            <TopCard
+              key={restaurants[index]!.id}
+              restaurant={restaurants[index]!}
+              exitDir={exitDir}
+              onCommit={commit}
+              onOpenDetail={setDetail}
+            />
+          </AnimatePresence>
+        </div>
       </div>
 
       {showHint && (

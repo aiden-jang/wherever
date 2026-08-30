@@ -67,6 +67,15 @@ export interface DecisionResult {
    * never told a tie happened at all, and "we drew" is the most interesting thing a vote can do.
    */
   tiedWith: number;
+  /**
+   * True when a vetoed place outscored the winner: the group's actual favourite was killed.
+   *
+   * Vetoed places are dropped from the ranking before a winner is picked, silently, so a group could
+   * agree on somewhere, have it vetoed, and be handed second place with no sign that the vote had
+   * gone any other way. Deliberately a flag and not a name: the veto is anonymous on purpose, and
+   * naming the place it killed narrows the vetoer down in a group of four.
+   */
+  vetoedTop: boolean;
 }
 
 export interface DecisionAlternative {
@@ -84,8 +93,10 @@ export function promoteAlternative(
   if (!promoted) return null;
 
   return {
-    // A promoted backup was chosen by hand, so whatever the original vote tied on no longer applies.
+    // A promoted backup was chosen by hand, so whatever the original vote tied on no longer applies,
+    // and neither does what a veto did to it: the host has overridden the vote either way.
     tiedWith: 0,
+    vetoedTop: false,
     restaurant: promoted.restaurant,
     rightSwipes: promoted.rightSwipes,
     alternatives: [
@@ -152,6 +163,7 @@ export function decideWinner(
   const vetoed = vetoedRestaurantIds(votes);
   // Array.sort is stable: equal scores keep deck order, preserving the original deterministic
   // tie-break while also giving us the group's next-best choices from the very same decision.
+  const scoreOf = (restaurant: Restaurant) => scores.get(restaurant.id) ?? 0;
   const ranked = deck
     .map((restaurant) => ({
       restaurant,
@@ -162,11 +174,15 @@ export function decideWinner(
     .sort((a, b) => b.score - a.score);
   const [winner, ...rest] = ranked;
   if (!winner) return null;
+  // Strictly ahead, not level: a vetoed place tied with the winner was not the group's favourite,
+  // it was joint favourite, and "your top pick was vetoed" would be overstating it.
+  const bestVetoed = Math.max(0, ...deck.filter((r) => vetoed.has(r.id)).map(scoreOf));
   return {
     restaurant: winner.restaurant,
     rightSwipes: winner.rightSwipes,
     alternatives: rest.slice(0, 2).map(({ restaurant, rightSwipes }) => ({ restaurant, rightSwipes })),
     tiedWith: rest.filter((candidate) => candidate.score === winner.score).length,
+    vetoedTop: bestVetoed > winner.score,
   };
 }
 

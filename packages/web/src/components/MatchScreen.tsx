@@ -290,7 +290,7 @@ function WinnerScreen({
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
-  const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round, tiedWith = 0 } = match;
+  const { restaurant, rightSwipes, alternatives, totalParticipants, vetoedCount, round, tiedWith = 0, vetoedTop = false } = match;
   const unavailable =
     restaurant.openNow === false ||
     restaurant.businessStatus === 'CLOSED_PERMANENTLY' ||
@@ -563,6 +563,15 @@ function WinnerScreen({
           {tiedWith === 1 ? "Two places finished level." : `${tiedWith + 1} places finished level.`} This
           one was dealt first, so it takes it.
         </p>
+      )}
+      {vetoedTop && (
+        /*
+         * The group agreed on somewhere else and somebody killed it. Vetoed places are dropped from
+         * the ranking before a winner is picked, so without this the round reads as a clean win for
+         * second place. No name and no place: the veto is anonymous by design, and naming what it
+         * killed narrows the vetoer down in a group of four.
+         */
+        <p className="mt-2 text-xs text-flare">Something scored higher. Somebody vetoed it.</p>
       )}
       <section className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left">
         <p className="px-1 text-2xs font-bold uppercase tracking-[0.16em] text-muted">Why this one works</p>

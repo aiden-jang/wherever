@@ -149,6 +149,7 @@ describe("promoteAlternative", () => {
       restaurant: deck[0]!,
       rightSwipes: 3,
       tiedWith: 0,
+      vetoedTop: false,
       alternatives: [
         { restaurant: deck[1]!, rightSwipes: 2 },
         { restaurant: deck[2]!, rightSwipes: 1 },
@@ -159,6 +160,7 @@ describe("promoteAlternative", () => {
       restaurant: deck[1],
       rightSwipes: 2,
       tiedWith: 0,
+      vetoedTop: false,
       alternatives: [
         { restaurant: deck[0], rightSwipes: 3 },
         { restaurant: deck[2], rightSwipes: 1 },
@@ -167,7 +169,8 @@ describe("promoteAlternative", () => {
   });
 
   it("refuses a restaurant that was not a ranked finalist", () => {
-    expect(promoteAlternative({ restaurant: deck[0]!, rightSwipes: 2, tiedWith: 0, alternatives: [] }, "ghost"))
+    expect(promoteAlternative({ restaurant: deck[0]!, rightSwipes: 2, tiedWith: 0,
+      vetoedTop: false, alternatives: [] }, "ghost"))
       .toBeNull();
   });
 });
@@ -393,6 +396,46 @@ describe("veto", () => {
 
   it("does not count toward the winner's headcount", () => {
     const votes = [yes("p1", "b"), yes("p2", "b"), veto("p3", "a")];
-    expect(decideWinner(deck, votes)).toEqual({ restaurant: deck[1], rightSwipes: 2, alternatives: [], tiedWith: 0 });
+    expect(decideWinner(deck, votes)).toEqual({ restaurant: deck[1], rightSwipes: 2, alternatives: [], tiedWith: 0, vetoedTop: false });
+  });
+});
+
+describe("when a veto took the group's favourite", () => {
+  const place = (id: string): Restaurant => ({ id, name: id }) as Restaurant;
+  const deck = [place("a"), place("b")];
+  const like = (who: string, what: string): Vote => ({ participantId: who, restaurantId: what, direction: "right" });
+  const veto = (who: string, what: string): Vote => ({ participantId: who, restaurantId: what, direction: "left", veto: true });
+
+  it("says so when a vetoed place outscored the winner", () => {
+    // Three people wanted "a"; one person killed it. "b" wins on one vote and reads as a clean win.
+    const result = decideWinner(deck, [
+      like("p1", "a"), like("p2", "a"), like("p3", "a"),
+      veto("p4", "a"),
+      like("p1", "b"),
+    ]);
+    expect(result?.restaurant.id).toBe("b");
+    expect(result?.vetoedTop).toBe(true);
+  });
+
+  it("stays quiet when the veto killed something nobody was winning with", () => {
+    const result = decideWinner(deck, [like("p1", "b"), like("p2", "b"), veto("p3", "a")]);
+    expect(result?.restaurant.id).toBe("b");
+    expect(result?.vetoedTop).toBe(false);
+  });
+
+  it("stays quiet when the vetoed place was only level, not ahead", () => {
+    // Joint favourite is not "the group's favourite", and saying so would overstate it.
+    const result = decideWinner(deck, [like("p1", "a"), like("p2", "b"), veto("p3", "a")]);
+    expect(result?.vetoedTop).toBe(false);
+  });
+
+  it("stays quiet when nobody vetoed anything", () => {
+    expect(decideWinner(deck, [like("p1", "a")])?.vetoedTop).toBe(false);
+  });
+
+  it("does not name what was vetoed anywhere in the result", () => {
+    // The flag exists so the veto can stay anonymous; leaking the place undoes that.
+    const result = decideWinner(deck, [like("p1", "a"), like("p2", "a"), veto("p3", "a"), like("p1", "b")]);
+    expect(JSON.stringify(result)).not.toContain('"a"');
   });
 });

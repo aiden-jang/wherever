@@ -70,6 +70,14 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The anonymous default was only anonymous in the docs.** This README claimed twice that votes are
+anonymous by default and enforced server-side, and the toggle beside the setting read "Off. Votes
+stay anonymous", while the client shipped `revealVoters: true`, so every session ever created
+revealed who had finished. The server half was always right and still is: identities are omitted from
+the progress payload when the flag is falsy, so nothing was recoverable from devtools. Only the
+default was wrong. It now lives in shared rather than the web app, because it is a product rule
+rather than UI state, and a default nobody can unit-test is a default that drifts back.
+
 **Chaotic does something now.** Its filters asked for every price, the widest radius and no rating
 floor, which is the host's default already, so picking it changed nothing and the toast said as much
 out loud. Breadth was never its promise anyway; adventurous already covers that. It now deals the

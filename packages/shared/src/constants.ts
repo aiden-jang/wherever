@@ -4,12 +4,32 @@
 // it case-insensitively). `googleType` is the Google Places (New) primary type the
 // Worker searches for, keeping the mapping in one place so the two can't drift.
 
-import type { AmenityKey, PriceTier, RestaurantSort } from "./types.js";
+import type { AmenityKey, PriceTier, RestaurantSort, SessionFilters } from "./types.js";
 
 /**
  * Emojis the group can throw at each other mid-round. Kept to a fixed set and validated at the
  * boundary so a reaction can never carry arbitrary text.
  */
+/**
+ * What a session starts as before the host touches anything.
+ *
+ * Lives here rather than in the web app because these are product rules, not UI state, and the one
+ * that matters most is a promise: votes are anonymous unless the host opts in. The client shipped
+ * `revealVoters: true` for months while the toggle beside it read "Off. Votes stay anonymous", so
+ * every real session revealed who had finished. The server was always right — it omits identities
+ * when the flag is falsy — but a default nobody could unit-test is a default that drifts.
+ */
+export const DEFAULT_FILTERS: SessionFilters = {
+  radiusMeters: 8000, // 5 mi
+  maxPriceTier: 4,
+  categories: [],
+  minRating: 0,
+  minReviews: 0,
+  openNow: true,
+  sort: "popularity",
+  revealVoters: false,
+};
+
 export const REACTION_EMOJIS = ["🔥", "😍", "🤤", "😂", "👀", "🙅"] as const;
 
 export interface CuisineOption {

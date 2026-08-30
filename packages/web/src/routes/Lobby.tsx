@@ -571,8 +571,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   // The match outcome wins over everything else once it arrives.
   if (match) {
     return (
-      <main className="flex-1 flex items-center justify-center px-6 py-10">
+      <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
         <LiveRegion message={announcement} />
+        <FloatingReactions
+          reactions={reactions}
+          roster={(session?.participants ?? []).map((p) => p.id)}
+        />
         <MatchScreen
           key={match.kind === "match" ? match.restaurant.id : "no-match"}
           match={match}
@@ -600,6 +604,11 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             ...(travelMinutes ? { travelMinutes } : {}),
           })}
         />
+        {/* The one moment everyone is looking at the same thing, and the reaction bar used to
+            disappear exactly then. */}
+        <div className="mt-4">
+          <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
+        </div>
       </main>
     );
   }

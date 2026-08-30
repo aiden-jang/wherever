@@ -116,6 +116,12 @@ type Voice = {
  * square, which is what makes cheap web audio sound like a toy.
  */
 const CUES: Record<string, Voice[]> = {
+  // Three cards off the top of the deck: short, dry, and low enough not to compete with a vote.
+  deal: [
+    { freq: G4, dur: 0.05, gain: 0.07, type: "sine" },
+    { freq: C5, at: 0.09, dur: 0.05, gain: 0.07, type: "sine" },
+    { freq: D5, at: 0.18, dur: 0.06, gain: 0.08, type: "sine" },
+  ],
   like: [{ freq: G5, glide: A5, dur: 0.09, gain: 0.16 }],
   pass: [{ freq: E5, glide: C5, dur: 0.1, gain: 0.1, type: "sine" }],
   superLike: [

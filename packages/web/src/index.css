@@ -238,6 +238,22 @@ body {
   will-change: transform, opacity;
 }
 
+/* Cards coming off the deck. Only on the first render of a deck, never on every swipe. */
+@keyframes deal-in {
+  0% {
+    transform: translateY(26px) scale(0.94) rotate(-3deg);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.deal-in {
+  animation: deal-in 0.42s var(--ease-spring, ease-out) backwards;
+}
+
 /* A vote landed. Small on purpose: it fires constantly, so it has to be noticeable and ignorable. */
 @keyframes vote-tick {
   0% {
@@ -269,7 +285,8 @@ body {
     animation: none;
     opacity: 1;
   }
-  .vote-tick {
+  .vote-tick,
+  .deal-in {
     animation: none;
   }
   .confetti-piece {

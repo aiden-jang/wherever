@@ -676,8 +676,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}
         {deck && deck.length > 0 ? (
           <>
-            <div className="w-full lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-center lg:gap-12">
-              <div className="min-w-0">
+            {/* The group panel is handed to the deck rather than placed beside it: the deck owns
+                the round state, so it is the only thing that can put its own status in the same
+                column on a wide screen instead of stacking it under a card that is already tall. */}
               <SwipeDeck
                 key={deck.map((r) => r.id).join(",")}
                 restaurants={deck}
@@ -690,75 +691,72 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                 }
                 onUndo={(restaurantId) => send({ type: "undo_swipe", restaurantId })}
                 onAnnounce={setAnnouncement}
-              />
-              </div>
-              {/* Everything about the group, beside the deck rather than under it on a wide
-                  screen: it fills the empty half and buys back the vertical room this screen
-                  never has. */}
-              <div className="min-w-0 lg:flex lg:flex-col lg:items-start lg:gap-1 lg:text-left">
-              {progress?.tastePulse && <GroupTasteMap pulse={progress.tastePulse} />}
-              {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
-                <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
-              )}
-              {progress && <LiveVotes count={progress.votesCast ?? 0} />}
-              {progress && progress.totalParticipants > 0 && (
-                <p className="mt-3 text-sm text-muted tabular-nums">
-                  {progress.finishedCount} of {progress.totalParticipants} done
-                  {/* -my-2 py-2 on the inline actions here: 20px tall is under the 24px tap floor on a
-                      phone, and these hurry or end a round. The negative margin keeps the line as it was. */}
-                  {isHost && progress.finishedCount < progress.totalParticipants && !confirmDecide && (
-                    <button
-                      disabled={hurryWait > 0}
-                      onClick={() => {
-                        send({ type: "nudge_them" });
-                        setHurriedAt(Date.now());
-                        setNow(Date.now());
-                      }}
-                      className="ml-3 -my-2 py-2 underline transition-colors hover:text-cream disabled:cursor-default disabled:no-underline disabled:opacity-50 disabled:hover:text-muted"
-                    >
-                      {hurryWait > 0 ? `hurried (${hurryWait}s)` : "hurry them"}
-                    </button>
+                aside={
+                  <>
+                  {progress?.tastePulse && <GroupTasteMap pulse={progress.tastePulse} />}
+                  {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
+                    <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
                   )}
-                  {isHost &&
-                    progress.finishedCount < progress.totalParticipants &&
-                    (confirmDecide ? (
-                      /* Two steps in the same row: this ends the round for everybody, and the screen
-                         cannot afford another line. */
-                      <>
-                        <span className="ml-3 text-cream">
-                          {decideNowWarning(progress.finishedCount, progress.totalParticipants)}
-                        </span>
+                  {progress && <LiveVotes count={progress.votesCast ?? 0} />}
+                  {progress && progress.totalParticipants > 0 && (
+                    <p className="mt-3 text-sm text-muted tabular-nums">
+                      {progress.finishedCount} of {progress.totalParticipants} done
+                      {/* -my-2 py-2 on the inline actions here: 20px tall is under the 24px tap floor on a
+                          phone, and these hurry or end a round. The negative margin keeps the line as it was. */}
+                      {isHost && progress.finishedCount < progress.totalParticipants && !confirmDecide && (
                         <button
+                          disabled={hurryWait > 0}
                           onClick={() => {
-                            setConfirmDecide(false);
-                            send({ type: "decide_now" });
+                            send({ type: "nudge_them" });
+                            setHurriedAt(Date.now());
+                            setNow(Date.now());
                           }}
-                          className="ml-3 font-semibold text-acid underline hover:text-cream transition-colors"
+                          className="ml-3 -my-2 py-2 underline transition-colors hover:text-cream disabled:cursor-default disabled:no-underline disabled:opacity-50 disabled:hover:text-muted"
                         >
-                          Decide anyway
+                          {hurryWait > 0 ? `hurried (${hurryWait}s)` : "hurry them"}
                         </button>
-                        <button
-                          onClick={() => setConfirmDecide(false)}
-                          className="ml-3 -my-2 py-2 underline hover:text-cream transition-colors"
-                        >
-                          Wait
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDecide(true)}
-                        className="ml-3 -my-2 py-2 underline hover:text-cream transition-colors"
-                      >
-                        just decide now
-                      </button>
-                    ))}
-                </p>
-              )}
-              <div className="mt-3">
-                <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
-              </div>
-              </div>
-            </div>
+                      )}
+                      {isHost &&
+                        progress.finishedCount < progress.totalParticipants &&
+                        (confirmDecide ? (
+                          /* Two steps in the same row: this ends the round for everybody, and the screen
+                             cannot afford another line. */
+                          <>
+                            <span className="ml-3 text-cream">
+                              {decideNowWarning(progress.finishedCount, progress.totalParticipants)}
+                            </span>
+                            <button
+                              onClick={() => {
+                                setConfirmDecide(false);
+                                send({ type: "decide_now" });
+                              }}
+                              className="ml-3 font-semibold text-acid underline hover:text-cream transition-colors"
+                            >
+                              Decide anyway
+                            </button>
+                            <button
+                              onClick={() => setConfirmDecide(false)}
+                              className="ml-3 -my-2 py-2 underline hover:text-cream transition-colors"
+                            >
+                              Wait
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDecide(true)}
+                            className="ml-3 -my-2 py-2 underline hover:text-cream transition-colors"
+                          >
+                            just decide now
+                          </button>
+                        ))}
+                    </p>
+                  )}
+                  <div className="mt-3">
+                    <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
+                  </div>
+                  </>
+                }
+              />
           </>
         ) : deck ? (
           <div className="text-center max-w-sm">

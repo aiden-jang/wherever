@@ -72,6 +72,15 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Half the swiping screen was holding one line of text.** At 1440px the deck ran 416x662 and the
+column beside it held 128px: "no votes yet" and the reaction bar. Everything else about the round --
+where you are in the deck, what the keys do, whether you can undo -- was stacked underneath a card
+that already reaches the bottom of the viewport. The deck owns that state, so it now owns the split
+too and takes the group panel as a prop rather than being placed next to it. The right column carries
+202px of real content, the deck column gave back 62px of height, and on a phone nothing moved: same
+single column, same order. The finished-deck state splits the same way, which is the one moment other
+people's progress is the thing you are actually waiting on.
+
 **The card's stats row had no hierarchy.** Rating, price and travel time sat at one weight, so the
 number the vote actually turns on read exactly like the price tier. The rating keeps its accent
 because it answers "is it any good", the price stays muted because it is a detail, and the travel

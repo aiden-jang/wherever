@@ -622,7 +622,10 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
         <LiveRegion message={announcement} />
         <Toasts toasts={allToasts} />
-        <FloatingReactions reactions={reactions} />
+        <FloatingReactions
+          reactions={reactions}
+          roster={(session?.participants ?? []).map((p) => p.displayName)}
+        />
         {demo && <DemoBanner />}
         {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}
         {deck && deck.length > 0 ? (

@@ -1,4 +1,4 @@
-import { REACTION_EMOJIS } from "@wherever/shared";
+import { REACTION_EMOJIS, reactionLane } from "@wherever/shared";
 import type { FloatingReaction } from "../useSessionSocket.js";
 
 /** Tap row for throwing an emoji to the whole session during a round. */
@@ -20,21 +20,24 @@ export function ReactionBar({ onReact }: { onReact: (emoji: string) => void }) {
   );
 }
 
-/** Stable-ish horizontal position (20-80%) derived from the reaction id. */
-function leftFor(id: string): number {
-  let sum = 0;
-  for (let i = 0; i < id.length; i++) sum += id.charCodeAt(i);
-  return 20 + (sum % 61);
-}
-
 /*
  * Overlay of reactions floating up. Positioned within a `relative` container.
  *
  * A veto and a super-like arrive on this same channel but are not chatter: one takes a place away
  * from everybody and the other weighs the tally. They land in the middle at twice the size behind a
  * tint of their own colour, so they cannot be mistaken for somebody tapping a laughing face.
+ *
+ * Chatter rises in a lane belonging to whoever sent it and carries their name, so a reaction reads
+ * as a person in the room rather than as weather. System events have no sender and get neither.
  */
-export function FloatingReactions({ reactions }: { reactions: FloatingReaction[] }) {
+export function FloatingReactions({
+  reactions,
+  roster = [],
+}: {
+  reactions: FloatingReaction[];
+  /** Display names in seat order, so each person gets a lane of their own. */
+  roster?: readonly string[];
+}) {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
       {reactions.map((r) =>
@@ -48,10 +51,15 @@ export function FloatingReactions({ reactions }: { reactions: FloatingReaction[]
         ) : (
           <span
             key={r.id}
-            className="reaction-rise absolute bottom-28 text-4xl drop-shadow-lg"
-            style={{ left: `${leftFor(r.id)}%` }}
+            className="reaction-rise absolute bottom-28 flex flex-col items-center drop-shadow-lg"
+            style={{ left: `${reactionLane(r.from, r.id, roster)}%` }}
           >
-            {r.emoji}
+            <span className="text-4xl">{r.emoji}</span>
+            {r.from && (
+              <span className="mt-0.5 max-w-24 truncate text-[10px] font-semibold text-cream/80">
+                {r.from}
+              </span>
+            )}
           </span>
         ),
       )}

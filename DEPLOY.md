@@ -2,7 +2,15 @@
 
 Everything runs on Cloudflare's free tier: the Worker + Durable Objects + D1 for the backend, and Pages for the web app.
 
-**You do not normally need any of this.** Merging to `main` deploys both halves: `.github/workflows/ci.yml` runs the Worker's `deploy` (migrations, then code) and then builds and publishes the web app to Pages. The steps below are for standing things up by hand, and they need your own Cloudflare login, so run them yourself.
+**You do not normally need any of this.** Merging to `main` deploys both halves, and CI does it by running the same root script you would:
+
+```bash
+pnpm run deploy    # worker (migrations, then code), then build + publish web to Pages
+```
+
+Say `run`. Bare `pnpm deploy` is a pnpm builtin for packing a workspace package and will fail with `ERR_PNPM_INVALID_DEPLOY_TARGET`.
+
+The steps below are the individual halves, for standing things up by hand. They need your own Cloudflare login, so run them yourself.
 
 The API runs on the custom domain `api.wherever.aidenjang.com` and the web app on `wherever.aidenjang.com`.
 
@@ -15,7 +23,7 @@ npx wrangler login
 
 ## 2. Apply D1 migrations
 
-The Worker's own `deploy` script and the CI deploy both apply pending migrations before shipping code, so this is only needed when standing the database up by hand. There is no `deploy` script at the repo root: it lives in `packages/worker`, because the Worker and the Pages site ship separately. The `database_id` is committed in `packages/worker/wrangler.toml`, so there is nothing to create:
+`pnpm run deploy` and the CI deploy both apply pending migrations before shipping code, so this is only needed when standing the database up by hand. The `database_id` is committed in `packages/worker/wrangler.toml`, so there is nothing to create:
 
 ```bash
 npx wrangler d1 migrations apply wherever --remote

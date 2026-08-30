@@ -45,27 +45,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Migrations first, then the code, in that order and failing hard if the migration fails.
-      # Shipping code whose migration has not run is what 500'd /auth/me for every app once: the
-      # column was missing in production and every session lookup threw. `pnpm run deploy` chains
-      # `d1 migrations apply wherever --remote` ahead of `wrangler deploy` so the two cannot
-      # drift apart. Applying by hand was the old contract and is what allowed that drift.
-      - name: Deploy Worker to Cloudflare
-        run: pnpm run deploy
-        working-directory: packages/worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      # Build the web app pointing at the API's custom domain (baked into the bundle at build time)
-      # and publish it to Cloudflare Pages, so the frontend auto-deploys alongside the Worker.
+      # Both halves through the same root script a human would run, so CI and your terminal cannot
+      # deploy different things. Worker first: it chains `d1 migrations apply --remote` ahead of
+      # `wrangler deploy`, and shipping code whose migration has not run is what 500'd /auth/me for
+      # every app once — the column was missing in production and every session lookup threw.
+      #
       # NOTE: CLOUDFLARE_API_TOKEN must include Pages:Edit (not just Workers). Don't also enable a
       # Pages "connect to Git" integration in the dashboard, or you'll get two competing deploys.
-      - name: Build + deploy web to Cloudflare Pages
-        working-directory: packages/web
+      - name: Deploy Worker + web to Cloudflare
+        run: pnpm run deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          VITE_API_BASE: "https://api.wherever.aidenjang.com"
-          VITE_WS_BASE: "wss://api.wherever.aidenjang.com"
-        run: |
-          pnpm build
-          pnpm dlx wrangler@3 pages deploy dist --project-name wherever --branch main

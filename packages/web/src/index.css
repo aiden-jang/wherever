@@ -235,6 +235,20 @@ body {
   animation: pop-in 0.5s var(--ease-bounce);
 }
 
+/*
+ * The verdict, arriving in the order it is read.
+ *
+ * Everything on this screen used to land in the same frame, which is a lot to take in at the one
+ * moment the group is looking up from their phones: the headline, the place, the tally and the
+ * reasons all at once. Staggered, the eye is led "it's decided" -> the place -> by how much -> why,
+ * and the whole sequence is over in under half a second, so it reads as one arrival rather than a
+ * queue. `backwards` holds each one hidden until its turn instead of flashing first.
+ */
+.reveal {
+  animation: pop-in 0.42s var(--ease-bounce) backwards;
+  animation-delay: var(--reveal-at, 0ms);
+}
+
 /* Emoji reactions floating up during a round. */
 @keyframes reaction-rise {
   0% {
@@ -338,7 +352,8 @@ body {
   .confetti-piece {
     display: none;
   }
-  .pop-in {
+  .pop-in,
+  .reveal {
     animation: none;
   }
   /* Keep reactions visible but still; the JS timeout still clears them. */

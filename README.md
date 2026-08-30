@@ -72,6 +72,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The verdict arrives in the order it is read.** Everything on the decided screen used to land in
+the same frame, which is a lot to take in at the one moment the group looks up from their phones: the
+headline, the place, the tally and the reasons all at once. It is staggered now -- "it's decided",
+then the place, then by how much, then why -- over 290ms, so it reads as one arrival rather than a
+queue. `backwards` holds each piece hidden until its turn instead of flashing first, and the whole
+thing is off under reduced motion, where the screen simply appears.
+
 **The Foursquare source is gone.** It was a second full restaurant source that nothing could reach:
 `RESTAURANT_SOURCE` is `"google"`, no key was ever configured for it, and it had drifted out of step
 with the filtering rules the other two sources share, ignoring exclusions, the explicit price-tier

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInstallPrompt } from "../useInstallPrompt.js";
 import { line, matchReasons, nearMissLine, type ArrivalStatus, type ArrivalUpdate, type Participant, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
@@ -489,14 +489,15 @@ function WinnerScreen({
       */}
       <div className="mx-auto w-full max-w-sm text-center lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-start lg:gap-10">
         <div className="min-w-0">
-        <h1 className="font-display text-lg font-bold tracking-widest text-acid uppercase">
+        <h1 className="reveal font-display text-lg font-bold tracking-widest text-acid uppercase">
           It&apos;s decided<span className="sr-only">: {restaurant.name}</span>
         </h1>
         <button
           type="button"
           onClick={() => setDetailOpen(true)}
           aria-label={`See details for ${restaurant.name}`}
-          className="pop-in relative mt-5 block w-full text-left rounded-card bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
+          className="reveal relative mt-5 block w-full text-left rounded-card bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
+          style={{ "--reveal-at": "90ms" } as CSSProperties}
         >
           <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
           <span className="pointer-events-none absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm">
@@ -559,10 +560,13 @@ function WinnerScreen({
           </div>
         </button>
 
-        <p className="mt-4 text-muted tabular-nums">
+        <p className="reveal mt-4 text-muted tabular-nums" style={{ "--reveal-at": "190ms" } as CSSProperties}>
           {rightSwipes} of {totalParticipants} picked it.
         </p>
-        <p className="mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid">
+        <p
+          className="reveal mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid"
+          style={{ "--reveal-at": "190ms" } as CSSProperties}
+        >
           {tiedWith > 0 ? line("tie", seedFrom(restaurant.id)) : consensusLine(rightSwipes, totalParticipants)}
         </p>
         {tiedWith === 0 && nearMiss && (
@@ -586,7 +590,10 @@ function WinnerScreen({
            */
           <p className="mt-2 text-xs text-flare">Something scored higher. Somebody vetoed it.</p>
         )}
-        <section className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left">
+        <section
+          className="reveal mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left"
+          style={{ "--reveal-at": "290ms" } as CSSProperties}
+        >
           <p className="px-1 text-2xs font-bold uppercase tracking-[0.16em] text-muted">Why this one works</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             {reasons.map((reason) => (

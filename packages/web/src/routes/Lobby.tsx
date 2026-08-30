@@ -591,8 +591,11 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
      * The swiping column ran 68px to 768px, and a 1280x720 laptop cut it off at 720 — so the
      * reaction bar, the only signal during a round that anyone else is in the session at all, was
      * below the fold and effectively did not exist. On a phone the 80px of overflow lands exactly
-     * where the browser chrome does. The card itself stays at 360: CardFace needs about 340 for the
-     * photo plus two lines of name, so the space had to come out of the gaps instead.
+     * where the browser chrome does, so the space came out of the gaps.
+     *
+     * From `lg` up the group half moves beside the deck instead of under it. That fills a screen
+     * that was a 384px card adrift in 1280px of gradient, and it buys back the vertical room, which
+     * is what lets the card finally be the size of the thing the whole app is about.
      */
     return (
       <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-4">
@@ -604,62 +607,71 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}
         {deck && deck.length > 0 ? (
           <>
-            <SwipeDeck
-              key={deck.map((r) => r.id).join(",")}
-              restaurants={deck}
-              alreadyVoted={alreadyVoted}
-              superSpent={superUsed}
-              vetoSpent={vetoUsed}
-              onSwipe={(restaurantId, direction, isSuper, isVeto) =>
-                send({ type: "swipe", restaurantId, direction, super: isSuper, veto: isVeto })
-              }
-              onUndo={(restaurantId) => send({ type: "undo_swipe", restaurantId })}
-              onAnnounce={setAnnouncement}
-            />
-            {progress?.tastePulse && <GroupTasteMap pulse={progress.tastePulse} />}
-            {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
-              <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
-            )}
-            {progress && progress.totalParticipants > 0 && (
-              <p className="mt-3 text-sm text-muted">
-                {progress.finishedCount} of {progress.totalParticipants} done
-                {isHost &&
-                  progress.finishedCount < progress.totalParticipants &&
-                  (confirmDecide ? (
-                    /* Two steps in the same row: this ends the round for everybody, and the screen
-                       cannot afford another line. */
-                    <>
-                      <span className="ml-3 text-cream">
-                        {decideNowWarning(progress.finishedCount, progress.totalParticipants)}
-                      </span>
+            <div className="w-full lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-center lg:gap-12">
+              <div className="min-w-0">
+              <SwipeDeck
+                key={deck.map((r) => r.id).join(",")}
+                restaurants={deck}
+                alreadyVoted={alreadyVoted}
+                superSpent={superUsed}
+                vetoSpent={vetoUsed}
+                onSwipe={(restaurantId, direction, isSuper, isVeto) =>
+                  send({ type: "swipe", restaurantId, direction, super: isSuper, veto: isVeto })
+                }
+                onUndo={(restaurantId) => send({ type: "undo_swipe", restaurantId })}
+                onAnnounce={setAnnouncement}
+              />
+              </div>
+              {/* Everything about the group, beside the deck rather than under it on a wide
+                  screen: it fills the empty half and buys back the vertical room this screen
+                  never has. */}
+              <div className="min-w-0 lg:flex lg:flex-col lg:items-start lg:gap-1 lg:text-left">
+              {progress?.tastePulse && <GroupTasteMap pulse={progress.tastePulse} />}
+              {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
+                <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
+              )}
+              {progress && progress.totalParticipants > 0 && (
+                <p className="mt-3 text-sm text-muted">
+                  {progress.finishedCount} of {progress.totalParticipants} done
+                  {isHost &&
+                    progress.finishedCount < progress.totalParticipants &&
+                    (confirmDecide ? (
+                      /* Two steps in the same row: this ends the round for everybody, and the screen
+                         cannot afford another line. */
+                      <>
+                        <span className="ml-3 text-cream">
+                          {decideNowWarning(progress.finishedCount, progress.totalParticipants)}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setConfirmDecide(false);
+                            send({ type: "decide_now" });
+                          }}
+                          className="ml-3 font-semibold text-acid underline hover:text-cream transition-colors"
+                        >
+                          Decide anyway
+                        </button>
+                        <button
+                          onClick={() => setConfirmDecide(false)}
+                          className="ml-3 underline hover:text-cream transition-colors"
+                        >
+                          Wait
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        onClick={() => {
-                          setConfirmDecide(false);
-                          send({ type: "decide_now" });
-                        }}
-                        className="ml-3 font-semibold text-acid underline hover:text-cream transition-colors"
-                      >
-                        Decide anyway
-                      </button>
-                      <button
-                        onClick={() => setConfirmDecide(false)}
+                        onClick={() => setConfirmDecide(true)}
                         className="ml-3 underline hover:text-cream transition-colors"
                       >
-                        Wait
+                        just decide now
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDecide(true)}
-                      className="ml-3 underline hover:text-cream transition-colors"
-                    >
-                      just decide now
-                    </button>
-                  ))}
-              </p>
-            )}
-            <div className="mt-3">
-              <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
+                    ))}
+                </p>
+              )}
+              <div className="mt-3">
+                <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
+              </div>
+              </div>
             </div>
           </>
         ) : deck ? (

@@ -34,7 +34,7 @@ function CardFace({
       {/* data-card-photo marks the photo zone: TopCard's tap handler cycles photos here and opens
           details everywhere else. */}
       <div data-card-photo className="relative">
-        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="h-[clamp(132px,24dvh,192px)]" />
+        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,340px)]" />
         {photoCount > 1 && (
           <div className="pointer-events-none absolute inset-x-3 top-2 flex gap-1">
             {Array.from({ length: photoCount }).map((_, i) => (
@@ -197,14 +197,14 @@ function TopCard({
 export function DeckSkeleton() {
   const dealingLine = useLine("dealing");
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <div className="relative h-[clamp(288px,48dvh,360px)]">
+    <div className="w-full max-w-sm mx-auto lg:max-w-none">
+      <div className="relative h-[clamp(288px,48dvh,360px)] lg:h-[clamp(360px,64dvh,520px)]">
         <div
           className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden animate-pulse"
           style={{ transform: "scale(0.95) translateY(14px)" }}
         />
         <div className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 overflow-hidden animate-pulse">
-          <div className="h-[clamp(132px,24dvh,192px)] bg-white/5" />
+          <div className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,340px)] bg-white/5" />
           <div className="p-5 space-y-3">
             <div className="h-6 w-2/3 rounded bg-white/10" />
             <div className="h-4 w-1/2 rounded bg-white/5" />
@@ -426,8 +426,8 @@ export function SwipeDeck({
   const upcoming = restaurants.slice(index + 1, index + 3);
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <div className="relative h-[clamp(288px,48dvh,360px)]">
+    <div className="w-full max-w-sm mx-auto lg:max-w-none">
+      <div className="relative h-[clamp(288px,48dvh,360px)] lg:h-[clamp(360px,64dvh,520px)]">
         {/* Background cards, peeking behind the top one. */}
         {upcoming
           .map((r, i) => (

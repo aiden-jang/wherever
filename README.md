@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The deck stops being a small card in a void.** On a laptop the swiping screen was a 384px card
+centred in 1280px of empty gradient, with the group's avatars, progress and reactions stacked under
+it and fighting for the vertical space this screen never has. From `lg` up they sit beside the deck
+instead, which fills the empty half and buys back the height, so the card can finally be the size of
+the thing the app is about. Below `lg` nothing changed: the phone layout still fits with the reaction
+bar above the fold, which is the constraint that shaped this screen in the first place.
+
 **A veto looks like a consequence, not a laughing face.** Both a veto and a super-like already fanned
 out to the room, but they reused the floating-reaction channel, so the thing that removes a place for
 everybody drifted up the screen exactly like somebody tapping 😂. They now land in the middle at twice

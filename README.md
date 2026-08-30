@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**A reaction comes from a person.** Reactions already floated, but from a lane derived from the
+reaction's own random id, and the sender's name was on the wire and never used — so the same person's
+emoji appeared somewhere new every time and the whole thing read as weather. Each person now keeps one
+lane for the round and their reactions carry their name. Lanes are spread across the roster rather
+than hashed, because hashing put two people at 24% and 26% in a real session and they overlapped.
+Anonymous system events have no sender, so they keep neither.
+
 **Something on screen moves when somebody else does.** During a round every signal about the group
 was near-static: the avatars sit there, and `finishedCount` only ticks when a whole deck is done,
 which can be minutes apart. So the app's central promise, that everyone is voting on this together

@@ -70,6 +70,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**A flick counts, and the card leaves like it was thrown.** A swipe was decided on distance alone, so
+a fast flick that did not travel 110px did nothing: you threw the card and it sat there. On a phone
+that is most of the gesture, because a quick flick covers less ground than a slow drag of the same
+intent. Velocity now counts too, provided the card actually moved, so a hard short flick is a vote and
+a fast tap still is not. The exit carries the throw as well: a hard flick clears the screen further
+and faster, a nudge over the line barely gets out. Reduced motion still just fades.
+
 **A one-vote win says so.** The tally and the runners-up were already computed for the Plan B list,
 but the margin was never said, so "2 of 2 picked it" read the same whether the group agreed or whether
 one swipe decided the night. When the runner-up came within a single vote the winner screen now names

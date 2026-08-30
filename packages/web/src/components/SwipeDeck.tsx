@@ -12,10 +12,9 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
-import { swipeAnnouncement, undoAnnouncement } from "@wherever/shared";
+import { swipeAnnouncement, throwDistance, throwDuration, throwVerdict, undoAnnouncement } from "@wherever/shared";
 import { useLine } from "../useLine.js";
 
-const SWIPE_THRESHOLD = 110;
 const HINT_KEY = "wherever:swipe-hint-seen";
 
 function CardFace({
@@ -107,6 +106,8 @@ function TopCard({
   // Distinguish a tap from a drag (a vote) by how far the pointer travelled between down and up,
   // so tapping never fights the swipe gesture.
   const pressStart = useRef<{ x: number; y: number } | null>(null);
+  // Last throw's speed, read by the exit. Zero for a button or key press, which is not a throw.
+  const thrownAt = useRef(0);
 
   // Photos: tapping the photo cycles through them; tapping the "i" badge or the text area opens
   // details. Fall back to the single imageUrl when there's no gallery.
@@ -154,13 +155,20 @@ function TopCard({
         }
       }}
       onDragEnd={(_, info) => {
-        if (info.offset.x > SWIPE_THRESHOLD) onCommit("right");
-        else if (info.offset.x < -SWIPE_THRESHOLD) onCommit("left");
+        const verdict = throwVerdict(info.offset.x, info.velocity.x);
+        if (!verdict) return;
+        // Remember how hard it went so the exit matches the gesture rather than a fixed 0.28s.
+        thrownAt.current = info.velocity.x;
+        onCommit(verdict);
       }}
       exit={
         reduce
           ? { opacity: 0, transition: { duration: 0.12 } }
-          : { x: exitDir === "right" ? 700 : -700, opacity: 0, transition: { duration: 0.28 } }
+          : {
+              x: exitDir === "right" ? throwDistance(thrownAt.current) : -throwDistance(thrownAt.current),
+              opacity: 0,
+              transition: { duration: throwDuration(thrownAt.current), ease: "easeOut" },
+            }
       }
     >
       <CardFace

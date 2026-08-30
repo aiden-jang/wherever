@@ -253,8 +253,14 @@ export interface IdentityMessage {
 export interface ReactionMessage {
   type: "reaction";
   emoji: string;
-  /** Display name of whoever sent it. */
+  /** Display name of whoever sent it. Always empty for a `kind`, which is a vote, not chatter. */
   from: string;
+  /**
+   * Set when this is a consequence rather than someone tapping an emoji. A veto takes a place away
+   * from the whole group and a super-like weighs the tally, so neither should drift up looking like
+   * a laughing face. Never says who: both are votes, and votes here are anonymous.
+   */
+  kind?: "veto" | "super";
 }
 
 /** The shared meetup time. Persisted so late joiners and reconnects see the same plan. */

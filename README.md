@@ -70,6 +70,17 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**A veto looks like a consequence, not a laughing face.** Both a veto and a super-like already fanned
+out to the room, but they reused the floating-reaction channel, so the thing that removes a place for
+everybody drifted up the screen exactly like somebody tapping 😂. They now land in the middle at twice
+the size behind a tint of their own colour, and they are announced, because that overlay is
+`aria-hidden` and both were silent for a screen reader. Neither names the place or the person: a veto
+is a vote, and votes here are anonymous.
+
+Closing that also closed a leak. The super-like broadcast carried the sender's display name while the
+veto deliberately carried none. A super-like is a weighted vote, so "the server never sends per-voter
+identities" has to hold on every channel, not just the progress payload. It sends no name now.
+
 **Ending the round early asks first.** "just decide now" was a bare underlined link that decided
 instantly. It is the one control that acts on everybody else's behalf, and it read like a shortcut
 rather than what it is. It now takes two steps and says the consequence in between: "2 people are

@@ -32,6 +32,8 @@ export interface FloatingReaction {
   id: string;
   emoji: string;
   from: string;
+  /** A consequence rather than chatter, and shown as one. */
+  kind?: "veto" | "super";
 }
 
 /** A stable id per session code so a reconnect keeps the same identity + votes. */
@@ -144,7 +146,10 @@ export function useSessionSocket(code: string, displayName: string) {
           return setMyVibe(msg.yours);
         case "reaction": {
           const id = crypto.randomUUID();
-          setReactions((prev) => [...prev, { id, emoji: msg.emoji, from: msg.from }]);
+          setReactions((prev) => [
+            ...prev,
+            { id, emoji: msg.emoji, from: msg.from, ...(msg.kind ? { kind: msg.kind } : {}) },
+          ]);
           // Drop it after the float animation so the list can't grow unbounded.
           setTimeout(() => setReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
           return;

@@ -87,10 +87,6 @@ export function styleFor(category: string) {
   return hit ? { emoji: hit[1], gradient: hit[2] } : FALLBACK;
 }
 
-export function distanceLabel(meters: number): string {
-  return meters < 1000 ? `${meters}m` : `${(meters / 1609).toFixed(1)} mi`;
-}
-
 /**
  * Google's primaryTypeDisplayName is often "<Cuisine> Restaurant" (e.g. "Taiwanese Restaurant"),
  * which is redundant on a restaurant card and long enough to wrap the meta row on a phone. Drop the

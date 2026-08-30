@@ -72,6 +72,14 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Distance changed unit system at a kilometre.** It printed metres under 1000 and miles over, so two
+cards a block apart could be measured in different systems in an app whose audience reads miles. It
+is feet below a tenth of a mile and miles above it now. The same function also produced "NaN mi" from
+a missing distance, and since five of its six call sites only reached it when the travel estimate had
+already returned null, the broken case was the only case it ran in. It returns nothing instead, and
+the separators around it are conditional so nothing is left dangling. Those five sites were the same
+two-call fallback copied out; that is one `distanceText` now.
+
 **The share card had the same long-name problem, on an image people post.** Its wrapper only broke
 between words, so a single word wider than the card was drawn straight off both edges; a name too
 long for two lines was cut mid-word with nothing to say so, which reads as the whole name of a

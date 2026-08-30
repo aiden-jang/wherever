@@ -6,7 +6,7 @@ import {
   useReducedMotion,
   useTransform,
 } from "framer-motion";
-import type { Restaurant, SwipeDirection } from "@wherever/shared";
+import type { Restaurant, SwipeDirection, VisitedPlace } from "@wherever/shared";
 import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
@@ -19,6 +19,7 @@ import {
   throwVerdict,
   travelLabel,
   undoAnnouncement,
+  revisitNote,
 } from "@wherever/shared";
 import { useLine } from "../useLine.js";
 
@@ -29,11 +30,14 @@ function CardFace({
   photoUrl,
   photoCount,
   photoIdx,
+  revisit,
 }: {
   restaurant: Restaurant;
   photoUrl: string | null | undefined;
   photoCount: number;
   photoIdx: number;
+  /** "you came here about 5 months ago", or null for anywhere new. */
+  revisit?: string | null;
 }) {
   // The app knows roughly forty cuisines by emoji and colour, and until now only showed you when the
   // photo failed. A pizza card and a sushi card looked identical the rest of the time.
@@ -52,6 +56,13 @@ function CardFace({
                 className={`h-1 flex-1 rounded-full ${i === photoIdx ? "bg-white" : "bg-white/35"}`}
               />
             ))}
+          </div>
+        )}
+        {revisit && (
+          <div className="pointer-events-none absolute inset-x-3 bottom-2 flex">
+            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-ink/75 px-2.5 py-1 text-2xs font-semibold text-flame backdrop-blur-sm">
+              <span aria-hidden>↺</span> {revisit}
+            </span>
           </div>
         )}
       </div>
@@ -82,8 +93,6 @@ function CardFace({
             {travelLabel(restaurant.distanceMeters) ?? distanceLabel(restaurant.distanceMeters)}
           </span>
         </div>
-        {/* Shut is the one fact worth knowing before you swipe yes, not after the group has picked
-            it. Null means the source had no hours, which is not the same as closed. */}
         {/* One line of why, from the source's own summary. Desktop only: the card is a fixed height
             and on a phone this would push the stats out of it. */}
         {restaurant.editorialSummary && (
@@ -91,6 +100,8 @@ function CardFace({
             {restaurant.editorialSummary}
           </p>
         )}
+        {/* Shut is the one fact worth knowing before you swipe yes, not after the group has picked
+            it. Null means the source had no hours, which is not the same as closed. */}
         {restaurant.openNow === false && (
           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-flare/10 px-2.5 py-1 text-xs font-semibold text-flare">
             <span aria-hidden>●</span> Closed right now
@@ -107,7 +118,7 @@ function CardFace({
 }
 
 /** A screen-reader summary of the card, so deciding isn't a guess without sight. */
-function cardDescription(r: Restaurant): string {
+function cardDescription(r: Restaurant, revisit?: string | null): string {
   const parts = [r.name, categoryLabel(r.category)];
   if (r.rating) {
     parts.push(
@@ -119,6 +130,7 @@ function cardDescription(r: Restaurant): string {
   parts.push(priceLabel(r.priceTier), travelLabel(r.distanceMeters) ?? distanceLabel(r.distanceMeters));
   // Closed is worth hearing before you vote, same as seeing it.
   if (r.openNow === false) parts.push("closed right now");
+  if (revisit) parts.push(revisit);
   return parts.filter(Boolean).join(", ");
 }
 
@@ -126,6 +138,7 @@ function cardDescription(r: Restaurant): string {
 const TAP_MOVE_TOLERANCE = 8;
 
 function TopCard({
+  revisit,
   restaurant,
   exitDir,
   onCommit,
@@ -133,6 +146,7 @@ function TopCard({
 }: {
   restaurant: Restaurant;
   exitDir: SwipeDirection;
+  revisit: string | null;
   onCommit: (dir: SwipeDirection) => void;
   onOpenDetail: (r: Restaurant) => void;
 }) {
@@ -166,7 +180,7 @@ function TopCard({
       className="absolute inset-0 rounded-[28px] bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-grab active:cursor-grabbing"
       role="group"
       aria-roledescription="restaurant card"
-      aria-label={cardDescription(restaurant)}
+      aria-label={cardDescription(restaurant, revisit)}
       style={{ x, rotate, touchAction: "pan-y" }}
       drag="x"
       dragSnapToOrigin
@@ -211,6 +225,7 @@ function TopCard({
       }
     >
       <CardFace
+        revisit={revisit}
         restaurant={restaurant}
         photoUrl={photos[photoIdx] ?? restaurant.imageUrl}
         photoCount={photos.length}
@@ -266,6 +281,7 @@ export function DeckSkeleton() {
 export function SwipeDeck({
   restaurants,
   alreadyVoted = [],
+  visited = [],
   superSpent = false,
   vetoSpent = false,
   onSwipe,
@@ -274,6 +290,8 @@ export function SwipeDeck({
 }: {
   restaurants: Restaurant[];
   alreadyVoted?: string[];
+  /** Where the group has already been, so a place out of cooldown says so instead of arriving as new. */
+  visited?: VisitedPlace[];
   superSpent?: boolean;
   /** Seeded from the server so a reconnect can't hand back a spent veto. */
   vetoSpent?: boolean;
@@ -506,7 +524,13 @@ export function SwipeDeck({
                   zIndex: -i - 1,
                 }}
               >
-                <CardFace restaurant={r} photoUrl={r.imageUrl} photoCount={0} photoIdx={0} />
+                <CardFace
+                  restaurant={r}
+                  photoUrl={r.imageUrl}
+                  photoCount={0}
+                  photoIdx={0}
+                  revisit={revisitNote(visited, r.id)}
+                />
               </div>
             </div>
           ))
@@ -518,6 +542,7 @@ export function SwipeDeck({
               key={restaurants[index]!.id}
               restaurant={restaurants[index]!}
               exitDir={exitDir}
+              revisit={revisitNote(visited, restaurants[index]!.id)}
               onCommit={commit}
               onOpenDetail={setDetail}
             />

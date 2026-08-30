@@ -72,6 +72,12 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**A long restaurant name broke out of the backups panel.** The runner-up rows are a grid, and grid
+columns floor at min-content: a bare `1fr` on desktop and the implicit `auto` column on mobile both
+grew to fit the longest name rather than letting the `truncate` inside them do anything, so the row
+ran 350px past the panel and the page scrolled sideways. Both templates are `minmax(0,1fr)` now. The
+lobby's own grid already had this right, which is what made it a slip rather than a pattern.
+
 **A veto could take the group's favourite and nobody would ever know.** Vetoed places are dropped
 from the ranking before a winner is picked, silently, so three people could agree on somewhere, one
 person could kill it, and the round would read as a clean win for second place. The winner screen now

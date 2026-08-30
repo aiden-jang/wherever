@@ -695,7 +695,14 @@ function WinnerScreen({
           </summary>
           <ol className="space-y-2 border-t border-white/10 p-3">
             {alternatives.map((choice, index) => (
-              <li key={choice.restaurant.id} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              /* minmax(0,1fr) in both templates, and the base one is not optional: grid columns floor
+                 at min-content, whether they are a bare 1fr or the implicit auto column a single-column
+                 grid gets. Either way a long restaurant name widened the column instead of letting the
+                 truncate inside it do its job, and the row ran out past the panel. */
+              <li
+                key={choice.restaurant.id}
+                className="grid gap-2 grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto]"
+              >
                 <a
                   href={mapsUrl(choice.restaurant)}
                   target="_blank"

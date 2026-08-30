@@ -9,6 +9,7 @@ import {
   RATING_OPTIONS,
   ROUND_TIMER_OPTIONS,
   SORT_OPTIONS,
+  isInNYC,
   type AmenityKey,
   type PriceTier,
   type RestaurantSort,
@@ -56,6 +57,20 @@ export function LocationPicker({
   const [nycOpen, setNycOpen] = useState(Boolean(filters.area));
 
   const nearMe = !filters.area && filters.lat == null;
+  /*
+   * The shortcuts are Manhattan and Brooklyn neighbourhoods, so somebody who searched "Denver, CO"
+   * was being offered Williamsburg. `isInNYC` was written for exactly this and called nowhere.
+   *
+   * Shown when the location is unknown, which is what "near me" means here: the browser resolves
+   * coordinates at search time, not in this form, so there is nothing yet to rule the group out on.
+   * Always shown once a neighbourhood is picked, otherwise choosing one would hide the way to undo it.
+   */
+  const showNyc =
+    Boolean(filters.area) ||
+    filters.lat == null ||
+    filters.lng == null ||
+    isInNYC(filters.lat, filters.lng);
+
   const activeNeighborhood = filters.area
     ? NEIGHBORHOODS.find((n) => n.value === filters.area)
     : undefined;
@@ -138,7 +153,8 @@ export function LocationPicker({
       )}
       {err && <p className="text-xs text-flare">{err}</p>}
 
-      {/* NYC neighborhood shortcuts, collapsed by default. */}
+      {/* NYC neighborhood shortcuts, collapsed by default, and only where they mean anything. */}
+      {showNyc && (
       <div>
         <button
           type="button"
@@ -187,6 +203,7 @@ export function LocationPicker({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

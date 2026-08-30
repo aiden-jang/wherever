@@ -70,6 +70,14 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Denver was being offered Williamsburg.** `isInNYC` exists, with a comment stating the rule it was
+written for -- the neighbourhood shortcuts only make sense inside the city, so the UI shows them only
+when the location falls in the box -- and it was called from nowhere and covered by nothing. The
+create form offered Manhattan and Brooklyn shortcuts to everyone. They now appear only when the
+resolved location is in NYC, still appear when it is unknown, because "near me" resolves coordinates
+at search time and there is nothing yet to rule anyone out on, and always appear once a neighbourhood
+is picked, since hiding them would take away the way to undo it.
+
 **One mutation never asked who was calling.** Every socket message that changes something reads the
 sender's attachment first, and most also check the host flag. `set_never_again` was dispatched
 without the socket at all, so it could not have checked even if it wanted to: any connection that

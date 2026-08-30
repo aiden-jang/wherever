@@ -72,6 +72,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**An interrupted drag left the sheet stuck open and pushed down.** Drag-to-dismiss handled start,
+move and end, but not cancel, and the OS takes a touch away often enough to matter -- an incoming
+call, a system edge gesture, the browser claiming the gesture. `touchend` never arrives in that case,
+so the offset stayed frozen wherever the finger got to and the sheet sat askew until the next touch.
+A cancelled gesture now resets the drag and never dismisses, because a cancelled gesture is not a
+decision. Verified by dragging a sheet 60px and cancelling: it snaps back and stays open.
+
 **Blocked site data hung the app on "connecting".** Every `localStorage` call in this app is wrapped
 in a try/catch; all four `sessionStorage` calls were bare. Where a browser blocks site data, touching
 storage throws on access, and one of those calls builds the join message inside the socket's `onopen`

@@ -72,6 +72,15 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Blocked site data hung the app on "connecting".** Every `localStorage` call in this app is wrapped
+in a try/catch; all four `sessionStorage` calls were bare. Where a browser blocks site data, touching
+storage throws on access, and one of those calls builds the join message inside the socket's `onopen`
+-- so the join was never sent and the session sat on "connecting" forever rather than degrading. They
+are guarded now, with an in-memory fallback for the client id that still holds identity across
+reconnects within the page and only stops surviving a refresh. Verified by making every
+`sessionStorage` access throw and joining a session anyway: no errors, no hang, and it falls back to
+asking for a name.
+
 **The avatars were not showing initials.** Two copies of the same helper, already drifted apart --
 one fell back to "?" on an empty name and the other left the circle blank -- and neither returned an
 initial: both sliced the first two characters of the whole string, so "Aiden Jang" appeared as "AI"

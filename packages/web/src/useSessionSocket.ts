@@ -40,15 +40,33 @@ export interface FloatingReaction {
   kind?: "veto" | "super";
 }
 
-/** A stable id per session code so a reconnect keeps the same identity + votes. */
+/*
+ * A stable id per session code so a reconnect keeps the same identity + votes.
+ *
+ * This runs inside `onopen` to build the join message, so it must not throw: where a browser has
+ * blocked site data, touching sessionStorage raises, the join is never sent, and the app sits on
+ * "connecting" forever rather than degrading. The in-memory fallback still holds identity across
+ * reconnects within this page; it only stops surviving a refresh.
+ */
+const fallbackClientIds = new Map<string, string>();
+
 function clientIdFor(code: string): string {
   const key = `cid:${code}`;
-  let id = sessionStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem(key, id);
+  try {
+    let id = sessionStorage.getItem(key);
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem(key, id);
+    }
+    return id;
+  } catch {
+    let id = fallbackClientIds.get(key);
+    if (!id) {
+      id = crypto.randomUUID();
+      fallbackClientIds.set(key, id);
+    }
+    return id;
   }
-  return id;
 }
 
 /**

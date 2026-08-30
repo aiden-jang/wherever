@@ -10,19 +10,21 @@
     <title>Wherever, Honestly</title>
     <meta name="description" content="Because &quot;I'm fine with whatever&quot; is a lie and everyone knows it." />
 
-    <!-- Open Graph: rich preview when someone shares the link. Relative
-         og:image so it resolves against whatever origin serves the app
-         (the custom domain isn't provisioned yet). -->
+    <!-- Open Graph: rich preview when someone shares the link, which is the only way anyone joins.
+         The image URL must be absolute; crawlers do not resolve a relative one against the page, so
+         "/og.png" meant no preview image anywhere. VITE_SITE_URL is substituted at build time. -->
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="%SITE_URL%/" />
     <meta property="og:title" content="Wherever, Honestly" />
     <meta property="og:description" content="Because &quot;I'm fine with whatever&quot; is a lie and everyone knows it." />
-    <meta property="og:image" content="/og.png" />
+    <meta property="og:image" content="%SITE_URL%/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Wherever, Honestly: a group picks dinner by swiping." />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Wherever, Honestly" />
     <meta name="twitter:description" content="Because &quot;I'm fine with whatever&quot; is a lie and everyone knows it." />
-    <meta name="twitter:image" content="/og.png" />
+    <meta name="twitter:image" content="%SITE_URL%/og.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

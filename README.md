@@ -70,6 +70,15 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The share preview had no image, which for this app is the whole front door.** `og:image` was
+relative, with a comment reasoning that it would resolve against whatever origin served the app.
+Crawlers do not do that: a relative Open Graph URL is ignored, so every link pasted into a group
+chat, the only way anyone joins, previewed with no picture. It is absolute now, along with a missing
+`og:url` and an `og:image:alt`. The origin is substituted at build time from committed config rather
+than an `.env` file, because `.env` is gitignored here and an unset variable would have shipped the
+literal `%SITE_URL%` to crawlers, which is worse than what it replaced. `SITE_URL` still overrides it
+for a preview deploy.
+
 **Three screens had no heading at all.** The swiping screen had no heading of any level, so anyone
 navigating by headings arrived mid-round with nothing to orient on; the waiting room had none either;
 and the winner screen's only h1 lived in the "nobody agreed" branch, so the app's main success screen

@@ -1,6 +1,13 @@
 import { useMemo } from "react";
 
-const COLORS = ["#ff5e2c", "#ff2d78", "#7c3aed", "#d7ff3e", "#ff8a3d"];
+// Read from the theme rather than repeated here, so a palette change reaches the confetti too.
+const COLORS = [
+  "var(--color-ember)",
+  "var(--color-flare)",
+  "var(--color-grape)",
+  "var(--color-acid)",
+  "var(--color-flame)",
+];
 
 /**
  * Lightweight CSS confetti for the match celebration. Pure divs + a keyframe (no dependency,

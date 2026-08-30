@@ -4,6 +4,8 @@ import type { Restaurant } from "@wherever/shared";
 // category is a display string like "Pizza Restaurant" / "Taiwanese Restaurant", so we match on
 // keywords (substring, case-insensitive) rather than exact names — otherwise everything real drops
 // to the generic plate. A small gradient palette keeps neighbouring cards from all looking alike.
+// Literal hex, not theme variables: shareCard.ts parses these stops to paint the winner card on a
+// canvas, and a canvas cannot read a CSS variable.
 const GRADIENTS = {
   ember: "linear-gradient(135deg, #ff5e2c, #ff2d78)",
   warm: "linear-gradient(135deg, #ff8a3d, #ff2d78)",

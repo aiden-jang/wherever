@@ -70,6 +70,14 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**One mutation never asked who was calling.** Every socket message that changes something reads the
+sender's attachment first, and most also check the host flag. `set_never_again` was dispatched
+without the socket at all, so it could not have checked even if it wanted to: any connection that
+opened and skipped the join could permanently block a restaurant from every future deck in that
+session. It stays open to everyone who joined rather than becoming host-only, because it is the
+group's memory and the button is offered to the whole group. The test that covers it was run against
+the old code first to confirm it fails there; a test that passes either way proves nothing.
+
 **The service worker cached failures and served them first.** Nothing checked `res.ok`, so a
 transient 404 on an asset or a 500 on a navigation was written to the cache and then served ahead of
 the network until somebody remembered to bump the version constant by hand; the offline fallback also

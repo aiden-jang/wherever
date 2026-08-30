@@ -160,6 +160,16 @@ function cardDescription(r: Restaurant, revisit?: string | null): string {
   return parts.filter(Boolean).join(", ");
 }
 
+/*
+ * Deck on the left, everything else on the right, and one column on a phone.
+ *
+ * The left column is capped at the card's own width so the card does not stretch on a wide screen;
+ * the right one takes the rest.
+ */
+const SPLIT =
+  "w-full lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-center lg:gap-12";
+const RAIL = "mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none lg:text-left";
+
 // A press that moves less than this many pixels counts as a tap (open details) rather than a drag.
 const TAP_MOVE_TOLERANCE = 8;
 
@@ -313,6 +323,7 @@ export function SwipeDeck({
   onSwipe,
   onUndo,
   onAnnounce,
+  aside,
 }: {
   restaurants: Restaurant[];
   alreadyVoted?: string[];
@@ -322,6 +333,14 @@ export function SwipeDeck({
   /** Seeded from the server so a reconnect can't hand back a spent veto. */
   vetoSpent?: boolean;
   onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean, isVeto?: boolean) => void;
+  /**
+   * Everything about the group, rendered in the second column on a wide screen.
+   *
+   * Passed in rather than placed beside the deck by the caller, because the deck's own status --
+   * where you are in it, what the keys do, whether you can undo -- has to go in that column too, and
+   * only the deck knows any of it. Beneath the deck on a phone, where there is no second column.
+   */
+  aside?: ReactNode;
   onUndo: (restaurantId: string) => void;
   /** Feeds the page's live region, so voting is not silent for a screen reader. */
   onAnnounce?: (text: string) => void;
@@ -472,7 +491,7 @@ export function SwipeDeck({
 
   if (done) {
     return (
-      <>
+      <div className={SPLIT}>
         <div className="text-center max-w-sm mx-auto mt-10">
           <div className="text-5xl">🧾</div>
           <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
@@ -523,15 +542,18 @@ export function SwipeDeck({
             </button>
           )}
         </div>
+        {/* Waiting on other people is exactly when their progress is worth looking at. */}
+        {aside && <div className={RAIL}>{aside}</div>}
         {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}
-      </>
+      </div>
     );
   }
 
   const upcoming = restaurants.slice(index + 1, index + 3);
 
   return (
-    <div className="w-full max-w-sm mx-auto lg:max-w-none">
+    <div className={SPLIT}>
+      <div className="mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none">
       <div className="relative h-[clamp(288px,48dvh,360px)] lg:h-[clamp(360px,64dvh,520px)]">
         {/* Background cards, peeking behind the top one. */}
         {upcoming
@@ -631,14 +653,20 @@ export function SwipeDeck({
           ♥
         </button>
       </div>
-      <p className="mt-3 text-center text-sm text-muted tabular-nums">
+      </div>
+
+      {/* The second column, and the reason it is not mostly empty: on a wide screen the deck's own
+          status used to stack under a card that already runs to the bottom of the viewport, leaving
+          this half holding one line of text. Under the deck on a phone, in the same order. */}
+      <div className={RAIL}>
+      <p className="mt-3 text-center text-sm text-muted tabular-nums lg:mt-0 lg:text-left">
         {index + 1} / {restaurants.length}
         {!superUsed && <span className="ml-2 text-grape">· ⭐ super</span>}
         {!vetoUsed && <span className="ml-2 text-flare">· 🚫 veto, kills it</span>}
       </p>
       {/* Every one of these already worked; nothing said so, and a key nobody knows about is a
           feature nobody has. Desktop only: there is no keyboard to speak of on the phone layout. */}
-      <p className="mt-3 hidden items-center justify-center gap-2 text-2xs text-muted lg:flex">
+      <p className="mt-3 hidden items-center justify-center gap-2 text-2xs text-muted lg:flex lg:justify-start">
         <Key>←</Key> pass
         <Key>→</Key> eat
         {/* The cap dims, the word does not: fading the word too put it under 4.5:1, and dimming it
@@ -651,11 +679,13 @@ export function SwipeDeck({
         <button
           type="button"
           onClick={undoLast}
-          className="mx-auto mt-2 block px-3 py-1 text-xs font-medium text-muted transition hover:text-cream hover:underline"
+          className="mx-auto mt-2 block px-3 py-1 text-xs font-medium text-muted transition hover:text-cream hover:underline lg:mx-0"
         >
           Undo last vote
         </button>
       )}
+      {aside}
+      </div>
 
       {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}
     </div>

@@ -72,6 +72,18 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The whole app was one 506kB chunk.** This is opened on a phone, outside, on cellular, so first
+paint is the part of the experience nobody thinks of as design. The decided screen is the largest
+thing in the app -- winner, plan, arrival pulse, receipt, backups, and a canvas that draws a share
+card -- and none of it is reachable until a round ends, so it is now its own chunk and is fetched
+while people are still swiping. It is in cache long before it is needed, and the reveal never waits
+on a network round trip. 506kB to 465kB, 154.6kB to 144.3kB gzipped.
+
+Splitting the routes as well was measured and rejected: it saves nothing on the invite path, because
+the weight is React and framer-motion shared by both routes rather than route code, and it buys a
+serial round trip on the one path that matters most. The next real lever is framer-motion itself, at
+roughly 47kB gzipped.
+
 **Two roles were written inline instead of named, and one had drifted.** Five screens share a
 full-screen state -- no such session, nothing survived the filters, 404, a crash, nobody agreed --
 built each time as a big glyph over a heading. Four used a 36px heading and the fifth had drifted to

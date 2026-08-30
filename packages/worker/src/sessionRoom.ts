@@ -849,7 +849,7 @@ export class SessionRoom extends DurableObject<Env> {
   /** Fetch from the source, drop anything the group already picked, cache it. */
   private async fetchFreshDeck(meta: SessionMeta): Promise<Restaurant[]> {
     const kind = this.env.RESTAURANT_SOURCE ?? "mock";
-    const apiKey = kind === "google" ? this.env.GOOGLE_PLACES_API_KEY : this.env.FOURSQUARE_API_KEY;
+    const apiKey = kind === "google" ? this.env.GOOGLE_PLACES_API_KEY : undefined;
 
     // A real Google search is about to happen → charge it against the monthly budget first. If the
     // budget is spent, don't call Google: fall back to the sample deck so the app stays playable as

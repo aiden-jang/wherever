@@ -7,7 +7,7 @@ import {
   useTransform,
 } from "framer-motion";
 import type { Restaurant, SwipeDirection, VisitedPlace } from "@wherever/shared";
-import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
+import { categoryLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
@@ -17,7 +17,7 @@ import {
   throwDistance,
   throwDuration,
   throwVerdict,
-  travelLabel,
+  distanceText,
   undoAnnouncement,
   revisitNote,
 } from "@wherever/shared";
@@ -87,11 +87,16 @@ function CardFace({
           <span className="whitespace-nowrap" title={priceLabel(restaurant.priceTier)}>
             {restaurant.priceRange ?? priceLabel(restaurant.priceTier)}
           </span>
-          <span className="text-white/20">·</span>
-          {/* Distance is the honest number; the estimate is the one people decide on. */}
-          <span className="whitespace-nowrap tabular-nums">
-            {travelLabel(restaurant.distanceMeters) ?? distanceLabel(restaurant.distanceMeters)}
-          </span>
+          {/* The estimate people decide on, the raw distance if there is no estimate, and no
+              dangling separator when the source gave no distance at all. */}
+          {distanceText(restaurant.distanceMeters) && (
+            <>
+              <span className="text-white/20">·</span>
+              <span className="whitespace-nowrap tabular-nums">
+                {distanceText(restaurant.distanceMeters)}
+              </span>
+            </>
+          )}
         </div>
         {/* One line of why, from the source's own summary. Desktop only: the card is a fixed height
             and on a phone this would push the stats out of it. */}
@@ -135,7 +140,7 @@ function Key({ children, dim = false }: { children: ReactNode; dim?: boolean }) 
 
 /** A screen-reader summary of the card, so deciding isn't a guess without sight. */
 function cardDescription(r: Restaurant, revisit?: string | null): string {
-  const parts = [r.name, categoryLabel(r.category)];
+  const parts: (string | null)[] = [r.name, categoryLabel(r.category)];
   if (r.rating) {
     parts.push(
       r.reviewCount
@@ -143,7 +148,7 @@ function cardDescription(r: Restaurant, revisit?: string | null): string {
         : `${r.rating} stars`,
     );
   }
-  parts.push(priceLabel(r.priceTier), travelLabel(r.distanceMeters) ?? distanceLabel(r.distanceMeters));
+  parts.push(priceLabel(r.priceTier), distanceText(r.distanceMeters));
   // Closed is worth hearing before you vote, same as seeing it.
   if (r.openNow === false) parts.push("closed right now");
   if (revisit) parts.push(revisit);

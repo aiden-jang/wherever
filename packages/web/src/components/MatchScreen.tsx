@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useInstallPrompt } from "../useInstallPrompt.js";
 import { line, matchReasons, nearMissLine, type ArrivalStatus, type ArrivalUpdate, type Participant, type PlannedMeetup, type Restaurant, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
-import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
-import { travelLabel } from "@wherever/shared";
+import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { distanceText } from "@wherever/shared";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
@@ -509,11 +509,14 @@ function WinnerScreen({
             </span>
             <span className="text-white/20">·</span>
             <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
-            <span className="text-white/20">·</span>
-            {/* Same order as the card: the estimate people decide on, not the raw straight line. */}
-            <span className="whitespace-nowrap tabular-nums">
-              {travelLabel(restaurant.distanceMeters) ?? distanceLabel(restaurant.distanceMeters)}
-            </span>
+            {distanceText(restaurant.distanceMeters) && (
+              <>
+                <span className="text-white/20">·</span>
+                <span className="whitespace-nowrap tabular-nums">
+                  {distanceText(restaurant.distanceMeters)}
+                </span>
+              </>
+            )}
           </div>
           {/*
             Whether it is open, on the winner itself.
@@ -720,9 +723,10 @@ function WinnerScreen({
                   <span className="min-w-0 flex-1">
                     <strong className="block truncate text-sm text-cream">{choice.restaurant.name}</strong>
                     <span className="block truncate text-xs text-muted">
-                      {choice.rightSwipes} liked it ·{" "}
-                      {travelLabel(choice.restaurant.distanceMeters) ??
-                        distanceLabel(choice.restaurant.distanceMeters)}{" "}
+                      {choice.rightSwipes} liked it
+                      {distanceText(choice.restaurant.distanceMeters)
+                        ? ` · ${distanceText(choice.restaurant.distanceMeters)}`
+                        : ""}{" "}
                       · {priceLabel(choice.restaurant.priceTier)}
                     </span>
                   </span>

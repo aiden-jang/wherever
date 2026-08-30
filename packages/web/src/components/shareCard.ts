@@ -1,6 +1,6 @@
 import type { Restaurant } from "@wherever/shared";
-import { travelLabel, wrapToWidth } from "@wherever/shared";
-import { distanceLabel, priceLabel, styleFor } from "./cardStyle.js";
+import { distanceText, wrapToWidth } from "@wherever/shared";
+import { priceLabel, styleFor } from "./cardStyle.js";
 
 export interface WinnerCardDetails {
   rightSwipes: number;
@@ -98,7 +98,7 @@ export async function renderShareCard(
     r.rating ? `★ ${r.rating}` : "new",
     priceLabel(r.priceTier),
     // The same estimate the winner screen shows, so the picture and the page agree.
-    travelLabel(r.distanceMeters) ?? distanceLabel(r.distanceMeters),
+    distanceText(r.distanceMeters),
   ].join("   ·   ");
   ctx.fillStyle = "#a8a097";
   ctx.font = "500 32px Inter, sans-serif";

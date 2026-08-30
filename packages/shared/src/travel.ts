@@ -32,3 +32,26 @@ export function travelLabel(distanceMeters: number): string | null {
   const travel = travelEstimate(distanceMeters);
   return travel && `${travel.minutes} min ${travel.mode}`;
 }
+
+/*
+ * The raw distance, in one unit system.
+ *
+ * This used to switch systems at a kilometre -- "750m" under, "0.6 mi" over -- in an app whose
+ * audience reads miles, so two cards a block apart could be measured in different units. Feet below a
+ * tenth of a mile, miles above it.
+ */
+export function distanceLabel(distanceMeters: number): string | null {
+  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return null;
+  const miles = distanceMeters / 1609.34;
+  // Under a tenth of a mile "0.1 mi" is a shrug; feet is the number people picture.
+  if (miles < 0.1) return `${Math.max(50, Math.round((distanceMeters * 3.28084) / 50) * 50)} ft`;
+  return `${miles.toFixed(1)} mi`;
+}
+
+/**
+ * What to show for "how far away is it": the estimate people decide on, the raw distance if there is
+ * no usable estimate, and nothing at all rather than "NaN mi" when the source gave no distance.
+ */
+export function distanceText(distanceMeters: number): string | null {
+  return travelLabel(distanceMeters) ?? distanceLabel(distanceMeters);
+}

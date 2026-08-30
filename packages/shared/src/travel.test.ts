@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { travelEstimate, travelLabel } from "./travel.js";
+import { distanceLabel, distanceText, travelEstimate, travelLabel } from "./travel.js";
 
 describe("how long it takes to get there", () => {
   it("walks you to somewhere close", () => {
@@ -39,5 +39,43 @@ describe("how long it takes to get there", () => {
     const tenMinuteWalk = travelEstimate(600)!;
     expect(tenMinuteWalk.minutes).toBeGreaterThan(5);
     expect(tenMinuteWalk.minutes).toBeLessThan(15);
+  });
+});
+
+describe("the raw distance", () => {
+  it("stays in one unit system", () => {
+    // It used to say "750m" under a kilometre and "0.6 mi" over it, in an app that reads miles.
+    for (const m of [30, 300, 900, 1500, 9000]) {
+      expect(distanceLabel(m), `${m}m`).toMatch(/^(\d+ ft|\d+\.\d mi)$/);
+    }
+  });
+
+  it("uses feet for the ones a tenth of a mile does not describe", () => {
+    expect(distanceLabel(60)).toMatch(/ ft$/);
+    expect(distanceLabel(400)).toMatch(/ mi$/);
+  });
+
+  it("never claims zero feet", () => {
+    expect(distanceLabel(1)).toBe("50 ft");
+  });
+
+  it("grows with the distance", () => {
+    const mi = (s: string | null) => Number(s!.replace(" mi", ""));
+    expect(mi(distanceLabel(5000))).toBeGreaterThan(mi(distanceLabel(1000)));
+  });
+
+  it("says nothing rather than NaN when there is no distance", () => {
+    // Every card that shows this asks for the travel estimate first, so this ran only on bad data.
+    for (const bad of [0, -1, NaN, Infinity]) expect(distanceLabel(bad), String(bad)).toBeNull();
+  });
+});
+
+describe("what the card shows for how far", () => {
+  it("prefers the estimate people decide on", () => {
+    expect(distanceText(5000)).toBe(travelLabel(5000));
+  });
+
+  it("falls back to nothing, not to a broken number", () => {
+    for (const bad of [0, NaN, -5]) expect(distanceText(bad), String(bad)).toBeNull();
   });
 });

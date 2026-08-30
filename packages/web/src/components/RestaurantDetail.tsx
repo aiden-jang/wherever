@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Restaurant } from "@wherever/shared";
 import { AMENITY_OPTIONS } from "@wherever/shared";
-import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { distanceText } from "@wherever/shared";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { useScrollLock } from "../useScrollLock.js";
 import { useDialogFocus } from "../useDialogFocus.js";
@@ -154,8 +155,12 @@ export function RestaurantDetail({
                 <span className="whitespace-nowrap">{restaurant.priceRange}</span>
               </>
             )}
-            <span className="text-white/20">·</span>
-            <span className="whitespace-nowrap">{distanceLabel(restaurant.distanceMeters)}</span>
+            {distanceText(restaurant.distanceMeters) && (
+              <>
+                <span className="text-white/20">·</span>
+                <span className="whitespace-nowrap">{distanceText(restaurant.distanceMeters)}</span>
+              </>
+            )}
           </div>
 
           {restaurant.editorialSummary && (

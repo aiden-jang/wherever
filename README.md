@@ -72,6 +72,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**Not one input told the browser what it was for.** Four fields, no `autocomplete` between them, so
+a phone that knows the user's name and postcode offered neither and everyone typed them by hand every
+session. The three name fields say `name`, the location field says `postal-code` (it takes a town
+too, but the zip is the half a phone can fill), and the invite-code field says `off`, because no
+address book has a value for it. Identifying an input's purpose is also a WCAG AA requirement, not
+only a convenience.
+
 **The two riskiest controls on the swiping screen were 20px tall.** "just decide now" ends the round
 for everybody and "hurry them" prods people, and on a phone both were inline links the height of
 their own text, under the 24px tap floor. Padding grows them to 36px and a matching negative margin

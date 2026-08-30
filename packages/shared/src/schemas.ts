@@ -23,6 +23,7 @@ export const sessionFiltersSchema = z.object({
   minReviews: z.number().int().min(0).max(100_000).optional(),
   openNow: z.boolean().optional(),
   sort: z.enum(["popularity", "distance"]).optional(),
+  shuffle: z.boolean().optional(),
   revealVoters: z.boolean().optional(),
   roundSeconds: z.number().int().min(0).max(3600).optional(),
   amenities: z

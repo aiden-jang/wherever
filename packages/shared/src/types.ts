@@ -96,6 +96,11 @@ export interface SessionFilters {
   /** Deck ordering. Defaults to "popularity". */
   sort?: RestaurantSort;
   /**
+   * Deal the deck in no particular order, ignoring how the source ranked it. A vibe sets this; the
+   * host's own filters do not offer it, because "worst first" is not a thing anybody asks for.
+   */
+  shuffle?: boolean;
+  /**
    * When true, the round shows who has finished voting (names/avatars fill in). When unset/false the
    * server never sends per-person progress, so votes stay anonymous — enforced server-side, not just
    * hidden in the UI. Rides in filters to avoid a separate D1 column; it's a session preference.

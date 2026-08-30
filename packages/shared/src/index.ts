@@ -15,3 +15,4 @@ export * from "./reactionLane.js";
 export * from "./throw.js";
 export * from "./travel.js";
 export * from "./revisit.js";
+export * from "./shuffle.js";

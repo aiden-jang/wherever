@@ -7,7 +7,7 @@ import {
   useTransform,
 } from "framer-motion";
 import type { Restaurant, SwipeDirection } from "@wherever/shared";
-import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { categoryLabel, distanceLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
@@ -35,6 +35,9 @@ function CardFace({
   photoCount: number;
   photoIdx: number;
 }) {
+  // The app knows roughly forty cuisines by emoji and colour, and until now only showed you when the
+  // photo failed. A pizza card and a sushi card looked identical the rest of the time.
+  const cuisine = styleFor(restaurant.category);
   return (
     <>
       {/* data-card-photo marks the photo zone: TopCard's tap handler cycles photos here and opens
@@ -52,13 +55,16 @@ function CardFace({
           </div>
         )}
       </div>
+      <div className="h-[3px] w-full shrink-0" style={{ background: cuisine.gradient }} aria-hidden />
       <div className="p-5">
         <div className="font-display text-2xl font-bold leading-tight line-clamp-2">
           {restaurant.name}
         </div>
         {/* Category on its own line (it's the long one), then the short stats — each atomic value
             kept on one line so "3.6 mi" can never split across a wrap. */}
-        <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
+        <div className="mt-2 truncate text-sm text-muted">
+          <span aria-hidden>{cuisine.emoji}</span> {categoryLabel(restaurant.category)}
+        </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted tabular-nums">
           <span className="whitespace-nowrap text-acid">
             {restaurant.rating ? `★ ${restaurant.rating}` : "new"}

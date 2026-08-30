@@ -72,6 +72,13 @@ moment, seeded so a re-render never swaps a sentence mid-read, and a test walks 
 fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
 landing-page-only sprinkle.
 
+**The avatars were not showing initials.** Two copies of the same helper, already drifted apart --
+one fell back to "?" on an empty name and the other left the circle blank -- and neither returned an
+initial: both sliced the first two characters of the whole string, so "Aiden Jang" appeared as "AI"
+rather than "AJ", and a name starting with an emoji had its surrogate pair cut in half. There is one
+implementation now, in shared where it can be tested, taking the first grapheme of each of the first
+two names.
+
 **Not one input told the browser what it was for.** Four fields, no `autocomplete` between them, so
 a phone that knows the user's name and postcode offered neither and everyone typed them by hand every
 session. The three name fields say `name`, the location field says `postal-code` (it takes a town

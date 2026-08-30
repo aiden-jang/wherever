@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   arrivalPulseText,
   groupJourneyPulse,
+  initialsFor,
   journeyTiming,
   type ArrivalStatus,
   type ArrivalUpdate,
@@ -11,10 +12,6 @@ import {
 import { buzz } from "./haptics.js";
 
 type ShareStatus = "sharing" | "shared" | "copied" | null;
-
-function initials(name: string): string {
-  return name.trim().slice(0, 2).toUpperCase() || "?";
-}
 
 export function ArrivalPulse({
   destination,
@@ -143,7 +140,7 @@ export function ArrivalPulse({
                   className={`flex min-w-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-2 text-2xs ${late ? "border-flare/30 bg-flare/10 text-flare" : arrival ? "border-white/10 bg-black/15 text-cream/90" : "border-dashed border-white/15 text-muted"}`}
                 >
                   <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-2xs font-bold ${arrival?.status === "here" ? "bg-acid text-ink" : arrival?.status === "heading_out" ? "bg-ember/20 text-ember" : arrival?.status === "planning" ? "bg-grape/20 text-purple-300" : "bg-white/[0.06] text-muted"}`}>
-                    {initials(participant.displayName)}
+                    {initialsFor(participant.displayName)}
                   </span>
                   <span className="max-w-20 truncate">{participant.displayName}</span>
                   <span className="font-semibold">{late ? `${timing!.overdueMinutes}m late` : timing?.label ?? "check-in?"}</span>

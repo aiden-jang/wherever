@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { MotionConfig } from "framer-motion";
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import Landing from "./routes/Landing.js";
+import Share from "./routes/Share.js";
 import Lobby from "./routes/Lobby.js";
 import NotFound from "./routes/NotFound.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
@@ -44,6 +45,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/s/:code" element={<Lobby />} />
+            {/* Registered in the manifest as the app's `share_target`. */}
+            <Route path="/share" element={<Share />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </ErrorBoundary>

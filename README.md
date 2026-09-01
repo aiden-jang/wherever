@@ -17,6 +17,11 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
 - **Show who's voted, or don't.** The host chooses; anonymous is the default and enforced server-side.
 - **No accounts.** Type a name, share a code, done.
 - **Remembers where you went.** Already-visited spots stop showing up.
+- **Joins the way people actually share.** Point your camera at somebody's join QR, or share the
+  invite link *into* the installed app from any chat and land straight in the session.
+- **Behaves like an app on the home screen.** Long-press for "Start a session" or "Join with a code",
+  a badge on the icon counting the cards the room is waiting on you for, and the screen stays awake
+  while a round is running, because a table of dark phones is how a round stalls.
 
 > Part of a [platform of apps](https://github.com/aiden-jang/platform/blob/main/PLATFORM.md) that share one sign-in. Unlike the other apps (which serve their SPA
 > from the Worker), wherever keeps its web and worker as **separate deploys**: the Worker is
@@ -500,6 +505,23 @@ feels solid or broken:
   never gets stuck with no one able to start or decide.
 - **No leaks.** Stale sessions are pruned on a daily cron and bounded by a TTL, so abandoned rooms
   do not accumulate in D1.
+
+**Every browser capability degrades to nothing.** The QR scanner only appears where `BarcodeDetector`
+can do `qr_code`, the badge and the wake lock are silently absent on iOS and Firefox, and a view
+transition is skipped entirely under `prefers-reduced-motion` rather than cross-faded quietly. None of
+them are load-bearing: the typed code, the counter in the page and a plain screen swap were the whole
+app before, and still are wherever the platform says no.
+
+**A reconnect has to survive a pocket.** The socket retried six times on a capped backoff and then gave
+up for good, which is about twenty-two seconds - a lift, a walk past the kitchen, or most of what a
+restaurant's wifi does to a phone. It now also retries whenever the tab becomes visible or the browser
+reports it is back online, resetting the attempt count, because that is a new chance rather than a
+seventh go at the old one.
+
+**Sample restaurants say why they are sample restaurants.** The deck falls back to a seeded mock when
+the month's Google budget is spent *or* when no live source is configured, and those are different
+sentences. The banner used to assert the budget for both, which is a small lie about the one thing this
+app is careful with.
 
 ## Testing
 

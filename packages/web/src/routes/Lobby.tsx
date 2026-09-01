@@ -5,6 +5,7 @@ import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
 import { useAppBadge } from "../useAppBadge.js";
+import { useWakeLock } from "../useWakeLock.js";
 import { useLine } from "../useLine.js";
 import { VibeDial } from "../components/VibeDial.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
@@ -437,6 +438,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
    * screen. See `useAppBadge`.
    */
   useAppBadge(match ? 0 : Math.max(0, (deck?.length ?? 0) - alreadyVoted.length));
+  /* Awake while there is a deck and no answer yet. Not in the lobby before the cards are dealt, and
+     not after: holding the screen on for a decision already made is just draining a battery. */
+  useWakeLock(Boolean(deck?.length) && !match);
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
 
   // Announce the verdict to screen readers when it lands.

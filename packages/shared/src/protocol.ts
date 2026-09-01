@@ -16,6 +16,9 @@ import type { Vibe } from "./vibes.js";
 
 // ---- Client -> Server ----
 
+/** Why a deck is stand-in data. `budget` is the month's Google spend; `sample` is no live source. */
+export type DemoReason = "budget" | "sample";
+
 export interface JoinMessage {
   type: "join";
   code: string;
@@ -172,8 +175,14 @@ export interface DeckMessage {
   vetoUsed?: boolean;
   /** Absolute epoch-ms deadline when the round auto-decides; omitted when there's no timer. */
   roundEndsAt?: number;
-  /** True when this is the sample deck served because the monthly live-data budget is spent. */
-  demo?: boolean;
+  /**
+   * Why this deck is the sample one, or absent when it is real.
+   *
+   * A reason rather than a flag, because the banner explains itself to the room and there are two
+   * different true things it could say: the month's budget is spent, or nothing live is configured.
+   * A boolean made the client guess, and it guessed "budget" for both.
+   */
+  demo?: DemoReason;
   /**
    * How many cards the furthest-along person is ahead of you, when you arrive mid-round. Absent or
    * zero when you are level. Only sent to the person it describes.

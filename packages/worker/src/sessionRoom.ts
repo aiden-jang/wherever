@@ -28,6 +28,7 @@ import {
   resolveVibe,
   shuffleDeck,
   type Vibe,
+  type DemoReason,
   blockedIds,
 } from "@wherever/shared";
 import { createRestaurantSource, MockRestaurantSource, isDemoSource } from "./restaurantSource.js";
@@ -855,20 +856,20 @@ export class SessionRoom extends DurableObject<Env> {
     // budget is spent, don't call Google: fall back to the sample deck so the app stays playable as
     // a demo, and flag it so the client can explain why the data is stand-in.
     let source;
-    let demo = false;
+    let demo: DemoReason | undefined;
     if (kind === "google" && apiKey) {
       const meter = this.env.USAGE_METER.get(this.env.USAGE_METER.idFromName("global"));
       if (await meter.tryConsume("search")) {
         source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
       } else {
         source = new MockRestaurantSource();
-        demo = true;
+        demo = "budget";
       }
     } else {
       source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
       // Same flag the spent-budget path sets: whatever the reason, the room is being told these
       // places are stand-ins rather than being left to assume they are real.
-      demo = isDemoSource(kind, apiKey);
+      demo = isDemoSource(kind, apiKey) ? "sample" : undefined;
     }
 
     /*
@@ -902,13 +903,17 @@ export class SessionRoom extends DurableObject<Env> {
     // Seeded on the code so the same session always deals the same chaos, which is debuggable.
     const deck = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
     await this.ctx.storage.put("deck", deck);
-    await this.ctx.storage.put("demoMode", demo);
+    await this.ctx.storage.put("demoMode", demo ?? null);
     return deck;
   }
 
   /** Whether the current deck is the sample fallback served because the live-data budget is spent. */
-  private async isDemoMode(): Promise<boolean> {
-    return (await this.ctx.storage.get<boolean>("demoMode")) ?? false;
+  private async isDemoMode(): Promise<DemoReason | undefined> {
+    /* Stored as a reason since the deck was fetched. `null` for a real deck, and `true` for a room
+       whose deck predates this field, which was only ever set for the budget case. */
+    const held = await this.ctx.storage.get<DemoReason | boolean | null>("demoMode");
+    if (held === true) return "budget";
+    return held === null || held === false ? undefined : held;
   }
 
   private async getVisited(code: string): Promise<VisitedPlace[]> {

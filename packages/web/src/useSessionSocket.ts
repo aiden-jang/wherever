@@ -11,6 +11,7 @@ import type {
   Session,
   TastePulse,
   VisitedPlace,
+  DemoReason,
 } from "@wherever/shared";
 
 type Status = "connecting" | "open" | "closed";
@@ -93,7 +94,7 @@ export function useSessionSocket(code: string, displayName: string) {
   const [session, setSession] = useState<Session | null>(null);
   const [deck, setDeck] = useState<Restaurant[] | null>(null);
   // True when the deck is the sample fallback served because the monthly live-data budget is spent.
-  const [demo, setDemo] = useState(false);
+  const [demo, setDemo] = useState<DemoReason | null>(null);
   const [alreadyVoted, setAlreadyVoted] = useState<string[]>([]);
   // Whether this client already spent its super-like this round (seeded from the deck on reconnect).
   const [superUsed, setSuperUsed] = useState(false);
@@ -148,7 +149,7 @@ export function useSessionSocket(code: string, displayName: string) {
           setArrivals([]);
           setProgress(null);
           setDeck(msg.restaurants);
-          setDemo(msg.demo ?? false);
+          setDemo(msg.demo ?? null);
           setVibeEffect(msg.vibeEffect ?? null);
           setBehindBy(msg.behindBy ?? 0);
           setSuperUsed(msg.superUsed ?? false);

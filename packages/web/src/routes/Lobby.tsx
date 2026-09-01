@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { decideNowWarning, initialsFor, line } from "@wherever/shared";
+import { decideNowWarning, initialsFor, line, type DemoReason } from "@wherever/shared";
 import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
@@ -389,17 +389,21 @@ function WaitingDots() {
 }
 
 /**
- * Shown when the deck is the sample fallback: the project's monthly live-data budget (kept inside
- * Google's free tier so the demo costs nothing) is spent, so we serve stand-in restaurants. Framed
- * as "still totally playable" rather than an error.
+ * Shown when the deck is the sample fallback. Framed as "still totally playable" rather than as an
+ * error, because it is.
+ *
+ * Two reasons, two sentences. Saying "we hit our monthly budget" when the truth is "nothing live is
+ * configured" is a small lie about the one thing this app is careful about, and the server knows
+ * which it is - so it says.
  */
-function DemoBanner() {
+function DemoBanner({ reason }: { reason: DemoReason }) {
   return (
     <div className="w-full max-w-sm mx-auto mb-5 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-center text-sm">
       <p className="font-semibold text-cream">Demo mode: sample restaurants.</p>
       <p className="mt-0.5 text-muted">
-        This project hit its monthly Google API budget, so the live data is off. Everything still
-        works; real spots are back on the 1st.
+        {reason === "budget"
+          ? "This project hit its monthly Google API budget, so the live data is off. Everything still works; real spots are back on the 1st."
+          : "No live restaurant source is configured, so these are stand-ins. Everything else works exactly the same."}
       </p>
     </div>
   );
@@ -703,7 +707,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           reactions={reactions}
           roster={(session?.participants ?? []).map((p) => p.id)}
         />
-        {demo && <DemoBanner />}
+        {demo && <DemoBanner reason={demo} />}
         {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}
         {deck && deck.length > 0 ? (
           <>

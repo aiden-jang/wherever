@@ -25,6 +25,13 @@ behind a `RestaurantSource` interface (`fetchDeck(filters) -> Restaurant[]`).
 and `FoursquareRestaurantSource` stays as an alternate implementation selected
 by `RESTAURANT_SOURCE`.
 
+> **Superseded on this point.** The Foursquare source was deleted: nothing could
+> reach it, no key was ever configured, and it had drifted out of step with the
+> filtering rules the other two share. `RESTAURANT_SOURCE` now takes `google` or
+> `mock`. The `RestaurantSource` seam stays and still earns its keep, because the
+> mock behind it is what a real session gets when the month's budget is spent.
+> The rest of this record stands as written.
+
 Cost is controlled deliberately, since Google billing budgets are only alerts,
 not hard caps:
 

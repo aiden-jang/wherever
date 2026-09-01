@@ -33,7 +33,7 @@ free tiers.
 
 Restaurants come from the Google Places API (New), reached through a swappable `RestaurantSource`
 interface. Without an API key the app falls back to a seeded mock deck, so it is fully playable
-offline and in CI, and Foursquare is kept as an alternate implementation.
+offline and in CI.
 
 ## Decisions & trade-offs
 
@@ -53,7 +53,7 @@ outcomes.
 teeth: it means one holdout cannot stall the group, which is the entire reason the app exists.
 
 **The data source is swappable behind an interface.** Google Places (New) is the default, but the
-app is written against a `RestaurantSource` interface with a seeded mock and a Foursquare alternate.
+app is written against a `RestaurantSource` interface with a seeded mock behind it.
 That keeps the vendor at arm's length, keeps CI and offline dev fully playable with no key, and made
 the provider a one-line switch. See [ADR 0002](docs/adr/0002-restaurant-source.md).
 
@@ -563,8 +563,8 @@ pnpm --filter @wherever/web dev       # http://localhost:5173
 Set `RESTAURANT_SOURCE=google` and a `GOOGLE_PLACES_API_KEY` (`wrangler secret`) to use live data;
 without a key the seeded mock deck keeps the app fully playable. See
 `packages/worker/.dev.vars.example`. Restrict the key to the Places API and set a per-API usage
-quota to stay inside the budget. To use Foursquare instead, set `RESTAURANT_SOURCE=foursquare` and
-`FOURSQUARE_API_KEY`.
+quota to stay inside the budget. `RESTAURANT_SOURCE` takes `google` or `mock`; anything else gets
+the mock deck, silently, which is a real restaurant app serving fictional restaurants.
 
 ## Project layout
 

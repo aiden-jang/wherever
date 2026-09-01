@@ -50,12 +50,13 @@ export function ScanQr({ onCode, onClose }: ScanQrProps) {
         setFault("No camera, or permission was refused. Type the code instead.");
         return;
       }
-      if (stop) {
+      /* Either bail-out has to stop the tracks. Returning without doing so leaves the camera on, with
+         the indicator light lit, until the tab is closed. */
+      const el = video.current;
+      if (stop || !el) {
         stream.getTracks().forEach((t) => t.stop());
         return;
       }
-      const el = video.current;
-      if (!el) return;
       el.srcObject = stream;
       await el.play().catch(() => {});
 

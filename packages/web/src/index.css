@@ -130,6 +130,26 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * The bits of screen the phone owns: the notch, and the home indicator along the bottom.
+ *
+ * This is a `display: standalone` PWA, so installed there is no browser chrome holding content off
+ * those edges - anything pinned to one sits under it. `viewport-fit=cover` in the document head is
+ * what makes these report a real number; without it they are all zero and every rule below is a
+ * no-op that looks like it works.
+ *
+ * Named rather than written inline, because the two that matter are used from several components and
+ * `max()` against a floor is the part that is easy to forget: a bare inset is 0 on a desktop and on
+ * every phone without a notch, which would take the padding away from everybody else.
+ */
+@utility pad-safe-bottom {
+  padding-bottom: max(var(--pad, 0px), env(safe-area-inset-bottom));
+}
+
+@utility pad-safe-top {
+  padding-top: max(var(--pad, 0px), env(safe-area-inset-top));
+}
+
 /* Slow-drifting sunset aurora behind everything. */
 @keyframes aurora-drift {
   0% {

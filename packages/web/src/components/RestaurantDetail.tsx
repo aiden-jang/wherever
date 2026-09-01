@@ -79,7 +79,9 @@ export function RestaurantDetail({
           focusPanel(el);
         }}
         tabIndex={-1}
-        className="relative w-full max-w-sm max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 bg-ink-soft shadow-raised sm:rounded-3xl"
+        /* A bottom sheet on a phone, so its own last row sits over the home indicator. `pad-safe-bottom`
+           keeps whatever padding it already had on everything else. */
+        className="relative w-full max-w-sm max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 bg-ink-soft shadow-raised pad-safe-bottom sm:rounded-3xl sm:pb-0"
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragY ? "none" : "transform 0.2s ease",

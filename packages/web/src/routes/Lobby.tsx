@@ -56,13 +56,13 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
 function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
   if (reconnecting) {
     return (
-      <div className="fixed top-0 inset-x-0 z-40 bg-white/10 backdrop-blur text-cream text-center text-sm font-medium py-2">
+      <div className="fixed top-0 inset-x-0 z-40 bg-white/10 backdrop-blur text-cream text-center text-sm font-medium py-2 pad-safe-top [--pad:0.5rem]">
         Connection dropped. Reconnecting...
       </div>
     );
   }
   return (
-    <div className="fixed top-0 inset-x-0 z-40 bg-flare/90 text-ink text-center text-sm font-medium py-2">
+    <div className="fixed top-0 inset-x-0 z-40 bg-flare/90 text-ink text-center text-sm font-medium py-2 pad-safe-top [--pad:0.5rem]">
       Still can&apos;t reach the session.{" "}
       <button onClick={() => location.reload()} className="underline font-semibold">
         Reload to rejoin
@@ -114,7 +114,7 @@ interface Toast {
 function Toasts({ toasts }: { toasts: Toast[] }) {
   if (toasts.length === 0) return null;
   return (
-    <div className="fixed top-4 inset-x-0 z-40 flex flex-col items-center gap-2 px-4">
+    <div className="fixed top-0 inset-x-0 z-40 flex flex-col items-center gap-2 px-4 pad-safe-top [--pad:1rem]">
       {toasts.map((t) => (
         <div
           key={t.id}

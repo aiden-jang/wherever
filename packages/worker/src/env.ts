@@ -18,9 +18,11 @@ export interface Env {
   /** Google Places API (New) key. Restrict it to the Places API + your domain. */
   GOOGLE_PLACES_API_KEY?: string;
   /**
-   * Public origin of this Worker's API (e.g. https://api.wherever.aidenjang.com), used to
-   * build absolute photo-proxy URLs that the cross-origin web app can load in <img>. Empty
-   * in dev, where Vite proxies /api to the Worker and relative URLs work.
+   * Absolute origin to prefix photo-proxy URLs with. Unset now that the SPA and the API share
+   * one origin, so those URLs are relative. Kept because the old api.* host still routes here,
+   * and a page served from there would need absolute URLs back to itself.
    */
   PUBLIC_API_BASE?: string;
+  /** The built SPA (packages/web/dist), served from this same Worker. */
+  ASSETS: Fetcher;
 }

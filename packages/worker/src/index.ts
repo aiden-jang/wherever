@@ -44,6 +44,8 @@ app.onError((err, c) => {
   return c.json({ error: "Something broke on our end. Not your fault." }, 500);
 });
 
+// Same-origin now, so the browser sends no preflight for the SPA's own calls. Still here for
+// the old api.* host, which is cross-origin to anyone still loading the previous bundle.
 app.use("/api/*", cors());
 
 app.get("/api/health", (c) =>
@@ -212,6 +214,10 @@ app.get("/ws/:code", (c) => {
   const room = c.env.SESSION_ROOM.get(id);
   return room.fetch(c.req.raw);
 });
+
+// Anything that is not the API is the SPA: real files, with index.html as the fallback so client
+// routes resolve. Registered last so it can never shadow a route above it.
+app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 // Sessions (and their visited-history) are ephemeral — one dinner decision. Prune anything past the
 // TTL on a daily cron so D1 doesn't grow without bound. There's no FK cascade, so both tables are

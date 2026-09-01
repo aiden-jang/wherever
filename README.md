@@ -23,13 +23,14 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
   a badge on the icon counting the cards the room is waiting on you for, and the screen stays awake
   while a round is running, because a table of dark phones is how a round stalls.
 
-> Part of a [platform of apps](https://github.com/aiden-jang/platform/blob/main/PLATFORM.md) that share one sign-in. Unlike the other apps (which serve their SPA
-> from the Worker), wherever keeps its web and worker as **separate deploys**: the Worker is
-> pure API + realtime, the web is a standalone PWA.
+> Part of a [platform of apps](https://github.com/aiden-jang/platform/blob/main/PLATFORM.md) that share one sign-in. Like the others, one Worker serves both the
+> SPA and the API from a single origin. It used to be two deploys — a Pages site calling an
+> `api.` subdomain — which meant CORS, a build-time API base, and a dev setup whose origin
+> topology did not match production.
 
 ## How it works
 
-The Worker (Hono) is pure API + realtime; the web is a standalone, installable PWA that talks to it
+The Worker (Hono) is the API, the realtime layer, and the host for the installable PWA that talks to it
 over HTTP and a WebSocket. Each session is owned by **one Durable Object** (`SessionRoom`) that is
 the single authority for that session's live state: roster, the shared deck, and every vote. Durable
 data (sessions, visited history) lives in Cloudflare D1 via Drizzle. Every HTTP and WebSocket payload
@@ -626,7 +627,7 @@ docs/adr/   # architecture decision records
 
 ## Deploy
 
-Runs entirely on Cloudflare's free tier (Worker + Durable Objects + D1, plus Pages for the web app). See [DEPLOY.md](DEPLOY.md) for the step-by-step.
+Runs entirely on Cloudflare's free tier (one Worker + Durable Objects + D1, serving the SPA too). See [DEPLOY.md](DEPLOY.md) for the step-by-step.
 
 ## Observability
 

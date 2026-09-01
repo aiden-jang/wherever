@@ -353,6 +353,42 @@ body {
   animation: vote-tick 0.42s var(--ease-spring, ease-out);
 }
 
+/*
+ * Two accessibility modes this app never answered, which is odd for one whose colour tokens carry
+ * their measured contrast ratios in the comment beside them.
+ *
+ * `prefers-contrast: more` is somebody telling the browser that the middle of the range is not
+ * working for them. `--color-muted` is the entire secondary-text tier - it is 7.56:1 and the token
+ * warns against dimming it further - so lifting that one variable raises every caption, hint and
+ * disclaimer in the app at once, without touching a component.
+ */
+@media (prefers-contrast: more) {
+  :root {
+    --color-muted: var(--color-cream);
+  }
+}
+
+/*
+ * `forced-colors: active` is Windows High Contrast, where the browser throws the palette away and
+ * paints with the system's own. Decoration that survives that is decoration painted over text: the
+ * aurora and the grain are both full-bleed layers under everything, and there is nothing left of
+ * their subtlety once the colours are replaced.
+ */
+@media (forced-colors: active) {
+  .aurora,
+  .grain::before,
+  .grain::after {
+    display: none;
+  }
+
+  /* The focus ring is the one thing that must survive, and several of them are drawn with a colour
+     the system is about to overwrite. `CanvasText` is whatever the user chose as their text. */
+  :focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora,
   .float {

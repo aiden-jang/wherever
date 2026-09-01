@@ -11,6 +11,8 @@ import {
   passesReviews,
   photoProxyUrl,
   resolveSearchCenter,
+  createRestaurantSource,
+  isDemoSource,
   type GooglePlace,
 } from "./restaurantSource.js";
 import { VIBES, type SessionFilters } from "@wherever/shared";
@@ -365,5 +367,25 @@ describe("the demo deck filters like the real one", () => {
       const got = await deck(vibe.filters);
       expect(got.length, vibe.id).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("a source name nobody meant", () => {
+  /*
+   * `RESTAURANT_SOURCE` took a third value for months after that source was deleted, and the README
+   * went on telling people to set it. A typo, or that stale instruction, put a real restaurant app on
+   * fictional restaurants with nothing said.
+   */
+  it("still deals a deck rather than refusing", () => {
+    const source = createRestaurantSource("foursquare", "some-key");
+    expect(source).toBeInstanceOf(MockRestaurantSource);
+  });
+
+  it("counts as demo data, like a spent budget does", () => {
+    expect(isDemoSource("foursquare", "some-key")).toBe(true);
+    expect(isDemoSource("mock")).toBe(true);
+    // The one case that is real: google, with a key.
+    expect(isDemoSource("google", "some-key")).toBe(false);
+    expect(isDemoSource("google", undefined)).toBe(true);
   });
 });

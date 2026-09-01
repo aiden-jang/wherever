@@ -30,7 +30,7 @@ import {
   type Vibe,
   blockedIds,
 } from "@wherever/shared";
-import { createRestaurantSource, MockRestaurantSource } from "./restaurantSource.js";
+import { createRestaurantSource, MockRestaurantSource, isDemoSource } from "./restaurantSource.js";
 import { visitedPlaces } from "./db/schema.js";
 import type { Env } from "./env.js";
 
@@ -866,6 +866,9 @@ export class SessionRoom extends DurableObject<Env> {
       }
     } else {
       source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
+      // Same flag the spent-budget path sets: whatever the reason, the room is being told these
+      // places are stand-ins rather than being left to assume they are real.
+      demo = isDemoSource(kind, apiKey);
     }
 
     /*

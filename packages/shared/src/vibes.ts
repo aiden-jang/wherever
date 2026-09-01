@@ -131,12 +131,12 @@ export function vibeReadingLine(reading: VibeReading, groupSize: number): string
   return `${option.label} is ahead, ${reading.votes} of ${reading.total}.`;
 }
 
-/*
- * What a vibe actually did to the deck, in words.
+/**
+ * What a vibe did to the deck, in words. Picking one silently rewrites the filters and the deck looks
+ * like any other, so without this the choice reads as decoration.
  *
- * Picking one silently rewrites the group's filters and the deck looks the same as any other, so the
- * choice reads as decoration. Derived from the vibe's own filters rather than written by hand, so a
- * vibe whose numbers change cannot end up described as something it no longer does.
+ * Derived from the vibe's own filters, never written by hand, so a vibe whose numbers change cannot
+ * end up described as something it no longer does.
  */
 export function vibeEffect(vibe: Vibe, base: SessionFilters): string[] {
   const { filters: wanted } = vibeOption(vibe);
@@ -162,12 +162,8 @@ export function vibeEffect(vibe: Vibe, base: SessionFilters): string[] {
   return out;
 }
 
-/**
- * One line for a toast: what the group's vibe changed.
- *
- * Never null. A vibe can genuinely change nothing (chaotic against wide-open defaults asks for the
- * deck you were already getting), and somebody who just picked one is owed an answer either way.
- */
+/** Never null. A vibe can genuinely change nothing - chaotic against wide-open defaults asks for the
+ *  deck you were already getting - and whoever just picked one is owed an answer either way. */
 export function vibeEffectLine(vibe: Vibe, base: SessionFilters): string {
   const label = vibeOption(vibe).label;
   const parts = vibeEffect(vibe, base);

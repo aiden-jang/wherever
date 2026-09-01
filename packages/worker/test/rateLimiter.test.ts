@@ -28,15 +28,16 @@ describe("RateLimiter", () => {
 
   it("lets the next window through", async () => {
     const l = limiter(`window-${crypto.randomUUID()}`);
-    expect(await l.hit(1, 60_000)).toBe(true);
-    expect(await l.hit(1, 60_000)).toBe(false);
+    expect(await l.hit(1, 5)).toBe(true);
+    expect(await l.hit(1, 5)).toBe(false);
 
     /*
-     * A window of zero: every call is already past the end of the last one, so each starts a fresh
-     * window. That is the expiry path, reachable without waiting a minute in a test.
+     * A real window, actually waited out. `windowMs: 0` looks like the cheap way to reach the expiry
+     * path and is not: the reset needs `now - start > windowMs`, so two calls inside the same
+     * millisecond do not reset, and the test passes or fails on how fast the machine is. It did both.
      */
-    expect(await l.hit(1, 0)).toBe(true);
-    expect(await l.hit(1, 0)).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 12));
+    expect(await l.hit(1, 5), "a fresh window").toBe(true);
   });
 
   it("counts each key on its own", async () => {

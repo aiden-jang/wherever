@@ -1,6 +1,5 @@
-// WebSocket message protocol. Every realtime message is one of these tagged
-// unions. Client -> server and server -> client are kept separate so each side
-// only handles what it should receive.
+// Every realtime message is one of these tagged unions. The two directions are separate types so
+// each side can only handle what it should receive.
 
 import type {
   Participant,
@@ -37,10 +36,8 @@ export interface SwipeMessage {
   direction: SwipeDirection;
   /** A super-like (weighted right-swipe). Server enforces one per participant per round. */
   super?: boolean;
-  /**
-   * A veto (absolute left-swipe): removes the place from contention whatever the majority wanted.
-   * Server enforces one per participant per round — the client hiding a spent button is not a rule.
-   */
+  /** Kills the place whatever the majority wanted. One per person per round, enforced by the server:
+   *  a client hiding a spent button is not a rule. */
   veto?: boolean;
 }
 
@@ -95,35 +92,21 @@ export interface SetArrivalMessage {
   travelMinutes?: number;
 }
 
-/**
- * Each participant owns their own vibe pick; null clears it.
- *
- * Lobby only. A vibe changes the deck the group is about to be dealt, so changing it mid-round would
- * mean people were voting on two different sets of restaurants.
- */
+/** Lobby only. A vibe changes the deck about to be dealt, so mid-round it would put two people on
+ *  different sets of restaurants. `null` clears your pick. */
 export interface SetVibeMessage {
   type: "set_vibe";
   vibe: Vibe | null;
 }
 
-/**
- * Change the round's filters from the lobby.
- *
- * Host only, and lobby only. They used to be answered once in the create modal, by one person, before
- * anybody else had joined; the lobby is where the waiting already happens and where the group can see
- * what is being set. Mid-round would mean two people swiping different decks.
- */
+/** Host only, lobby only. Mid-round would mean two people swiping different decks. */
 export interface SetFiltersMessage {
   type: "set_filters";
   filters: SessionFilters;
 }
 
-/**
- * Mark somewhere the group has been as never-again, or take that back.
- *
- * Separate from the visit itself, which expires on its own. Any seat may set it: a place one person
- * cannot eat at is a place the group cannot go, and making this host-only would mean saying so out loud.
- */
+/** Any seat may set this, not just the host: a place one person cannot eat at is a place the group
+ *  cannot go, and asking them to say why out loud is the thing this avoids. */
 export interface SetNeverAgainMessage {
   type: "set_never_again";
   restaurantId: string;
@@ -175,24 +158,13 @@ export interface DeckMessage {
   vetoUsed?: boolean;
   /** Absolute epoch-ms deadline when the round auto-decides; omitted when there's no timer. */
   roundEndsAt?: number;
-  /**
-   * Why this deck is the sample one, or absent when it is real.
-   *
-   * A reason rather than a flag, because the banner explains itself to the room and there are two
-   * different true things it could say: the month's budget is spent, or nothing live is configured.
-   * A boolean made the client guess, and it guessed "budget" for both.
-   */
+  /** Why these are stand-ins, or absent when they are real. A reason, not a flag: the banner has two
+   *  true things it could say, and a boolean made it guess. */
   demo?: DemoReason;
-  /**
-   * How many cards the furthest-along person is ahead of you, when you arrive mid-round. Absent or
-   * zero when you are level. Only sent to the person it describes.
-   */
+  /** Cards the furthest-along person is ahead of you. Only sent to the person it describes. */
   behindBy?: number;
-  /**
-   * What the group's vibe did to the filters, in words. Computed here rather than on the client,
-   * because the vibe is folded into the session's filters before the deck is fetched, so by the
-   * time anyone sees them the before-state is gone. Absent when nobody picked a vibe.
-   */
+  /** What the vibe did to the filters, in words. Worked out here because the vibe is folded into the
+   *  filters before the deck is fetched, so by the time anyone looks the before-state is gone. */
   vibeEffect?: string;
 }
 
@@ -206,18 +178,13 @@ export interface VoteProgressMessage {
   /** How many participants have finished swiping the whole deck. */
   finishedCount: number;
   totalParticipants: number;
-  /**
-   * Participant ids that have finished, sent ONLY when the host enabled revealVoters. Omitted
-   * entirely in anonymous sessions so identities never leave the server.
-   */
+  /** Sent only when the host turned on `revealVoters`. Omitted entirely otherwise, so in an anonymous
+   *  round no identity ever leaves the server. */
   finishedIds?: string[];
   /** Anonymous aggregate only: no restaurant, category, participant, or individual ballot. */
   tastePulse?: TastePulse;
-  /**
-   * Every vote cast this round, by everyone. A count and nothing else, so it says nothing about who
-   * voted or on what, but unlike `finishedCount` it moves on every single swipe — which is the only
-   * continuous proof anybody else is actually in there with you.
-   */
+  /** A count and nothing else, so it says nothing about who voted or on what. Unlike `finishedCount`
+   *  it moves on every swipe, which is the only continuous proof somebody else is in there with you. */
   votesCast?: number;
 }
 
@@ -234,20 +201,17 @@ export interface MatchMessage {
   tiedWith?: number;
   /** A vetoed place outscored the winner. A flag, never a name: the veto stays anonymous. */
   vetoedTop?: boolean;
-  /**
-   * Which round finally decided it, 1-based. The group's indecision is the thing this app exists
-   * to end, so the number of attempts it took is worth saying out loud.
-   */
+  /** Which round decided it, 1-based. Worth saying out loud: how many tries it took is the thing this
+   *  app exists to shorten. */
   round?: number;
 }
 
-/**
+/*
  * Round ended with no winner.
  *
- * `vetoedCount` separates the two ways that happens, which read completely differently to the group:
- * nobody wanted anything, or people wanted things and every one of them got vetoed. Saying "nobody
- * liked anything" in the second case is simply false, and it is the case where somebody most wants
- * to know what happened.
+ * `vetoedCount` separates the two ways that happens, which read completely differently: nobody wanted
+ * anything, or people wanted things and every one got vetoed. "Nobody liked anything" is simply false
+ * in the second case, and that is the case where somebody most wants to know what happened.
  */
 export interface NoMatchMessage {
   type: "no_match";
@@ -272,11 +236,11 @@ export interface IdentityMessage {
   participantId: string;
 }
 
-/**
+/*
  * The host asking whoever has not finished to get on with it.
  *
- * Server-side because the client cannot know who is unfinished without being told who everybody is,
- * which is exactly what an anonymous round does not send. Delivered only to the people it is about.
+ * Server-side, because working out who is unfinished needs to know who everybody is - exactly what an
+ * anonymous round never sends. Delivered only to the people it is about.
  */
 export interface NudgeMessage {
   type: "nudge";

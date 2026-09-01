@@ -89,17 +89,15 @@ const MOCK_DECK: Restaurant[] = [
   { id: "mock-6", name: "The Reservation", category: "Italian", priceTier: 4, rating: 4.7, reviewCount: 1180, distanceMeters: 1900, imageUrl: null, address: "9 Tablecloth Row", amenities: { reservable: true, servesCocktails: true, goodForGroups: true } },
 ];
 
-/*
- * Seeded data, filtered the same way the real source filters.
+/**
+ * Seeded data, filtered exactly the way the real source filters.
  *
- * This is not only a test fixture: it is the deck a real session gets when the month's Google budget
- * is spent, so a filter that works against Google and not here is a filter that silently stops
- * working in front of people. Three did. Exclusions ("not that") were dropped entirely, the explicit
- * price-tier list was ignored in favour of the max alone, and amenities were never checked, which is
- * most of what a vibe does.
+ * Not just a test fixture: this is the deck a real session gets when the month's Google budget runs
+ * out. A filter that works against Google and not here is one that silently stops working in front of
+ * people, and three did - exclusions were dropped, the price-tier list was ignored in favour of the
+ * max alone, and amenities were never checked, which is most of what a vibe does.
  *
- * Opening hours are the one honest exception: the mock data has none, so openNow cannot be applied
- * and everything is treated as open.
+ * `openNow` is the one honest exception: this data has no opening hours, so everything reads as open.
  */
 export class MockRestaurantSource implements RestaurantSource {
   async fetchDeck(filters: SessionFilters): Promise<Restaurant[]> {
@@ -306,14 +304,11 @@ export function mapGooglePlace(
     phone: p.nationalPhoneNumber ?? null,
     openNow: p.currentOpeningHours?.openNow ?? null,
     /*
-     * Google's own hyphen, not Google's en-dash.
+     * Swap Google's en-dash for our hyphen, and nothing else.
      *
-     * `weekdayDescriptions` arrives as "Monday: 8:00 AM – 11:00 PM" and we render it verbatim, so an
-     * en-dash from an upstream API ends up sitting next to our own typography. Normalising the
-     * separator is meaning-preserving: a time range reads identically either way, and it is the one
-     * character that makes a page look machine-set.
-     *
-     * Only the separator. Nothing else about the string is rewritten.
+     * `weekdayDescriptions` arrives as "Monday: 8:00 AM - 11:00 PM" and is rendered verbatim, so an
+     * upstream en-dash ends up sitting next to our own typography. A time range reads the same either
+     * way, and it is the one character that makes a page look machine-set.
      */
     hours: p.currentOpeningHours?.weekdayDescriptions?.map((line) => line.replace(/\s[–—]\s/g, " - ")) ?? null,
     businessStatus: p.businessStatus ?? null,
@@ -438,12 +433,12 @@ export function createRestaurantSource(
       return new MockRestaurantSource();
     default:
       /*
-       * A value nobody meant. `RESTAURANT_SOURCE` used to take a third name, and the README still
-       * told you to set it long after the source was deleted - so the failure this guards is not
-       * hypothetical, it was documented.
+       * A value nobody meant. `RESTAURANT_SOURCE` took a third name for months after that source was
+       * deleted, and the README went on telling people to set it, so this is documented rather than
+       * hypothetical.
        *
-       * Still returns the mock, because a dinner app that refuses to deal cards is worse than one
-       * dealing sample ones. But it says so, and `isDemoSource` below lets the caller tell the room.
+       * Still deals the mock, because an app that refuses to deal cards is worse than one dealing samples.
+       * But it says so, and `isDemoSource` lets the caller tell the room.
        */
       console.warn(`Unknown RESTAURANT_SOURCE "${kind}". Serving the sample deck.`);
       return new MockRestaurantSource();
@@ -451,11 +446,8 @@ export function createRestaurantSource(
 }
 
 /**
- * Whether a source name would put the app on the sample deck.
- *
- * The room already has a `demo` flag for "the month's budget is spent, these are stand-ins". A
- * misspelt source is the same lie by a different route, so it takes the same flag rather than
- * quietly serving fiction that looks live.
+ * Whether this source name means stand-in restaurants. A misspelt source is the same lie as a spent
+ * budget by a different route, so it takes the same flag rather than serving fiction that looks live.
  */
 export function isDemoSource(kind: string, apiKey?: string): boolean {
   return kind !== "google" || !apiKey;

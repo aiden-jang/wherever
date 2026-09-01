@@ -11,12 +11,10 @@ export interface Vote {
   /** A super-like: a right-swipe that counts extra toward winning (see SUPER_WEIGHT). */
   super?: boolean;
   /**
-   * A veto: a left-swipe that removes the place from contention outright, however many people
-   * wanted it. The mirror of a super-like, and the one thing majority rule can't express — "I will
-   * not eat there" is a different statement from "I'd rather not", and a group that can't say it
-   * ends up back in the group chat, which is the one thing this app is against.
+   * Kills the place outright, however many people wanted it.
    *
-   * Still a vote, so the person counts as having answered that card.
+   * "I will not eat there" is a different sentence from "I'd rather not", and a group that cannot say
+   * the first one ends up back in the group chat. Still a vote: the person has answered that card.
    */
   veto?: boolean;
 }
@@ -25,8 +23,8 @@ export interface Vote {
 export const SUPER_WEIGHT = 2;
 
 /**
- * Anonymous round texture without a leaderboard. No restaurant id, category, participant id, or
- * individual vote leaves this function, so the group can feel alignment without seeing the winner.
+ * How aligned the room feels, without a leaderboard. No restaurant, category, person or individual
+ * vote leaves this function, so an anonymous round stays anonymous.
  */
 export function tastePulse(deck: Restaurant[], votes: Vote[]): TastePulse | null {
   const restaurantById = new Map(deck.map((restaurant) => [restaurant.id, restaurant]));
@@ -61,19 +59,20 @@ export interface DecisionResult {
   /** The next two non-vetoed choices by the same tally, ready when the winner is impractical. */
   alternatives?: DecisionAlternative[];
   /**
-   * How many other places finished on the winner's exact score. Zero for a clean win.
+   * How many places tied with the winner. Zero for a clean win.
    *
-   * The tie itself is broken by deck order, which every client agrees on. Without this the group is
-   * never told a tie happened at all, and "we drew" is the most interesting thing a vote can do.
+   * The tie is broken by deck order, which every client agrees on. Say it out loud: "we drew" is the
+   * most interesting thing a vote can do, and without this nobody is ever told it happened.
    */
   tiedWith: number;
   /**
-   * True when a vetoed place outscored the winner: the group's actual favourite was killed.
+   * True when a vetoed place beat the winner: the group's actual favourite was killed.
    *
-   * Vetoed places are dropped from the ranking before a winner is picked, silently, so a group could
-   * agree on somewhere, have it vetoed, and be handed second place with no sign that the vote had
-   * gone any other way. Deliberately a flag and not a name: the veto is anonymous on purpose, and
-   * naming the place it killed narrows the vetoer down in a group of four.
+   * Vetoed places are dropped before ranking, silently, so without this a group agrees on somewhere,
+   * loses it, and is handed second place with no sign the vote went any other way.
+   *
+   * A flag and not a name, on purpose. The veto is anonymous, and naming what it killed narrows the
+   * vetoer down to one person in a group of four.
    */
   vetoedTop: boolean;
 }
@@ -106,11 +105,7 @@ export function promoteAlternative(
   };
 }
 
-/**
- * Count right-swipes per restaurant. Votes are assumed already deduped per
- * (participant, restaurant) by the caller, so a participant contributes at most
- * one vote to any restaurant.
- */
+/** One per person per restaurant; the caller has already deduped. */
 export function tallyRightSwipes(votes: Vote[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const v of votes) {
@@ -121,9 +116,10 @@ export function tallyRightSwipes(votes: Vote[]): Map<string, number> {
 }
 
 /**
- * Weighted score per restaurant used to pick the winner: a super-like counts SUPER_WEIGHT, a normal
- * right-swipe counts 1. Kept separate from tallyRightSwipes so the *display* stays an honest
- * headcount ("3 of 5 wanted it") while a super-like can still tip a close race.
+ * What picks the winner: a super-like is worth `SUPER_WEIGHT`, a plain right-swipe 1.
+ *
+ * Kept apart from `tallyRightSwipes` so the number on screen stays an honest headcount - "3 of 5
+ * wanted it" - while a super-like can still tip a close race.
  */
 export function tallyScores(votes: Vote[]): Map<string, number> {
   const scores = new Map<string, number>();
@@ -146,13 +142,11 @@ export function vetoedRestaurantIds(votes: Vote[]): Set<string> {
 }
 
 /**
- * Majority wins: the restaurant with the most right-swipes takes it. Ties are broken by deck order
- * (the earlier card wins), which keeps the result deterministic. Returns null when nobody swiped
- * right on anything, or when every place that got a right-swipe was also vetoed.
+ * Majority wins, ties broken by deck order so every client lands on the same answer. Null when
+ * nobody swiped right, or when everything that got a right-swipe was also vetoed.
  *
- * A plain left swipe is still only a downvote. A veto is the exception, and it is absolute: it wins
- * over any number of right-swipes, including super-likes, because a veto that a big enough majority
- * could overrule would not be a veto.
+ * A plain left swipe is only a downvote. A veto is absolute and beats any number of right-swipes,
+ * super-likes included: one a big enough majority could overrule would not be a veto.
  */
 export function decideWinner(
   deck: Restaurant[],
@@ -187,14 +181,11 @@ export function decideWinner(
 }
 
 /**
- * How close the runner-up came, when it came close.
+ * How close the runner-up came, when it came close. Null when it was not: "won by six" is not a story.
  *
- * The tally is already computed and the runners-up are already carried for the Plan B list, but the
- * margin was never said, so "1 of 2 picked it" reads the same whether the group agreed or whether
- * one swipe decided the night. Null when it was not close, because "won by six" is not a story.
- *
- * Counted in right-swipes, the headcount people can check against each other, rather than the
- * weighted score a super-like inflates.
+ * Without it, "1 of 2 picked it" reads the same whether the group agreed or one swipe decided the
+ * night. Counted in right-swipes - the headcount people can check against each other - rather than
+ * the weighted score a super-like inflates.
  */
 export function nearMissLine(
   winnerName: string,
@@ -209,11 +200,9 @@ export function nearMissLine(
 }
 
 /**
- * What ending the round early actually does, for the host about to do it.
- *
- * "just decide now" was a bare underlined link that decided instantly on the votes so far. It is the
- * one control here that acts on everybody else's behalf, and it read like a shortcut rather than the
- * thing it is: the unfinished cards simply never count.
+ * What ending the round early does, spelled out for the host about to do it. It is the one control
+ * that acts on everybody else's behalf, and as a bare underlined link it read like a shortcut rather
+ * than what it is: the unfinished cards simply never count.
  */
 export function decideNowWarning(finishedCount: number, totalParticipants: number): string {
   const waiting = Math.max(0, totalParticipants - finishedCount);
@@ -222,12 +211,11 @@ export function decideNowWarning(finishedCount: number, totalParticipants: numbe
 }
 
 /**
- * How many cards ahead the furthest-along other person is. Zero when you are level or leading.
+ * How far ahead the furthest-along person is. Zero when you are level or leading.
  *
- * Somebody who opens the link mid-round is dropped straight into a deck with no sign that voting
- * started without them, while the group watches "3 of 4 done" become "3 of 5" for no visible reason.
- * Counted from votes rather than from arrival time, so a reconnect that missed a stretch gets the
- * same honest answer as a genuine latecomer.
+ * Somebody opening the link mid-round otherwise lands in a deck with no sign voting started without
+ * them, while the group watches "3 of 4 done" become "3 of 5" for no visible reason. Counted from
+ * votes, not arrival time, so a reconnect that missed a stretch gets the same honest answer.
  */
 export function cardsBehind(votes: Vote[], participantId: string): number {
   const counts = new Map<string, number>();

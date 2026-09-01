@@ -160,12 +160,8 @@ function cardDescription(r: Restaurant, revisit?: string | null): string {
   return parts.filter(Boolean).join(", ");
 }
 
-/*
- * Deck on the left, everything else on the right, and one column on a phone.
- *
- * The left column is capped at the card's own width so the card does not stretch on a wide screen;
- * the right one takes the rest.
- */
+/* Deck left, everything else right, one column on a phone. The left column is capped at the card's
+   own width so it does not stretch on a wide screen. */
 const SPLIT =
   "w-full lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-center lg:gap-12";
 const RAIL = "mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none lg:text-left";
@@ -251,10 +247,10 @@ function TopCard({
         onCommit(verdict);
       }}
       /*
-       * Kept, and currently inert: framer only reads `exit` under an AnimatePresence, and this deck
-       * no longer has one (see the note at the render site). This is the throw the card should make
-       * when it leaves, and the machinery behind it -- exitDir, thrownAt, throwDistance,
-       * throwDuration -- is all still here for whoever restores it.
+       * Inert right now: framer only reads `exit` under an `AnimatePresence`, and this deck no longer has
+       * one (see the note at the render site). This is the throw the card should make when it leaves, and
+       * the machinery for it - exitDir, thrownAt, throwDistance, throwDuration - is still here for whoever
+       * puts it back.
        */
       exit={
         reduce
@@ -339,12 +335,11 @@ export function SwipeDeck({
   /** Seeded from the server so a reconnect can't hand back a spent veto. */
   vetoSpent?: boolean;
   onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean, isVeto?: boolean) => void;
-  /**
-   * Everything about the group, rendered in the second column on a wide screen.
+  /*
+   * The group panel, in the second column on a wide screen and under the deck on a phone.
    *
-   * Passed in rather than placed beside the deck by the caller, because the deck's own status --
-   * where you are in it, what the keys do, whether you can undo -- has to go in that column too, and
-   * only the deck knows any of it. Beneath the deck on a phone, where there is no second column.
+   * Passed in rather than placed by the caller, because the deck's own status - where you are, what the
+   * keys do, whether you can undo - belongs in that column too, and only the deck knows any of it.
    */
   aside?: ReactNode;
   onUndo: (restaurantId: string) => void;
@@ -467,12 +462,8 @@ export function SwipeDeck({
   const done = index >= restaurants.length;
   const waitingLine = useLine("waiting");
 
-  /*
-   * "Deal the cards" is what the button says, so deal them.
-   *
-   * A short window rather than a mount-only flag: the background cards are keyed by restaurant, so a
-   * new one mounts on every swipe, and animating those would make the stack twitch on each vote.
-   */
+  /* A short window, not a mount-only flag: background cards are keyed by restaurant, so a new one
+     mounts on every swipe and animating those would make the stack twitch on each vote. */
   const [dealing, setDealing] = useState(true);
   useEffect(() => {
     play("deal");
@@ -481,10 +472,8 @@ export function SwipeDeck({
   }, []);
 
   /*
-   * Fetch the next two cards' photos while this one is being decided.
-   *
-   * A swipe reveals the card underneath instantly, but its photo starts loading only then, so on a
-   * phone every swipe flashes the fallback gradient first. Two ahead covers a fast double-swipe
+   * Two cards ahead. A swipe reveals the one underneath instantly but its photo only starts loading
+   * then, so on a phone every swipe flashed the fallback gradient first. Two covers a fast double-swipe
    * without pulling the whole deck down a mobile connection.
    */
   useEffect(() => {

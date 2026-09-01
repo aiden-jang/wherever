@@ -66,20 +66,18 @@ type ClientMap = Record<string, { participantId: string; isHost: boolean }>;
 type VoteMap = Record<string, Vote>;
 type ArrivalMap = Record<string, ArrivalUpdate>;
 /**
- * participantId -> the vibe they picked.
- *
- * Never leaves this object. Clients receive tallies only, so the "nobody finds out who said fancy"
- * promise is a property of the server rather than of every screen that renders it.
+ * Who picked which vibe. Never leaves this object - clients get tallies only, so "nobody finds out
+ * who said fancy" is a property of the server rather than of every screen that renders it.
  */
 type VibeMap = Record<string, Vibe>;
 
 /**
- * One instance per session, addressed by session code. Owns every WebSocket for
- * the session and holds the live vote state.
+ * One per session, addressed by session code. Owns every socket in the room and the live votes.
  *
- * Single-threaded, so counting a vote and deciding a winner cannot interleave:
- * the status check-and-flip in `decide` makes the result fire exactly once with
- * no locks. See docs/adr/0001-durable-objects.md.
+ * Single-threaded, so counting a vote and deciding a winner cannot interleave: the check-and-flip in
+ * `decide` fires the result exactly once with no locks. See docs/adr/0001-durable-objects.md.
+ *
+ * Every rule below is enforced here, not by hiding a control. A hidden button is not a rule.
  */
 export class SessionRoom extends DurableObject<Env> {
   /** RPC: the Worker calls this right after creating the session row. */
@@ -149,11 +147,8 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /**
-   * One person's vibe pick, tallied and fanned out without naming anybody.
-   *
-   * Lobby only: the vibe decides which deck gets fetched, so allowing changes mid-round would mean two
-   * people were voting on different restaurants. Enforced here rather than by hiding the control, since
-   * a hidden control is not a rule.
+   * One person's vibe, tallied and fanned out without naming anybody. Lobby only: the vibe decides
+   * which deck is fetched, so mid-round it would put two people on different restaurants.
    */
   private async handleSetVibe(ws: WebSocket, vibe: Vibe | null): Promise<void> {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
@@ -169,10 +164,8 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /**
-   * Send every client the tallies, and each client its own pick and nobody else's.
-   *
-   * One message per socket rather than one broadcast, because `yours` differs per recipient. That is the
-   * only per-client field, and it is the client's own answer being handed back to it.
+   * Tallies to everyone, plus each person's own pick back to them. One message per socket rather than
+   * a broadcast, because `yours` is the only field that differs per recipient.
    */
   private async broadcastVibes(vibes?: VibeMap): Promise<void> {
     const map = vibes ?? (await this.ctx.storage.get<VibeMap>("vibes")) ?? {};
@@ -192,13 +185,8 @@ export class SessionRoom extends DurableObject<Env> {
     return counts;
   }
 
-  /**
-   * Change the filters, from the lobby, as the host.
-   *
-   * Host-only because these are one shared set of rules for everybody's deck, and lobby-only because
-   * changing them mid-round would deal two people different restaurants. Both enforced here: the client
-   * hides the controls from non-hosts, and a hidden control has never been a rule.
-   */
+  /** Host only, lobby only: one shared set of rules, and changing them mid-round would deal two
+   *  people different restaurants. */
   private async handleSetFilters(ws: WebSocket, filters: SessionFilters): Promise<void> {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att?.isHost) return;
@@ -210,10 +198,8 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /**
-   * Mark somewhere as never-again, or take it back.
-   *
-   * Only touches a place the group has actually been: this is a note on a visit, not a way to blacklist
-   * arbitrary ids, and without the check anybody with the code could quietly shrink the deck.
+   * Only for a place the group has actually been. This is a note on a visit, not a way to blacklist
+   * any id you like - without the check, anybody with the code could quietly shrink the deck.
    */
   private async handleSetNeverAgain(
     ws: WebSocket,
@@ -235,12 +221,8 @@ export class SessionRoom extends DurableObject<Env> {
     this.broadcast({ type: "history", visited: await this.getVisited(meta.code) });
   }
 
-  /*
-   * Prod whoever has not finished the deck.
-   *
-   * Sent only to the sockets it is about, so nobody learns who the slow one is from a broadcast, and
-   * rate-limited on the server because a button that can be held down is not a rate limit.
-   */
+  /* Sent only to the sockets it is about, so nobody learns who the slow one is from a broadcast. Rate
+     limited on the server, because a button you can hold down is not a rate limit. */
   private async handleNudge(ws: WebSocket): Promise<void> {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att?.isHost) {
@@ -295,10 +277,9 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /**
-   * A Durable Object has a single alarm, so both timers — host-reassign grace and the round
-   * countdown — are multiplexed through here: set the alarm to the earliest pending deadline, or
-   * clear it when neither is pending. Callers set/clear `hostGraceUntil` / `roundEndsAt` then call
-   * this.
+   * One alarm per Durable Object, and two timers need it: the host-reassign grace window and the round
+   * countdown. Set it to whichever deadline is nearer, or clear it when neither is pending. Callers set
+   * `hostGraceUntil` / `roundEndsAt` and then call this.
    */
   private async rescheduleAlarm(): Promise<void> {
     const times: number[] = [];
@@ -314,9 +295,8 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /**
-   * When the host's last socket drops, DON'T hand off host immediately — a refresh or a brief blip
-   * would otherwise demote them. Instead start a grace window; host is only reassigned in alarm() if
-   * they haven't reconnected by then. The host stays host throughout, so a reconnect resumes cleanly.
+   * Don't hand off host the moment their last socket drops: a refresh or a blip would demote them.
+   * Start a grace window instead, and only reassign in `alarm()` if they are still gone.
    */
   private async scheduleHostReassignIfNeeded(closing: WebSocket): Promise<void> {
     const att = closing.deserializeAttachment() as SocketAttachment | null;
@@ -343,11 +323,8 @@ export class SessionRoom extends DurableObject<Env> {
     return undefined;
   }
 
-  /**
-   * The multiplexed alarm: run whichever deadlines have elapsed — hand host off if the grace window
-   * passed with them still gone, and/or decide the round if its countdown ran out — then reschedule
-   * anything still pending.
-   */
+  /** Run whichever deadlines have passed - hand off host, decide the round, or both - then reschedule
+   *  anything still pending. */
   override async alarm(): Promise<void> {
     const now = Date.now();
     let hostChanged = false;
@@ -374,9 +351,9 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /**
-   * Move host off `oldHostId` to another connected participant, or clear it if the room is empty.
-   * host is cached in three places — the `hostId` record, the `clientMap`, and each live socket
-   * attachment — so all three are updated and the new host keeps it across a reconnect.
+   * Move host to another connected person, or clear it if the room emptied. Host is cached in three
+   * places - the `hostId` record, the `clientMap`, and each live socket attachment - so all three move
+   * together or a reconnect picks up the old answer.
    */
   private async reassignHostAway(oldHostId: string): Promise<void> {
     let newHostId: string | undefined;
@@ -531,9 +508,9 @@ export class SessionRoom extends DurableObject<Env> {
     /*
      * The vote has to be for a card that was actually dealt.
      *
-     * "Finished the deck" is counted as distinct restaurant ids voted, so without this a client
-     * could send `deckSize` made-up ids and be finished without seeing a single real card -- and
-     * every one of those ids becomes a key in the vote map, which is Durable Object storage.
+     * "Finished the deck" counts distinct restaurant ids voted on, so without this a client could send
+     * `deckSize` invented ids and be finished without seeing a card. Every one of those ids also becomes
+     * a key in the vote map, which is Durable Object storage.
      */
     const deck = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
     if (!deck.some((r) => r.id === restaurantId)) return;
@@ -570,13 +547,12 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.put("votes", votes);
 
     /*
-     * Both land on the whole room, and both are anonymous.
+     * Both land on the whole room, and both are anonymous: it learns one happened, never who spent it or
+     * on what. Naming a veto turns "I can't eat there" into an argument, which is the conversation this
+     * app exists to avoid.
      *
-     * A veto is anonymous like every other vote: the room learns one landed, never who spent it or
-     * on what. Naming it would turn "I can't eat there" into an argument, which is the conversation
-     * this app exists to avoid. A super-like used to carry the sender's display name, which is the
-     * same leak wearing a friendlier face: it is a weighted vote, and "the server never sends
-     * per-voter identities" has to mean on every channel, not just the progress payload.
+     * The super-like carries no name for the same reason. It is a weighted vote, and "the server never
+     * sends per-voter identities" has to hold on every channel, not just the progress payload.
      */
     if (superLike) this.broadcast({ type: "reaction", emoji: "⭐", from: "", kind: "super" });
     if (vetoing) this.broadcast({ type: "reaction", emoji: "🚫", from: "", kind: "veto" });
@@ -585,9 +561,9 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /**
-   * Rewind belongs on the server too: removing only the card in React would leave the original vote
-   * in the tally and turn the replacement into an overwrite that may keep a spent super/veto. The
-   * participant id comes from the socket attachment, so nobody can rewind somebody else's choice.
+   * Rewind belongs here too. Removing the card only in React would leave the original vote in the
+   * tally, turning the replacement into an overwrite that can keep a spent super or veto. The
+   * participant comes from the socket, so nobody can rewind somebody else's choice.
    */
   private async handleUndoSwipe(ws: WebSocket, restaurantId: string): Promise<void> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
@@ -873,11 +849,9 @@ export class SessionRoom extends DurableObject<Env> {
     }
 
     /*
-     * The group's mood, folded into the filters the deck is actually fetched with.
-     *
-     * Persisted onto the session rather than applied only here, so the filter summary everyone is looking
-     * at describes the deck they were dealt. No vibe leaves the host's filters exactly as they were, which
-     * is why this is opt-in: a session where nobody picks is unchanged.
+     * The vibe, folded into the filters the deck is actually fetched with, and saved onto the session so
+     * the summary everyone is reading describes the deck they were dealt. No vibe changes nothing, which
+     * is why it is opt-in.
      */
     const reading = resolveVibe(await this.vibeCounts());
     if (reading.vibe) {
@@ -891,12 +865,8 @@ export class SessionRoom extends DurableObject<Env> {
     }
 
     const all = await source.fetchDeck(meta.filters);
-    /*
-     * Everywhere the group has been, minus the ones whose cooldown has run out.
-     *
-     * This used to exclude every visited place for good, which meant a group that actually used the app
-     * shrank its own deck one dinner at a time until nothing was left. See revisit.ts.
-     */
+    /* Everywhere the group has been, minus the ones whose cooldown expired. Excluding them forever meant
+       a group that actually used the app shrank its own deck one dinner at a time. See revisit.ts. */
     const visited = await this.getVisited(meta.code);
     const blocked = blockedIds(visited);
     const filtered = all.filter((r) => !blocked.has(r.id));

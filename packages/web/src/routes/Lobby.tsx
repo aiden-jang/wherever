@@ -10,11 +10,9 @@ import { useLine } from "../useLine.js";
 import { VibeDial } from "../components/VibeDial.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
 /*
-  * The decided screen is the largest thing in the app -- the winner, the plan, the arrival pulse, the
-  * receipt, the backups, and a canvas that draws a share card -- and none of it is reachable until a
-  * round ends. Split out, and then fetched while people are still swiping, so it is already in cache
-  * by the time it is needed and the reveal never waits on a network round trip.
-  */
+ * The decided screen is the biggest thing here and nothing reaches it until a round ends. Split out,
+ * then fetched while people are still swiping, so the reveal never waits on a network round trip.
+ */
 const MatchScreen = lazy(() =>
   import("../components/MatchScreen.js").then((m) => ({ default: m.MatchScreen })),
 );
@@ -74,12 +72,11 @@ function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
 }
 
 /**
- * Three-beat explainer for people who land here from a shared link and don't know the rules.
+ * The rules, for whoever arrived from a shared link.
  *
- * The veto gets its own line rather than a fourth card. "Majority rules" is no longer the whole
- * truth, and somebody who never learns the exception either never spends their veto or watches
- * their pick vanish without knowing why — but three beats is the joke, and a fourth column would
- * squeeze all of them on a phone.
+ * The veto gets a line rather than a fourth card: "majority rules" is no longer the whole truth, and
+ * somebody who never learns the exception either never spends theirs or watches their pick vanish
+ * with no idea why. Three beats is the joke, and four columns do not fit a phone.
  */
 function HowItWorks() {
   const steps = [
@@ -198,11 +195,9 @@ function useHostPromotionToasts(
 }
 
 /*
- * Say something once, when it becomes true, and never again for the same words.
- *
- * Used for the two things the deck screen has to explain without taking a permanent row: what the
- * group's vibe did to the filters, and that you have walked in on a round already under way. That
- * screen has to fit on a laptop without pushing the reaction bar under the fold.
+ * Say a thing once, when it becomes true, and never again for the same words. The deck screen has to
+ * explain two things without spending a permanent row on either: what the vibe did to the filters,
+ * and that you walked in on a round already under way.
  */
 function useOneShotToast(
   text: string | null,
@@ -228,11 +223,10 @@ function useOneShotToast(
 }
 
 /*
- * The one thing on this screen that moves when somebody else does.
+ * The only thing here that moves when somebody else does.
  *
- * Everything else about the group is near-static during a round: the avatars sit there, and
- * `finishedCount` only ticks when a whole deck is done, which can be minutes apart. A plain count of
- * votes cast changes on every swipe by anyone, so it is the only continuous sign that you are not
+ * The avatars sit still and `finishedCount` ticks only when a whole deck is done, which can be minutes
+ * apart. Votes cast changes on every swipe by anyone, so it is the one continuous sign you are not
  * swiping alone. Keyed on the number so the pulse restarts each time one lands.
  */
 function LiveVotes({ count }: { count: number }) {
@@ -280,11 +274,8 @@ function ParticipantChip({ p }: { p: Participant }) {
   );
 }
 
-/**
- * Reveal-voters mode: a row of participant avatars during the round, each lighting up with a check
- * once that person has finished swiping. Only rendered when the host enabled it (and the server
- * therefore sent finishedIds), so anonymous sessions never show identities.
- */
+/** Only rendered when the host turned reveal on, and the server only sends `finishedIds` then, so an
+ *  anonymous round has no identities to leak. */
 function VoterAvatars({
   participants,
   finishedIds,
@@ -389,12 +380,10 @@ function WaitingDots() {
 }
 
 /**
- * Shown when the deck is the sample fallback. Framed as "still totally playable" rather than as an
- * error, because it is.
+ * Sample restaurants, framed as still playable rather than as an error, because it is.
  *
- * Two reasons, two sentences. Saying "we hit our monthly budget" when the truth is "nothing live is
- * configured" is a small lie about the one thing this app is careful about, and the server knows
- * which it is - so it says.
+ * Two reasons, two sentences. Saying "we hit our budget" when the truth is "nothing live is
+ * configured" is a small lie about the one thing this app is careful with, and the server knows which.
  */
 function DemoBanner({ reason }: { reason: DemoReason }) {
   return (
@@ -436,11 +425,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
 
-  /*
-   * Cards this person still owes the room, on the app icon while they are looking at something else.
-   * Cleared once the round is decided: a badge for a decision already made is a lie on the home
-   * screen. See `useAppBadge`.
-   */
+  /* Cards this person still owes the room, on the icon while they are looking at something else.
+     Cleared once decided: a badge for a decision already made is a lie on the home screen. */
   useAppBadge(match ? 0 : Math.max(0, (deck?.length ?? 0) - alreadyVoted.length));
   /* Awake while there is a deck and no answer yet. Not in the lobby before the cards are dealt, and
      not after: holding the screen on for a decision already made is just draining a battery. */

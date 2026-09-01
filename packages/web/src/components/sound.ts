@@ -1,13 +1,10 @@
 /*
- * UI sound, synthesized on the fly.
+ * UI sound, synthesized rather than sampled: a dozen oscillator envelopes are a few hundred bytes
+ * where the same palette as audio files would be a few hundred kilobytes to serve and wait for.
  *
- * No audio files. A dozen oscillator envelopes are a few hundred bytes of code where the same
- * palette as samples would be a few hundred kilobytes to serve, cache, and wait for on a phone
- * that just opened the link.
- *
- * Every cue is built from a C major pentatonic scale, which contains no semitones. Cues overlap
- * constantly here — a match lands while someone is mid-swipe — and a scale with no minor seconds
- * in it can't produce a clash no matter what combination happens to sound at once.
+ * Every cue comes from a C major pentatonic scale, which has no semitones in it. Cues overlap here - a
+ * match lands while somebody is mid-swipe - and a scale with no minor seconds cannot clash whatever
+ * combination happens to sound at once.
  */
 
 const MUTE_KEY = "wherever.muted.v1";
@@ -40,14 +37,11 @@ export function toggleMuted(): boolean {
   return muted;
 }
 
-/**
- * The audio graph, built on first use.
- *
- * Browsers refuse to start an AudioContext outside a user gesture, so this deliberately isn't
- * created at import time. Every cue below is triggered by a tap, a swipe, or a key — except the
- * match fanfare, which arrives over the socket. By then the context exists because you voted to
- * get there. Someone who joins and never swipes hears nothing, which is the right trade for not
- * holding an audio graph open on every page load.
+/*
+ * Built on first use, never at import: browsers refuse to start an AudioContext outside a user
+ * gesture. Every cue is a tap, a swipe or a key, except the match fanfare - and by then the context
+ * exists because you voted to get there. Somebody who joins and never swipes hears nothing, which
+ * beats holding an audio graph open on every page load.
  */
 function graph(): { ctx: AudioContext; master: GainNode } | null {
   if (muted) return null;
@@ -69,12 +63,10 @@ function graph(): { ctx: AudioContext; master: GainNode } | null {
   return master ? { ctx, master } : null;
 }
 
-/**
- * Build the graph on the first gesture anywhere in the app.
- *
- * Cues that arrive over the socket — a match landing, someone joining the lobby — aren't gestures,
- * and iOS only lets an AudioContext resume inside one. Without this the first socket cue is
- * silently dropped, so sound would appear broken until you happened to swipe.
+/*
+ * The first gesture anywhere builds the graph. Cues that arrive over the socket are not gestures, and
+ * iOS only resumes an AudioContext inside one - so without this the first socket cue is dropped
+ * silently and sound seems broken until you happen to swipe.
  */
 export function primeOnFirstGesture(): void {
   const events = ["pointerdown", "keydown", "touchstart"] as const;
@@ -164,12 +156,10 @@ const MIN_GAP_SECONDS = 0.05;
 const lastPlayed = new Map<string, number>();
 
 /*
- * Schedule slightly ahead of now, never at now.
- *
- * The audio thread has already rendered up to currentTime by the time this runs, so a note booked
- * for exactly currentTime lands in the past and the hardware skips whatever it missed. It doesn't
- * silence the cue, which is why it's easy to miss: it eats the attack and leaves the tail. 20ms is
- * under the threshold where a delay is perceptible and comfortably clears one render quantum.
+ * Book notes slightly ahead of `currentTime`, never at it. The audio thread has already rendered up
+ * to there, so a note booked for exactly now lands in the past and the hardware skips what it missed.
+ * That does not silence the cue - it eats the attack and leaves the tail, which is why it is easy to
+ * miss. 20ms is under the threshold where a delay is audible and clears one render quantum.
  */
 const LOOKAHEAD_SECONDS = 0.02;
 

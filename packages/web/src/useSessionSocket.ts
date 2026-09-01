@@ -263,9 +263,36 @@ export function useSessionSocket(code: string, displayName: string) {
 
     connect();
 
+    /*
+     * Come back when the phone does.
+     *
+     * Six attempts on a backoff capped at five seconds is about twenty-two seconds, and then this
+     * gave up for good. Twenty-two seconds is a pocket. It is also a lift, a walk past the kitchen,
+     * and most of what a restaurant's wifi does to a phone - so the room's most patient member would
+     * look at a dead app and a Reload link, mid-round.
+     *
+     * Both signals, because neither is reliable alone: `online` does not fire when the network was
+     * never technically lost, and a backgrounded tab is often throttled out of its own retries.
+     * Attempts reset because this is a new chance, not a seventh go at the old one.
+     */
+    const retryNow = () => {
+      if (disposed) return;
+      if (document.hidden) return;
+      const open = wsRef.current?.readyState;
+      if (open === WebSocket.OPEN || open === WebSocket.CONNECTING) return;
+      clearTimeout(reconnectTimer);
+      attempts = 0;
+      setStatus("connecting");
+      connect();
+    };
+    window.addEventListener("online", retryNow);
+    document.addEventListener("visibilitychange", retryNow);
+
     return () => {
       disposed = true;
       clearTimeout(reconnectTimer);
+      window.removeEventListener("online", retryNow);
+      document.removeEventListener("visibilitychange", retryNow);
       wsRef.current?.close();
     };
   }, [code, displayName]);

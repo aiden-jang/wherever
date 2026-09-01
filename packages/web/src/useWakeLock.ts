@@ -24,7 +24,15 @@ export function useWakeLock(active: boolean) {
     const take = async () => {
       if (dropped || document.hidden) return;
       try {
-        held = await api.request("screen");
+        const lock = await api.request("screen");
+        /* Check again on the way out. The effect can tear down while this request is in flight, and
+           a lock that arrives after cleanup has already run is one nobody will ever release: the
+           screen then stays awake for the life of the tab. */
+        if (dropped) {
+          void lock.release().catch(() => {});
+          return;
+        }
+        held = lock;
       } catch {
         /* Refused on low battery, or where the policy forbids it. Nothing to say to anybody: the
            screen behaves the way it always did. */

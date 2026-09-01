@@ -389,6 +389,21 @@ body {
   }
 }
 
+/*
+ * The cross-fade the browser runs between routes. See `useViewTransition`.
+ *
+ * Shorter than the default 250ms and eased on the app's own spring, or the transition reads as the
+ * page being slow rather than as one screen becoming another.
+ *
+ * Under reduced motion the hook does not start a transition at all, so there is nothing here to
+ * disable: a snapshot cross-fade is precisely the unrequested movement that setting asks about.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: var(--ease-spring);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora,
   .float {

@@ -42,13 +42,12 @@ export interface FloatingReaction {
   kind?: "veto" | "super";
 }
 
-/*
- * A stable id per session code so a reconnect keeps the same identity + votes.
+/**
+ * A stable id per session code, so a reconnect keeps the same identity and votes.
  *
- * This runs inside `onopen` to build the join message, so it must not throw: where a browser has
- * blocked site data, touching sessionStorage raises, the join is never sent, and the app sits on
- * "connecting" forever rather than degrading. The in-memory fallback still holds identity across
- * reconnects within this page; it only stops surviving a refresh.
+ * Must not throw: this runs inside `onopen` to build the join message, and where a browser blocks site
+ * data even touching sessionStorage raises - then the join is never sent and the app sits on
+ * "connecting" forever. The in-memory fallback holds identity across reconnects, just not a refresh.
  */
 const fallbackClientIds = new Map<string, string>();
 
@@ -77,11 +76,8 @@ function clientIdFor(code: string): string {
  * match).
  */
 /**
- * Runs a state update inside a view transition where the browser has one.
- *
- * Not the router's: this swap is a websocket message arriving, not a navigation, so nothing else is
- * going to start one. Skipped whole under reduced motion, where a card flying across the screen is
- * exactly what that setting is asking not to see.
+ * A state update inside a view transition, where the browser has one. Not the router's: this swap is
+ * a websocket message arriving, so nothing else would start one. Skipped under reduced motion.
  */
 function withTransition(update: () => void) {
   const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
@@ -166,13 +162,12 @@ export function useSessionSocket(code: string, displayName: string) {
           });
         case "match":
           /*
-           * Through a view transition, so the card the room just chose grows into the result rather
-           * than the screen swapping under it. `SwipeDeck` and `MatchScreen` give their hero the same
-           * `view-transition-name`, which is the whole trick: the browser matches them by name across
-           * the two DOMs and tweens between the two boxes.
+           * Through a transition, so the chosen card grows into the result instead of the screen swapping.
+           * `SwipeDeck` and `MatchScreen` give their hero the same `view-transition-name` and the browser
+           * matches them across the two DOMs.
            *
-           * The update has to be flushed inside the callback. React batches by default, so without
-           * `flushSync` the transition captures the old DOM, resolves, and animates nothing.
+           * `flushSync` is required: React batches by default, so otherwise the transition captures the old
+           * DOM, resolves, and animates nothing.
            */
           return withTransition(() => setMatch({
             kind: "match",
@@ -266,14 +261,12 @@ export function useSessionSocket(code: string, displayName: string) {
     /*
      * Come back when the phone does.
      *
-     * Six attempts on a backoff capped at five seconds is about twenty-two seconds, and then this
-     * gave up for good. Twenty-two seconds is a pocket. It is also a lift, a walk past the kitchen,
-     * and most of what a restaurant's wifi does to a phone - so the room's most patient member would
-     * look at a dead app and a Reload link, mid-round.
+     * Six attempts on a five-second cap is about twenty-two seconds, and then this used to give up for
+     * good - which is a pocket, a lift, or most of what a restaurant's wifi does to a phone.
      *
-     * Both signals, because neither is reliable alone: `online` does not fire when the network was
-     * never technically lost, and a backgrounded tab is often throttled out of its own retries.
-     * Attempts reset because this is a new chance, not a seventh go at the old one.
+     * Both signals, because neither is enough alone: `online` never fires if the network was not
+     * technically lost, and a backgrounded tab is often throttled out of its own retries. Attempts reset,
+     * because this is a new chance rather than a seventh go at the old one.
      */
     const retryNow = () => {
       if (disposed) return;

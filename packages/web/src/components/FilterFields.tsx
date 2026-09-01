@@ -24,24 +24,21 @@ const segBase = "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-co
 const segOn = "bg-ember text-ink border-ember";
 const segOff = "bg-black/40 text-cream border-white/10 hover:border-white/30";
 
-/*
- * The knobs, extracted so the lobby can own them.
- *
- * They used to sit in the create modal, which meant one person answered eight questions alone before
- * anybody else had joined, in an app whose whole pitch is that deciding is exhausting. They live in the
- * lobby now, next to the vibe dial, where the group can see them and the waiting is happening anyway.
+/**
+ * The knobs, in the lobby rather than the create modal. One person answering eight questions alone
+ * before anybody joined was a strange opening for an app whose pitch is that deciding is exhausting.
  */
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="text-xs font-semibold uppercase tracking-wider text-muted">{children}</span>;
 }
 
-/**
- * The whole "where" control in one place: "Near me" (device location) sitting next to a zip/town
- * search, with the NYC neighborhood shortcuts tucked behind a collapsed disclosure so the form isn't
- * a wall of chips. Geocoding runs on submit via the Worker and writes the center into
- * filters.lat/lng (+ a label). Lives inside the outer create <form>, so Enter is caught here and NOT
- * allowed to submit that form.
+/*
+ * The whole "where" control: "Near me" beside a zip/town search, with the NYC shortcuts behind a
+ * fold so the form is not a wall of chips. Geocoding runs on submit through the Worker and writes the
+ * centre into `filters.lat/lng`.
+ *
+ * Lives inside the outer create `<form>`, so Enter is caught here and must not submit that one.
  */
 export function LocationPicker({
   filters,
@@ -58,12 +55,12 @@ export function LocationPicker({
 
   const nearMe = !filters.area && filters.lat == null;
   /*
-   * The shortcuts are Manhattan and Brooklyn neighbourhoods, so somebody who searched "Denver, CO"
-   * was being offered Williamsburg. `isInNYC` was written for exactly this and called nowhere.
+   * The shortcuts are Manhattan and Brooklyn, so somebody who searched "Denver, CO" was being offered
+   * Williamsburg. `isInNYC` was written for exactly this and called nowhere.
    *
-   * Shown when the location is unknown, which is what "near me" means here: the browser resolves
-   * coordinates at search time, not in this form, so there is nothing yet to rule the group out on.
-   * Always shown once a neighbourhood is picked, otherwise choosing one would hide the way to undo it.
+   * Shown while the location is unknown, which is what "near me" means here - the browser resolves
+   * coordinates at search time, so there is nothing yet to rule the group out on - and always once a
+   * neighbourhood is picked, or choosing one would hide the way to undo it.
    */
   const showNyc =
     Boolean(filters.area) ||

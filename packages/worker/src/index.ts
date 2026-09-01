@@ -18,17 +18,15 @@ const CREATE_WINDOW_MS = 60_000;
 
 const app = new Hono<{ Bindings: Env }>();
 
-/**
+/*
  * Per-user responses must never be stored.
  *
- * A GET with no Cache-Control is heuristically cacheable, so the browser invents its own freshness
- * lifetime and keeps it. That shipped in accounts and produced a real bug: sign out, press back, the
- * page re-checks the session, the browser answers from its own cache, and you appear signed in until a
- * refresh. It cuts both ways too, since a cached signed-out response keeps telling a freshly signed-in
- * person they are signed out.
+ * A GET with no `Cache-Control` is heuristically cacheable, so the browser invents a freshness
+ * lifetime and keeps it. That shipped in accounts: sign out, press back, and the browser answers the
+ * session check from its own cache so you look signed in until a refresh. It cuts both ways - a
+ * cached signed-out answer keeps telling a freshly signed-in person they are signed out.
  *
- * Deliberately conditional. A route that has already chosen its own caching knows something this
- * middleware does not, and overwriting that would silently undo an intentional decision.
+ * Conditional on purpose. A route that already chose its own caching knows something this does not.
  */
 app.use('*', async (c, next) => {
   await next();

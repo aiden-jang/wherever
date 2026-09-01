@@ -10,7 +10,8 @@ import type { SessionFilters } from "@wherever/shared";
 import {
 } from "@wherever/shared";
 import { Modal } from "../components/Modal.js";
-import { ScanQr, qrScanSupported } from "../components/ScanQr.js";
+import { ScanQr } from "../components/ScanQr.js";
+import { qrScanSupported } from "../qrScan.js";
 import {
   createSession,
   getLocation,

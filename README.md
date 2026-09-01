@@ -531,10 +531,36 @@ app is careful with.
   provider change or a bad upstream response cannot silently corrupt the deck.
 - **Session lifecycle.** The full join / vote / decide / reconnect flow runs against the **real
   Workers runtime** via `@cloudflare/vitest-pool-workers`, with migrations applied to an in-memory
-  D1 per file. 127 tests in all, 77 in `shared` and 50 in the Worker, covering the decision core
-  (including super-like weighting), the filter predicates, the usage-meter cap, and the session
+  D1 per file. 281 tests in all, 220 in `shared` and 61 in the Worker, covering the decision core
+  (including super-like weighting), the filter predicates, the usage-meter cap, the rate limiter that
+  stands between a script and unlimited session creation and paid geocoding, and the session
   lifecycle. The web package has none: everything worth asserting was pushed down into `shared` and
   the Worker so it could be tested without a browser, which is why the split is lopsided.
+- **Nothing in a test is allowed to race the clock.** The rate limiter's window test originally used
+  `windowMs: 0` to reach the expiry path without waiting. The reset needs `now - start > windowMs`, so
+  two calls inside the same millisecond do not reset it, and the test passed or failed on how fast the
+  machine was - it did both, within one session. It waits out a real 5ms window now.
+
+## How the code is commented
+
+A comment here is a warning, not an essay. The bar is whether it records something that would cost
+somebody real time to rediscover: a trap that has actually bitten, a rule the server enforces that a
+reader might assume the client owns, a constraint that fails silently when broken, or why not the
+obvious alternative.
+
+What that looks like in practice:
+
+- *Enforced here, not by hiding a control. A hidden button is not a rule.*
+- *`windowMs: 0` looks like the cheap way to reach the expiry path and is not.*
+- *Book notes slightly ahead of `currentTime`, never at it. A note booked for exactly now lands in the
+  past and the hardware skips it, which eats the attack and leaves the tail - so it is easy to miss.*
+- *A flag and not a name, on purpose. The veto is anonymous, and naming what it killed narrows the
+  vetoer down to one person in a group of four.*
+
+Everything else goes, and the reasoning behind a whole feature lives here or in `docs/adr/` rather
+than in a docstring where it rots. The tree sits at about 1,600 comment lines across 13,000 of source,
+which is lower than it looks: the rules of this game are genuinely subtle, and most of what survives is
+a rule rather than a description.
 
 ## Talking about this
 

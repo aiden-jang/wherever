@@ -32,12 +32,16 @@ that counts paid Google calls per calendar month and acts as a circuit breaker.
 - Caps default to **950/month** each (just under the 1,000 free tier, with
   headroom for a month-end burst), overridable via `wrangler` vars.
 - Over budget, the app **degrades instead of erroring**: search falls back to the
-  seeded sample deck (flagged `demo: true`, which the client shows as "demo
+  seeded sample deck (flagged `demo: "budget"`, which the client shows as "demo
   mode"), and photos fall back to the cuisine emoji. `GET /api/usage` exposes the
   live counts.
 
 This covers every paid path because they all funnel through the Worker; there is
 no other route to the key.
+
+> **Amended.** `demo` carries a reason rather than a boolean. The sample deck is also what a
+> misconfigured `RESTAURANT_SOURCE` gets, and the banner used to blame the budget for both - which is
+> a false statement in an app whose whole discipline is not claiming more than it knows.
 
 ## Consequences
 

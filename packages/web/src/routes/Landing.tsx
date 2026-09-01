@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useTransitionNavigate } from "../useViewTransition.js";
 import { buzz } from "../components/haptics.js";
 import { LocationPicker } from "../components/FilterFields";
 import { play } from "../components/sound.js";
@@ -194,7 +194,7 @@ const inputClass =
 
 
 function CreateForm({ onError }: { onError: (m: string) => void }) {
-  const navigate = useNavigate();
+  const go = useTransitionNavigate();
   const [name, setName] = useState(recallName());
   const [filters, setFilters] = useState<SessionFilters>(DEFAULT_FILTERS);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
@@ -226,7 +226,7 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
         ...filters,
         ...(usingExplicitCenter ? {} : (loc ?? {})),
       });
-      navigate(`/s/${code}`);
+      go(`/s/${code}`);
     } catch (err) {
       onError(err instanceof Error ? err.message : "Something broke. Probably not you.");
       setBusy(false);
@@ -252,7 +252,7 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
 }
 
 function JoinForm() {
-  const navigate = useNavigate();
+  const go = useTransitionNavigate();
   const [name, setName] = useState(recallName());
   const [code, setCode] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -269,7 +269,7 @@ function JoinForm() {
     e.preventDefault();
     if (!name.trim() || !isCompleteCode(code)) return;
     rememberName(name.trim());
-    navigate(`/s/${code}`);
+    go(`/s/${code}`);
   }
 
   /* The name still has to be filled in, so a scan fills the code and stops rather than jumping into

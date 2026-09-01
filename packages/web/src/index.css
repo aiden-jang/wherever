@@ -404,6 +404,16 @@ body {
   animation-timing-function: var(--ease-spring);
 }
 
+/*
+ * The chosen card growing into the result. Slower than the page fade and on the overshooting curve,
+ * because this one is the payoff rather than a screen change: `--ease-bounce` is the app's own
+ * spring for exactly this, and it is already used for the confetti and the verdict flash.
+ */
+::view-transition-group(chosen-card) {
+  animation-duration: 420ms;
+  animation-timing-function: var(--ease-bounce);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora,
   .float {

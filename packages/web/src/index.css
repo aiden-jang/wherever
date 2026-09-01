@@ -49,8 +49,10 @@
    */
   --radius-card: 28px;
 
-  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* The "Variable" suffix is the family name @fontsource registers, not a decoration. Drop it and the
+     browser silently falls through to the system stack. */
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 
   /* Spring easing, sampled from a damped harmonic oscillator rather than eyeballed as a bezier.
      A cubic-bezier physically cannot overshoot and come back, so "springy" UI built from one is

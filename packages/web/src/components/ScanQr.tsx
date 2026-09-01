@@ -6,27 +6,14 @@ import { useEffect, useRef, useState } from "react";
  * `JoinQr` has drawn one since the beginning and the only way to use it was to point a *camera app*
  * at it. This closes the loop from inside the room.
  *
- * `BarcodeDetector` is used rather than a decoding library, so nothing ships to the people who never
- * open this: the whole feature is the camera plus a browser API. Where it does not exist - Safari,
- * today - the button is not rendered at all, and the typed code stays what it always was. Detecting
- * support is `"BarcodeDetector" in window` *plus* asking whether it can do `qr_code`, because the
- * interface exists on some builds with the format unavailable.
+ * `BarcodeDetector` rather than a decoding library, so nothing ships to the people who never open
+ * this: the whole feature is the camera plus a browser API. Where it does not exist - Safari, today -
+ * the button is never rendered and the typed code stays what it always was. See `qrScan.ts` for the
+ * support probe, which lives outside this file so Fast Refresh keeps working.
  */
 interface ScanQrProps {
   onCode: (raw: string) => void;
   onClose: () => void;
-}
-
-export async function qrScanSupported(): Promise<boolean> {
-  const api = (window as unknown as {
-    BarcodeDetector?: { getSupportedFormats: () => Promise<string[]> };
-  }).BarcodeDetector;
-  if (!api || !navigator.mediaDevices?.getUserMedia) return false;
-  try {
-    return (await api.getSupportedFormats()).includes("qr_code");
-  } catch {
-    return false;
-  }
 }
 
 export function ScanQr({ onCode, onClose }: ScanQrProps) {

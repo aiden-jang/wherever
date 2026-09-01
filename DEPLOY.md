@@ -52,6 +52,11 @@ pnpm build
 npx wrangler pages deploy dist --project-name wherever
 ```
 
+**Deep links are served by `public/_redirects`**, not by a dashboard setting. `/s/CODE` and `/share`
+are routes in the SPA rather than files on disk, so without `/* /index.html 200` Pages answers its own
+404 and an invite link is dead. Static assets are matched first, so the rule costs them nothing.
+
+
 Or connect the repo in the Cloudflare Pages dashboard with build command `pnpm --filter @wherever/web build`, output dir `packages/web/dist`, and the two `VITE_*` vars set in the Pages environment.
 
 ## Restaurant data (Google Places)

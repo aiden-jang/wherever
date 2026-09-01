@@ -1,0 +1,6 @@
+# Deep links are the product: an invite is a link to /s/CODE, and the OS drops a share on /share.
+# Neither is a file on disk, so without this Cloudflare Pages answers its own 404 and the headline
+# feature depends on a dashboard setting nothing in this repo can see.
+#
+# Static files are matched before this rule, so /assets/* and the icons still serve themselves.
+/*    /index.html   200

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
+import { sessionCodeFromShare } from "@wherever/shared";
 
 /**
  * Where the OS drops a share aimed at the installed app.
@@ -10,17 +10,14 @@ import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
  * you long-press it, share it to Wherever, and land in the session. Without this the link opens a
  * browser tab beside the app you already installed.
  *
- * Only a link carrying `/s/` is treated as a code. `sessionCodeFrom` will happily pull six letters
- * out of any prose - its own comment says "join with TM4ERX" is unrecoverable, because "join with" is
- * alphabet letters too - so anything else lands on the home page rather than in a room chosen by
- * accident.
+ * The rule about what counts as a code lives in `sessionCodeFromShare`, with the tests: the cost of
+ * being loose here is dropping somebody into a stranger's dinner because they shared a review.
  */
 export default function Share() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const shared = params.get("url") ?? params.get("text") ?? "";
-  const code = /\/s\//i.test(shared) ? sessionCodeFrom(shared) : "";
-  const joinable = isCompleteCode(code);
+  const code = sessionCodeFromShare(params.get("url") ?? params.get("text") ?? "");
+  const joinable = code !== "";
 
   useEffect(() => {
     if (joinable) navigate(`/s/${code}`, { replace: true });

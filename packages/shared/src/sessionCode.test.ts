@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CODE_ALPHABET, CODE_LENGTH, isCompleteCode, sessionCodeFrom } from "./sessionCode.js";
+import { CODE_ALPHABET, CODE_LENGTH, isCompleteCode, sessionCodeFrom, sessionCodeFromShare } from "./sessionCode.js";
 
 describe("reading a pasted session code", () => {
   it("takes a plain code", () => {
@@ -45,5 +45,27 @@ describe("reading a pasted session code", () => {
   it("knows when there is enough to try", () => {
     expect(isCompleteCode("TM4ER")).toBe(false);
     expect(isCompleteCode("TM4ERX")).toBe(true);
+  });
+});
+
+describe("a code out of a share", () => {
+  it("takes one from an invite link", () => {
+    expect(sessionCodeFromShare("https://wherever.aidenjang.com/s/TM4ERX")).toBe("TM4ERX");
+    expect(sessionCodeFromShare("come eat: https://wherever.aidenjang.com/s/AYSJCE now")).toBe("AYSJCE");
+  });
+
+  it("refuses prose, however many letters it has", () => {
+    // Six alphabet letters are trivially available in any sentence. `sessionCodeFrom` would take them.
+    expect(sessionCodeFrom("check out this pizza place")).toHaveLength(6);
+    expect(sessionCodeFromShare("check out this pizza place")).toBe("");
+    expect(sessionCodeFromShare("")).toBe("");
+  });
+
+  it("refuses a link that has no complete code in it", () => {
+    expect(sessionCodeFromShare("https://wherever.aidenjang.com/s/AB")).toBe("");
+  });
+
+  it("refuses a bare code with no link around it, because that could be anything", () => {
+    expect(sessionCodeFromShare("TM4ERX")).toBe("");
   });
 });

@@ -21,3 +21,17 @@ export function sessionCodeFrom(raw: string): string {
 export function isCompleteCode(code: string): boolean {
   return code.length === CODE_LENGTH;
 }
+
+/**
+ * A join code out of something the OS handed us from a share sheet, or "" when there is none.
+ *
+ * Only a link carrying `/s/` counts. `sessionCodeFrom` above will happily pull six letters out of any
+ * prose - its own note says "join with TM4ERX" is unrecoverable, because "join with" is alphabet
+ * letters too - and the cost of being wrong here is not a failed parse. It is dropping somebody into
+ * a stranger's dinner because they shared a restaurant review.
+ */
+export function sessionCodeFromShare(shared: string): string {
+  if (!/\/s\//i.test(shared)) return "";
+  const code = sessionCodeFrom(shared);
+  return isCompleteCode(code) ? code : "";
+}

@@ -314,7 +314,22 @@ function JoinForm() {
 }
 
 export default function Landing() {
-  const [modal, setModal] = useState<"create" | "join" | null>(null);
+  /*
+   * The manifest's two home-screen shortcuts land here with `?new=1` or `?join=1`, so a long-press on
+   * the installed icon opens the dialog rather than the page behind it. Read once, on mount: they are
+   * an entry point, not state, and leaving them in the address bar would reopen the dialog on every
+   * back-navigation.
+   */
+  const [modal, setModal] = useState<"create" | "join" | null>(() => {
+    const asked = new URLSearchParams(window.location.search);
+    if (asked.has("new")) return "create";
+    if (asked.has("join")) return "join";
+    return null;
+  });
+  useEffect(() => {
+    if (!window.location.search) return;
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
   const [error, setError] = useState<string | null>(null);
 
   return (

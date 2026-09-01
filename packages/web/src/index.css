@@ -390,6 +390,26 @@ body {
 }
 
 /*
+ * Controls are pressed, not read.
+ *
+ * There are 84 buttons in this app and one of them said `select-none`. On a phone that means a long
+ * press on any of the other 83 pops the text-selection callout over a button, and on the deck - where
+ * the gesture *is* a press and drag - a slow swipe starts selecting the restaurant's name instead of
+ * moving the card.
+ *
+ * Scoped to things you press. Prose stays selectable, including the address on the match screen,
+ * which somebody may well want to copy by hand.
+ */
+button,
+summary,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  /* iOS shows its own callout menu on long press even where selection is off. */
+  -webkit-touch-callout: none;
+}
+
+/*
  * The cross-fade the browser runs between routes. See `useViewTransition`.
  *
  * Shorter than the default 250ms and eased on the app's own spring, or the transition reads as the

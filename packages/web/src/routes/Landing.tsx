@@ -10,6 +10,7 @@ import type { SessionFilters } from "@wherever/shared";
 import {
 } from "@wherever/shared";
 import { Modal } from "../components/Modal.js";
+import { ScanQr, qrScanSupported } from "../components/ScanQr.js";
 import {
   createSession,
   getLocation,
@@ -254,6 +255,15 @@ function JoinForm() {
   const navigate = useNavigate();
   const [name, setName] = useState(recallName());
   const [code, setCode] = useState("");
+  const [scanning, setScanning] = useState(false);
+  /* Asked once, on mount. The answer needs a promise, and a button that appears three seconds late is
+     worse than one that was never offered. */
+  const [canScan, setCanScan] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void qrScanSupported().then((ok) => { if (alive) setCanScan(ok); });
+    return () => { alive = false; };
+  }, []);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -261,6 +271,15 @@ function JoinForm() {
     rememberName(name.trim());
     navigate(`/s/${code}`);
   }
+
+  /* The name still has to be filled in, so a scan fills the code and stops rather than jumping into
+     the room. Scanning is the tedious half; typing your own name is not. */
+  function scanned(raw: string) {
+    setScanning(false);
+    setCode(sessionCodeFrom(raw));
+  }
+
+  if (scanning) return <ScanQr onCode={scanned} onClose={() => setScanning(false)} />;
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
@@ -281,6 +300,15 @@ function JoinForm() {
       <button type="submit" disabled={!name.trim() || !isCompleteCode(code)} className="rounded-2xl border border-white/15 px-6 py-3 text-lg font-semibold disabled:opacity-50 hover:bg-white/5 transition">
         Join
       </button>
+      {canScan ? (
+        <button
+          type="button"
+          onClick={() => setScanning(true)}
+          className="text-sm text-muted transition hover:text-cream"
+        >
+          Or point your camera at their code
+        </button>
+      ) : null}
     </form>
   );
 }

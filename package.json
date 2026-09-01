@@ -11,12 +11,13 @@
   "scripts": {
     "dev:web": "pnpm --filter @wherever/web dev",
     "dev:worker": "pnpm --filter @wherever/worker dev",
-    "deploy": "pnpm --filter @wherever/worker run deploy && pnpm --filter @wherever/web run deploy",
+    "deploy": "pnpm typecheck && pnpm lint && pnpm test && pnpm run deploy:only",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "lint": "eslint . --ext .ts,.tsx",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "deploy:only": "pnpm --filter @wherever/worker run deploy"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.18.0",

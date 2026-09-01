@@ -8,8 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "gen:icons": "node scripts/gen-icons.mjs",
-    "deploy": "VITE_API_BASE=\"https://api.wherever.aidenjang.com\" VITE_WS_BASE=\"wss://api.wherever.aidenjang.com\" pnpm build && pnpm dlx wrangler@3 pages deploy dist --project-name wherever --branch main"
+    "gen:icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

@@ -12,7 +12,10 @@ Say `run`. Bare `pnpm deploy` is a pnpm builtin for packing a workspace package 
 
 The steps below are the individual halves, for standing things up by hand. They need your own Cloudflare login, so run them yourself.
 
-The API runs on the custom domain `api.wherever.aidenjang.com` and the web app on `wherever.aidenjang.com`.
+One Worker on `wherever.aidenjang.com` serves both the SPA and the API (`/api/*`, `/ws/:code`).
+One origin means no CORS and one deploy. `api.wherever.aidenjang.com` still routes to the same
+Worker so a page loaded before the merge keeps working; remove that route once nobody is on the
+old bundle.
 
 ## 1. Authenticate
 
@@ -37,27 +40,13 @@ npx wrangler d1 migrations apply wherever --remote
 pnpm --filter @wherever/worker run deploy
 ```
 
-This also provisions the `api.wherever.aidenjang.com` custom domain declared in `wrangler.toml`.
+This builds the SPA, applies pending D1 migrations, then deploys the Worker with the built
+assets. It also provisions the custom domains declared in `wrangler.toml`.
 
-## 4. Build + deploy the web app to Pages
-
-The client reads the Worker origin from build-time env vars (it uses the Vite dev proxy when they are unset). Point them at the API's custom domain:
-
-```bash
-cd packages/web
-VITE_API_BASE="https://api.wherever.aidenjang.com" \
-VITE_WS_BASE="wss://api.wherever.aidenjang.com" \
-pnpm build
-
-npx wrangler pages deploy dist --project-name wherever
-```
-
-**Deep links are served by `public/_redirects`**, not by a dashboard setting. `/s/CODE` and `/share`
-are routes in the SPA rather than files on disk, so without `/* /index.html 200` Pages answers its own
-404 and an invite link is dead. Static assets are matched first, so the rule costs them nothing.
-
-
-Or connect the repo in the Cloudflare Pages dashboard with build command `pnpm --filter @wherever/web build`, output dir `packages/web/dist`, and the two `VITE_*` vars set in the Pages environment.
+**Deep links need no extra config.** `/s/CODE` and `/share` are SPA routes, not files, and
+`not_found_handling = "single-page-application"` in `wrangler.toml` serves `index.html` for them.
+Real files are matched first, so assets and icons are unaffected. This replaced a Pages
+`_redirects` file, which only worked because the web app used to be a separate Pages project.
 
 ## Restaurant data (Google Places)
 
@@ -66,7 +55,6 @@ The app ships on the seeded **mock** source, so it deploys and works with no API
 1. Add the source flag under `[vars]` in `packages/worker/wrangler.toml`:
    ```toml
    [vars]
-   PUBLIC_API_BASE = "https://api.wherever.aidenjang.com"
    RESTAURANT_SOURCE = "google"
    ```
 2. Set the key as a Worker secret (never commit it):

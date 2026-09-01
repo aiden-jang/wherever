@@ -4,7 +4,8 @@ import { DEFAULT_FILTERS } from "@wherever/shared";
 export { DEFAULT_FILTERS };
 
 
-// Empty in dev (Vite proxies /api to the Worker); set to the Worker origin in prod.
+// Same origin everywhere now: the Worker serves this app and the API. The override only exists
+// for pointing a local web build at a deployed Worker.
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 export async function createSession(

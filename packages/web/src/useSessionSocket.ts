@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type {
   ClientMessage,
   ArrivalUpdate,
@@ -74,6 +75,20 @@ function clientIdFor(code: string): string {
  * a stable clientId, and surfaces server-pushed state (session, deck, progress,
  * match).
  */
+/**
+ * Runs a state update inside a view transition where the browser has one.
+ *
+ * Not the router's: this swap is a websocket message arriving, not a navigation, so nothing else is
+ * going to start one. Skipped whole under reduced motion, where a card flying across the screen is
+ * exactly what that setting is asking not to see.
+ */
+function withTransition(update: () => void) {
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!doc.startViewTransition || still) return update();
+  doc.startViewTransition(() => flushSync(update));
+}
+
 export function useSessionSocket(code: string, displayName: string) {
   const [session, setSession] = useState<Session | null>(null);
   const [deck, setDeck] = useState<Restaurant[] | null>(null);
@@ -149,7 +164,16 @@ export function useSessionSocket(code: string, displayName: string) {
             votesCast: msg.votesCast,
           });
         case "match":
-          return setMatch({
+          /*
+           * Through a view transition, so the card the room just chose grows into the result rather
+           * than the screen swapping under it. `SwipeDeck` and `MatchScreen` give their hero the same
+           * `view-transition-name`, which is the whole trick: the browser matches them by name across
+           * the two DOMs and tweens between the two boxes.
+           *
+           * The update has to be flushed inside the callback. React batches by default, so without
+           * `flushSync` the transition captures the old DOM, resolves, and animates nothing.
+           */
+          return withTransition(() => setMatch({
             kind: "match",
             restaurant: msg.restaurant,
             rightSwipes: msg.rightSwipes,
@@ -159,7 +183,7 @@ export function useSessionSocket(code: string, displayName: string) {
             tiedWith: msg.tiedWith ?? 0,
             vetoedTop: msg.vetoedTop ?? false,
             round: msg.round ?? 1,
-          });
+          }));
         case "nudge":
           return setNudges((n) => n + 1);
         case "no_match":

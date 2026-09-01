@@ -511,7 +511,9 @@ function WinnerScreen({
           onClick={() => setDetailOpen(true)}
           aria-label={`See details for ${restaurant.name}`}
           className="reveal relative mt-5 block w-full text-left rounded-card bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
-          style={{ "--reveal-at": "90ms" } as CSSProperties}
+          /* The other half of the deck's `chosen-card`: same name, so the card the room picked grows
+             into this one instead of the screen cutting. */
+          style={{ "--reveal-at": "90ms", viewTransitionName: "chosen-card" } as CSSProperties}
         >
           <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
           <span className="pointer-events-none absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm">

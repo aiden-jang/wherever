@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   motion,
@@ -603,7 +604,13 @@ export function SwipeDeck({
           is what the screen already looked like, minus the pile of dead cards behind it. Restoring
           the throw animation is a separate job and wants a real thumb to tune against.
         */}
-        <div className={dealing ? "deal-in absolute inset-0" : "contents"}>
+        {/* Named for the view transition into the match screen: the browser pairs this box with the
+            one in `MatchScreen` carrying the same name and tweens between them. `contents` cannot
+            carry it - a box is required - so the name goes on the wrapper that has one. */}
+        <div
+          className={dealing ? "deal-in absolute inset-0" : "contents"}
+          style={{ viewTransitionName: "chosen-card" } as CSSProperties}
+        >
           <TopCard
             key={restaurants[index]!.id}
             restaurant={restaurants[index]!}

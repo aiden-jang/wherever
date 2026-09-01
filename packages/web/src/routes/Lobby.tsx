@@ -4,6 +4,7 @@ import { decideNowWarning, initialsFor, line } from "@wherever/shared";
 import type { Participant, TastePulse } from "@wherever/shared";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
+import { useAppBadge } from "../useAppBadge.js";
 import { useLine } from "../useLine.js";
 import { VibeDial } from "../components/VibeDial.js";
 import { SwipeDeck, DeckSkeleton } from "../components/SwipeDeck.js";
@@ -429,6 +430,13 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   const { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, errorSeq, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
+
+  /*
+   * Cards this person still owes the room, on the app icon while they are looking at something else.
+   * Cleared once the round is decided: a badge for a decision already made is a lie on the home
+   * screen. See `useAppBadge`.
+   */
+  useAppBadge(match ? 0 : Math.max(0, (deck?.length ?? 0) - alreadyVoted.length));
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
 
   // Announce the verdict to screen readers when it lands.

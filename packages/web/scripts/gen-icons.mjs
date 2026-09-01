@@ -1,3 +1,7 @@
+// The install screenshots in the manifest are NOT made here: they are captures of the running app at
+// 412x915 and 1280x800, taken with a headless browser against the dev server. Regenerate them by
+// hand when the landing page changes, or the install card shows an app that no longer exists.
+//
 // Rasterize public/icon.svg into the PNG sizes installable apps expect, and public/og.svg into
 // the PNG that link-unfurl previews need (most platforms won't render an SVG og:image).
 // Run with: pnpm --filter @wherever/web gen:icons

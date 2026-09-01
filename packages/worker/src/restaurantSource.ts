@@ -435,7 +435,28 @@ export function createRestaurantSource(
       // No key configured: degrade to mock instead of failing.
       return new MockRestaurantSource();
     case "mock":
+      return new MockRestaurantSource();
     default:
+      /*
+       * A value nobody meant. `RESTAURANT_SOURCE` used to take a third name, and the README still
+       * told you to set it long after the source was deleted - so the failure this guards is not
+       * hypothetical, it was documented.
+       *
+       * Still returns the mock, because a dinner app that refuses to deal cards is worse than one
+       * dealing sample ones. But it says so, and `isDemoSource` below lets the caller tell the room.
+       */
+      console.warn(`Unknown RESTAURANT_SOURCE "${kind}". Serving the sample deck.`);
       return new MockRestaurantSource();
   }
+}
+
+/**
+ * Whether a source name would put the app on the sample deck.
+ *
+ * The room already has a `demo` flag for "the month's budget is spent, these are stand-ins". A
+ * misspelt source is the same lie by a different route, so it takes the same flag rather than
+ * quietly serving fiction that looks live.
+ */
+export function isDemoSource(kind: string, apiKey?: string): boolean {
+  return kind !== "google" || !apiKey;
 }

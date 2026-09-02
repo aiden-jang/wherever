@@ -13,9 +13,7 @@ Say `run`. Bare `pnpm deploy` is a pnpm builtin for packing a workspace package 
 The steps below are the individual halves, for standing things up by hand. They need your own Cloudflare login, so run them yourself.
 
 One Worker on `wherever.aidenjang.com` serves both the SPA and the API (`/api/*`, `/ws/:code`).
-One origin means no CORS and one deploy. `api.wherever.aidenjang.com` still routes to the same
-Worker so a page loaded before the merge keeps working; remove that route once nobody is on the
-old bundle.
+One origin means no CORS and one deploy.
 
 ## 1. Authenticate
 

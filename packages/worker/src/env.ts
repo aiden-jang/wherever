@@ -18,9 +18,8 @@ export interface Env {
   /** Google Places API (New) key. Restrict it to the Places API + your domain. */
   GOOGLE_PLACES_API_KEY?: string;
   /**
-   * Absolute origin to prefix photo-proxy URLs with. Unset now that the SPA and the API share
-   * one origin, so those URLs are relative. Kept because the old api.* host still routes here,
-   * and a page served from there would need absolute URLs back to itself.
+   * Absolute origin to prefix photo-proxy URLs with. Unset: the SPA and the API share one
+   * origin, so those URLs are relative. Only needed if the API is ever split back out.
    */
   PUBLIC_API_BASE?: string;
   /** The built SPA (packages/web/dist), served from this same Worker. */

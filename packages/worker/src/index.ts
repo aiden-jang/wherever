@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { createSessionSchema, type SessionFilters } from "@wherever/shared";
@@ -43,10 +42,6 @@ app.onError((err, c) => {
   console.error("Unhandled error:", err);
   return c.json({ error: "Something broke on our end. Not your fault." }, 500);
 });
-
-// Same-origin now, so the browser sends no preflight for the SPA's own calls. Still here for
-// the old api.* host, which is cross-origin to anyone still loading the previous bundle.
-app.use("/api/*", cors());
 
 app.get("/api/health", (c) =>
   c.json({ ok: true, source: c.env.RESTAURANT_SOURCE ?? "mock" }),

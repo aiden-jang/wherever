@@ -77,11 +77,6 @@ run_worker_first = true
 pattern = "wherever.aidenjang.com"
 custom_domain = true
 
-# The old API-only host. Kept so a page loaded before the merge, or a cached service worker,
-# keeps working. Safe to remove once nobody is on the old bundle.
-[[routes]]
-pattern = "api.wherever.aidenjang.com"
-custom_domain = true
 
 # Workers Logs — native, free-tier error/log observability. Tail live with `wrangler tail`;
 # browse + query in the dashboard (Workers & Pages → the worker → Logs).

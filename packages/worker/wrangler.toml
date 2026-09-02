@@ -69,13 +69,13 @@ binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = true
 
-# A route, not a custom domain. `custom_domain = true` asks Cloudflare to CREATE the DNS record
-# and refuses when one already exists (code 100117) — and this hostname already has proxied A
-# records from the old Pages project. A route attaches to the existing proxied record instead and
-# runs ahead of whatever it points at, so the swap needs no DNS surgery and no downtime.
+# custom_domain, because this hostname has no DNS record of its own — Cloudflare creates and
+# manages one pointing here. A plain route cannot work without a record to attach to.
+# If a deploy ever fails with 100117 ("already has externally managed DNS records"), something
+# else owns the hostname: delete that record first rather than switching to a route.
 [[routes]]
-pattern = "wherever.aidenjang.com/*"
-zone_name = "aidenjang.com"
+pattern = "wherever.aidenjang.com"
+custom_domain = true
 
 # The old API-only host. Kept so a page loaded before the merge, or a cached service worker,
 # keeps working. Safe to remove once nobody is on the old bundle.

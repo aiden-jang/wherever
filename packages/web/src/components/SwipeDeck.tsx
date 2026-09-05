@@ -20,6 +20,8 @@ import { useLine } from "../useLine.js";
 
 const HINT_KEY = "wherever:swipe-hint-seen";
 
+const DECK_LABEL = "text-2xs uppercase tracking-wide text-muted";
+
 function CardFace({
   restaurant,
   photoUrl,
@@ -645,9 +647,7 @@ export function SwipeDeck({
 
         {showHint && !spentNote && (
           <p className="mt-4 text-center text-xs text-muted animate-pulse lg:hidden">
-            Tap for details, drag or tap below to vote. <span className="text-flare">✕ pass</span>
-            {" · "}
-            <span className="text-acid">♥ eat</span>
+            Tap the card for details. Drag it, or use the buttons.
           </p>
         )}
 
@@ -657,51 +657,71 @@ export function SwipeDeck({
 
         {/* mt-4, not mt-8: the whole swiping column has to clear a 720px laptop, and the buttons stay
           at 64px because they are the primary target on a phone. See the main in Lobby. */}
-        <div className="mt-4 flex items-center justify-center gap-5">
-          <button
-            type="button"
-            aria-label="Pass"
-            onClick={() => commit("left")}
-            className="grid place-items-center h-16 w-16 rounded-full border border-white/15 text-2xl hover:border-flare hover:text-flare hover:scale-105 active:scale-95 transition"
-          >
-            ✕
-          </button>
-          <button
-            type="button"
-            aria-label={
-              vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"
-            }
-            aria-disabled={vetoUsed}
-            onClick={() => (vetoUsed ? saySpent("vetoSpent") : commit("left", false, true))}
-            className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
-              vetoUsed
-                ? "border-white/10 text-white/25"
-                : "border-flare text-flare hover:scale-105 active:scale-95 hover:bg-flare/10"
-            }`}
-          >
-            🚫
-          </button>
-          <button
-            type="button"
-            aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}
-            aria-disabled={superUsed}
-            onClick={() => (superUsed ? saySpent("superSpent") : commit("right", true))}
-            className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
-              superUsed
-                ? "border-white/10 text-white/25"
-                : "border-grape text-grape hover:scale-105 active:scale-95 hover:bg-grape/10"
-            }`}
-          >
-            ⭐
-          </button>
-          <button
-            type="button"
-            aria-label="Let's eat"
-            onClick={() => commit("right")}
-            className="grid place-items-center h-16 w-16 rounded-full bg-acid text-ink text-2xl font-bold hover:scale-105 active:scale-95 transition"
-          >
-            ♥
-          </button>
+        {/* Named, not just drawn. ✕ and 🚫 are both "no" to look at, and the one that is absolute is
+            the smaller of the two; on a phone the keyboard legend that would have told you is not
+            rendered at all. The label also carries the spent state, so a group does not have to tap
+            a dead button to find out it is dead. */}
+        <div className="mt-4 flex items-end justify-center gap-5">
+          <span className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              aria-label="Pass"
+              onClick={() => commit("left")}
+              className="grid place-items-center h-16 w-16 rounded-full border border-white/15 text-2xl hover:border-flare hover:text-flare hover:scale-105 active:scale-95 transition"
+            >
+              ✕
+            </button>
+            <span className={DECK_LABEL}>pass</span>
+          </span>
+          <span className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              aria-label={
+                vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"
+              }
+              aria-disabled={vetoUsed}
+              onClick={() => (vetoUsed ? saySpent("vetoSpent") : commit("left", false, true))}
+              className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
+                vetoUsed
+                  ? "border-white/10 text-white/25"
+                  : "border-flare text-flare hover:scale-105 active:scale-95 hover:bg-flare/10"
+              }`}
+            >
+              🚫
+            </button>
+            <span className={`${DECK_LABEL} ${vetoUsed ? "text-white/25" : "text-flare"}`}>
+              {vetoUsed ? "spent" : "veto"}
+            </span>
+          </span>
+          <span className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}
+              aria-disabled={superUsed}
+              onClick={() => (superUsed ? saySpent("superSpent") : commit("right", true))}
+              className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
+                superUsed
+                  ? "border-white/10 text-white/25"
+                  : "border-grape text-grape hover:scale-105 active:scale-95 hover:bg-grape/10"
+              }`}
+            >
+              ⭐
+            </button>
+            <span className={`${DECK_LABEL} ${superUsed ? "text-white/25" : "text-grape"}`}>
+              {superUsed ? "spent" : "super"}
+            </span>
+          </span>
+          <span className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              aria-label="Let's eat"
+              onClick={() => commit("right")}
+              className="grid place-items-center h-16 w-16 rounded-full bg-acid text-ink text-2xl font-bold hover:scale-105 active:scale-95 transition"
+            >
+              ♥
+            </button>
+            <span className={`${DECK_LABEL} text-acid`}>eat</span>
+          </span>
         </div>
       </div>
 
@@ -711,8 +731,8 @@ export function SwipeDeck({
       <div className={RAIL}>
         <p className="mt-3 text-center text-sm text-muted tabular-nums lg:mt-0 lg:text-left">
           {index + 1} / {restaurants.length}
-          {!superUsed && <span className="ml-2 text-grape">· ⭐ super</span>}
-          {!vetoUsed && <span className="ml-2 text-flare">· 🚫 veto, kills it</span>}
+          {/* The buttons now name themselves; what a label cannot fit is that the veto is absolute. */}
+          {!vetoUsed && <span className="ml-2 text-flare">· 🚫 kills it outright</span>}
         </p>
         {/* Every one of these already worked; nothing said so, and a key nobody knows about is a
           feature nobody has. Desktop only: there is no keyboard to speak of on the phone layout. */}

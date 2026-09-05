@@ -45,7 +45,13 @@ export function FloatingReactions({
   roster?: readonly string[];
 }) {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+    /*
+     * z-30 is load-bearing. Without it this layer is `z-index: auto` and sits before the deck in the
+     * DOM, so the cards painted over every reaction: the emoji looked broken on a phone, and whoever
+     * still had cards up saw nothing while whoever had finished swiping saw them fine. Under the
+     * toast stack at z-40, over the deck.
+     */
+    <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-hidden="true">
       {reactions.map((r) =>
         r.kind ? (
           <span key={r.id} className="verdict-flash absolute inset-0 grid place-items-center">

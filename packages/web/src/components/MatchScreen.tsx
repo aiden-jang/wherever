@@ -65,8 +65,16 @@ function seedFrom(id: string): number {
 }
 
 /** The tally is useful evidence; this is the human version of what it means. */
-function consensusLine(rightSwipes: number, totalParticipants: number): string {
-  if (totalParticipants <= 1) return "Your call. Dinner is handled.";
+/*
+ * One person is not a tie, however many places finished level.
+ *
+ * Alone, every place you liked scores exactly one, so a tie is guaranteed the moment you like two.
+ * The round used to answer that with "Dead tie. Of course it is." and "6 places finished level" —
+ * jokes about a committee that was never in the room, and the first thing most people see, because
+ * opening it alone to find out what it is is how everybody starts.
+ */
+function consensusLine(rightSwipes: number, totalParticipants: number, seed: number): string {
+  if (totalParticipants <= 1) return line("solo", seed);
   if (rightSwipes === totalParticipants) return "Unanimous. Put it in the group chat.";
   if (rightSwipes / totalParticipants >= 0.75) return "A clear majority. Dinner is handled.";
   return "The committee picked a winner.";
@@ -661,15 +669,20 @@ function WinnerScreen({
             className="reveal mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid"
             style={{ "--reveal-at": "190ms" } as CSSProperties}
           >
-            {tiedWith > 0
+            {tiedWith > 0 && totalParticipants > 1
               ? line("tie", seedFrom(restaurant.id))
-              : consensusLine(rightSwipes, totalParticipants)}
+              : consensusLine(rightSwipes, totalParticipants, seedFrom(restaurant.id))}
           </p>
+          {tiedWith > 0 && totalParticipants <= 1 && (
+            <p className="mt-2 text-xs text-muted">
+              You liked {tiedWith + 1}. This one was dealt first, so it takes it.
+            </p>
+          )}
           {tiedWith === 0 && nearMiss && (
             // Only when it was actually close, and never alongside the tie line, which is its own story.
             <p className="mt-2 text-xs text-muted">{nearMiss}</p>
           )}
-          {tiedWith > 0 && (
+          {tiedWith > 0 && totalParticipants > 1 && (
             // Say how it was settled. The tie-break is deck order, which is deterministic so every
             // client lands on the same winner; pretending it was a coin toss would be a lie.
             <p className="mt-2 text-xs text-muted">

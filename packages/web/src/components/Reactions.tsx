@@ -1,5 +1,7 @@
 import { REACTION_EMOJIS, reactionLane } from "@wherever/shared";
 import type { FloatingReaction } from "../useSessionSocket.js";
+import { buzz } from "./haptics.js";
+import { play } from "./sound.js";
 
 /** Tap row for throwing an emoji to the whole session during a round. */
 export function ReactionBar({ onReact }: { onReact: (emoji: string) => void }) {
@@ -10,7 +12,11 @@ export function ReactionBar({ onReact }: { onReact: (emoji: string) => void }) {
           key={emoji}
           type="button"
           aria-label={`React ${emoji}`}
-          onClick={() => onReact(emoji)}
+          onClick={() => {
+            buzz(8);
+            play("tap");
+            onReact(emoji);
+          }}
           className="grid h-11 w-11 place-items-center rounded-full text-2xl hover:bg-white/10 active:scale-90 transition"
         >
           {emoji}

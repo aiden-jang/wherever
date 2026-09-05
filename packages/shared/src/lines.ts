@@ -17,7 +17,11 @@ export type Moment =
   /** The host has asked you, specifically, to get on with it. */
   | "nudged"
   /** The round is running and not one person has voted yet. */
-  | "quiet";
+  | "quiet"
+  /** You tapped the veto again, having already spent it this round. */
+  | "vetoSpent"
+  /** You tapped the super-like again, having already spent it this round. */
+  | "superSpent";
 
 const LINES: Record<Moment, readonly string[]> = {
   landing: [
@@ -60,6 +64,18 @@ const LINES: Record<Moment, readonly string[]> = {
     "Nothing yet. Everyone is reading every single menu.",
     "Zero votes. Riveting stuff so far.",
     "No votes yet. Somebody go first, it's allowed.",
+  ],
+  vetoSpent: [
+    "One veto a round, and you already used yours.",
+    "You killed something already. One per customer.",
+    "Your veto is spent. That was your one act of violence.",
+    "Already vetoed tonight. The rest you have to argue for.",
+  ],
+  superSpent: [
+    "One super-like a round. Yours is already out there.",
+    "You only get the one star. It has been given.",
+    "Super-like spent. Everything else gets a normal opinion.",
+    "That star is gone. Champion something else the hard way.",
   ],
   tie: [
     "Dead tie. Of course it is.",

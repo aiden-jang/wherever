@@ -645,9 +645,12 @@ export function SwipeDeck({
           </div>
         </div>
 
+        {/* Every width, not `lg:` only. The keyboard legend that teaches a desktop first-timer sits
+            in the other column and names the keys, not the rule: that the two small buttons are one
+            each. Said once, before you hit it, rather than only after. */}
         {showHint && !spentNote && (
-          <p className="mt-4 text-center text-xs text-muted animate-pulse lg:hidden">
-            Tap the card for details. Drag it, or use the buttons.
+          <p className="mt-4 text-center text-xs text-muted animate-pulse">
+            Tap the card for details. Drag it, or use the buttons. 🚫 and ⭐ are one each, per round.
           </p>
         )}
 

@@ -14,6 +14,8 @@ export type Moment =
   | "waiting"
   /** Two places finished level and the tie is about to be broken. */
   | "tie"
+  /** One person voted, so there was never a committee to disagree with. */
+  | "solo"
   /** The host has asked you, specifically, to get on with it. */
   | "nudged"
   /** The round is running and not one person has voted yet. */
@@ -76,6 +78,12 @@ const LINES: Record<Moment, readonly string[]> = {
     "You only get the one star. It has been given.",
     "Super-like spent. Everything else gets a normal opinion.",
     "That star is gone. Champion something else the hard way.",
+  ],
+  solo: [
+    "Your call. Dinner is handled.",
+    "Table for one opinion. It happens to be the only one.",
+    "No committee, no argument. Straight to dinner.",
+    "You voted, you won. Landslide.",
   ],
   tie: [
     "Dead tie. Of course it is.",

@@ -18,7 +18,8 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run test",
+    "size": "node scripts/check-size.mjs",
+    "verify": "pnpm run size && pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run test",
     "deploy:only": "pnpm --filter @wherever/worker run deploy"
   },
   "devDependencies": {

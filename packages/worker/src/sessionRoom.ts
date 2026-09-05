@@ -80,6 +80,16 @@ type VibeMap = Record<string, Vibe>;
  * Every rule below is enforced here, not by hiding a control. A hidden button is not a rule.
  */
 export class SessionRoom extends DurableObject<Env> {
+  /*
+   * One start at a time. The status flip in handleStartRound deliberately happens after the Places
+   * fetch so a failed fetch leaves everyone in the lobby to retry, and that gap let a host who
+   * double-tapped through the `status !== "lobby"` guard twice. Each pass charges the budget meter
+   * for its own Google search. In memory rather than storage on purpose: an evicted instance comes
+   * back able to start, which is the safe direction for a flag whose only job is to close a gap
+   * between two awaits.
+   */
+  private starting = false;
+
   /** RPC: the Worker calls this right after creating the session row. */
   async initialize(meta: SessionMeta): Promise<void> {
     const existing = await this.ctx.storage.get<SessionMeta>("meta");
@@ -462,12 +472,14 @@ export class SessionRoom extends DurableObject<Env> {
         message: "Only the host can start swiping.",
       });
     }
+    if (this.starting) return;
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "lobby") return;
 
     // Fetch BEFORE flipping to swiping: if the Places call fails we stay in the lobby and let the
     // host retry, rather than stranding everyone on an empty "swiping" screen. (An empty-but-ok
     // result is distinct — that legitimately shows "nothing survived the filters".)
+    this.starting = true;
     let deck: Restaurant[];
     try {
       deck = await this.getOrCreateDeck(meta);
@@ -476,6 +488,8 @@ export class SessionRoom extends DurableObject<Env> {
         type: "error",
         message: "couldn't load restaurants right now. give it a moment and try again.",
       });
+    } finally {
+      this.starting = false;
     }
 
     meta.status = "swiping";

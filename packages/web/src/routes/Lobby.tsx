@@ -424,6 +424,13 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   const { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, errorSeq, status, everConnected, participantId, reactions, send } =
     useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
+  /*
+   * The host's start button, closed for the round it is fetching. Cleared on either outcome: the
+   * round begins, or Places failed and the host is meant to try again. `status` is in there so a
+   * reconnect cannot leave the button dead.
+   */
+  const [starting, setStarting] = useState(false);
+  useEffect(() => setStarting(false), [session?.status, errorSeq, status]);
 
   /* Cards this person still owes the room, on the icon while they are looking at something else.
      Cleared once decided: a badge for a decision already made is a lie on the home screen. */
@@ -891,10 +898,14 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       <div className="w-full mt-10">
         {isHost ? (
           <button
-            onClick={() => send({ type: "start_round" })}
-            className="w-full rounded-full bg-ember px-8 py-4 text-lg font-semibold text-ink shadow-lg shadow-ember/30 hover:scale-[1.02] transition-transform"
+            onClick={() => {
+              setStarting(true);
+              send({ type: "start_round" });
+            }}
+            disabled={starting}
+            className="w-full rounded-full bg-ember px-8 py-4 text-lg font-semibold text-ink shadow-lg shadow-ember/30 transition-transform disabled:opacity-60 enabled:hover:scale-[1.02]"
           >
-            Start swiping
+            {starting ? "Finding places..." : "Start swiping"}
           </button>
         ) : (
           <div className="flex flex-col items-center gap-2 text-center text-muted">

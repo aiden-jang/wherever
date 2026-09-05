@@ -20,6 +20,7 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { Modal } from "./Modal.js";
+import { MeetupPlanner, downloadInvite } from "./MeetupPlanner.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 import { renderShareCard } from "./shareCard.js";
@@ -112,29 +113,6 @@ function planText(
   const why = reasons.length > 0 ? `\nWhy it won: ${reasons.join(" · ")}` : "";
   const fallback = backup ? `\nPlan B: ${backup.name}\n${mapsUrl(backup)}` : "";
   return `Dinner plan: ${r.name}${where}${when}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}${why}${fallback}`;
-}
-
-function localDateTime(date: Date): string {
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
-
-function defaultPlanStart(): string {
-  const date = new Date();
-  date.setHours(19, 0, 0, 0);
-  if (date.getTime() < Date.now()) date.setDate(date.getDate() + 1);
-  return localDateTime(date);
-}
-
-function icsDate(date: Date): string {
-  return date
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d{3}/, "");
-}
-
-function icsText(value: string): string {
-  return value.replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
 }
 
 function History({
@@ -374,9 +352,6 @@ function WinnerScreen({
   const [cardResult, setCardResult] = useState<"making" | "shared" | "saved" | null>(null);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [directionsOpen, setDirectionsOpen] = useState(false);
-  const [planStart, setPlanStart] = useState(defaultPlanStart);
-  const [planDuration, setPlanDuration] = useState<60 | 90 | 120>(90);
-  const [calendarError, setCalendarError] = useState<string | null>(null);
   const [addressCopied, setAddressCopied] = useState(false);
   const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
   const { offer: installOffer, install, dismiss: dismissInstall } = useInstallPrompt(round);
@@ -491,79 +466,6 @@ function WinnerScreen({
     } catch {
       setCardResult(null);
     }
-  };
-
-  const downloadCalendar = (start: Date, duration: number) => {
-    const end = new Date(start.getTime() + duration * 60_000);
-    const uid = `${restaurant.id}-${start.getTime()}@wherever`;
-    const details = `Picked by ${rightSwipes} of ${totalParticipants} on Wherever, Honestly.`;
-    const ics = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Wherever Honestly//EN",
-      "BEGIN:VEVENT",
-      `UID:${icsText(uid)}`,
-      `DTSTAMP:${icsDate(new Date())}`,
-      `DTSTART:${icsDate(start)}`,
-      `DTEND:${icsDate(end)}`,
-      `SUMMARY:${icsText(`Dinner at ${restaurant.name}`)}`,
-      `LOCATION:${icsText(restaurant.address ?? restaurant.name)}`,
-      `DESCRIPTION:${icsText(details)}`,
-      "END:VEVENT",
-      "END:VCALENDAR",
-      "",
-    ].join("\r\n");
-    const href = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = href;
-    link.download = `${
-      restaurant.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") || "dinner"
-    }.ics`;
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(href), 0);
-  };
-
-  const addToCalendar = () => {
-    const start = new Date(planStart);
-    if (Number.isNaN(start.getTime())) {
-      setCalendarError("Pick a time first.");
-      return;
-    }
-    if (start.getTime() < Date.now()) {
-      setCalendarError("Pick a time that hasn’t happened yet.");
-      return;
-    }
-    downloadCalendar(start, planDuration);
-    onPlan({ start: start.toISOString(), duration: planDuration });
-    setPlannerOpen(false);
-    setCalendarError(null);
-  };
-
-  const openCalendar = (provider: "google" | "outlook") => {
-    const start = new Date(planStart);
-    if (Number.isNaN(start.getTime())) {
-      setCalendarError("Pick a time first.");
-      return;
-    }
-    if (start.getTime() < Date.now()) {
-      setCalendarError("Pick a time that hasn’t happened yet.");
-      return;
-    }
-    const end = new Date(start.getTime() + planDuration * 60_000);
-    const title = `Dinner at ${restaurant.name}`;
-    const location = restaurant.address ?? restaurant.name;
-    const details = `Picked by ${rightSwipes} of ${totalParticipants} on Wherever, Honestly.`;
-    const url =
-      provider === "google"
-        ? `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${icsDate(start)}/${icsDate(end)}&location=${encodeURIComponent(location)}&details=${encodeURIComponent(details)}`
-        : `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${encodeURIComponent(start.toISOString())}&enddt=${encodeURIComponent(end.toISOString())}&location=${encodeURIComponent(location)}&body=${encodeURIComponent(details)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-    onPlan({ start: start.toISOString(), duration: planDuration });
-    setPlannerOpen(false);
-    setCalendarError(null);
   };
 
   return (
@@ -730,8 +632,6 @@ function WinnerScreen({
               type="button"
               onClick={() => {
                 if (!isHost) return;
-                setPlanStart(localDateTime(new Date(planned.start)));
-                setPlanDuration(planned.duration);
                 setPlannerOpen(true);
               }}
               className={`mx-auto mt-3 flex max-w-full items-center gap-3 rounded-2xl border border-acid/20 bg-acid/10 px-4 py-3 text-left transition ${isHost ? "hover:border-acid/40 active:scale-[0.99]" : "cursor-default"}`}
@@ -1016,7 +916,14 @@ function WinnerScreen({
                 {!isHost && planned && (
                   <button
                     type="button"
-                    onClick={() => downloadCalendar(new Date(planned.start), planned.duration)}
+                    onClick={() =>
+                      downloadInvite(
+                        restaurant,
+                        new Date(planned.start),
+                        planned.duration,
+                        `Picked by ${rightSwipes} of ${totalParticipants} on Wherever, Honestly.`,
+                      )
+                    }
                     className="rounded-full border border-white/10 px-4 py-2.5 text-sm font-semibold text-muted transition hover:border-white/20 hover:text-cream active:scale-[0.98]"
                   >
                     Add meetup to my calendar
@@ -1118,138 +1025,14 @@ function WinnerScreen({
         </Modal>
       )}
       {plannerOpen && (
-        <Modal
-          title="Put dinner on the calendar"
-          onClose={() => {
-            setPlannerOpen(false);
-            setCalendarError(null);
-          }}
-        >
-          <p className="text-sm leading-relaxed text-muted">
-            Save {restaurant.name} wherever the group keeps plans.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {(
-              [
-                ["Tonight", 0],
-                ["Tomorrow", 1],
-                ["This weekend", "weekend"],
-              ] as const
-            ).map(([label, offset]) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => {
-                  const date = new Date();
-                  if (offset === "weekend") {
-                    const days = (6 - date.getDay() + 7) % 7 || 7;
-                    date.setDate(date.getDate() + days);
-                  } else {
-                    date.setDate(date.getDate() + offset);
-                  }
-                  date.setHours(19, 0, 0, 0);
-                  if (date.getTime() < Date.now()) date.setDate(date.getDate() + 1);
-                  setPlanStart(localDateTime(date));
-                  setCalendarError(null);
-                }}
-                className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-muted hover:border-acid/50 hover:text-acid transition"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <label
-            className="mt-5 block text-xs font-semibold uppercase tracking-wider text-muted"
-            htmlFor="dinner-time"
-          >
-            Start time
-          </label>
-          <input
-            id="dinner-time"
-            type="datetime-local"
-            value={planStart}
-            min={localDateTime(new Date())}
-            onChange={(event) => setPlanStart(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-ink px-3 py-3 text-sm text-cream outline-none focus:border-acid"
-          />
-          <label
-            className="mt-4 block text-xs font-semibold uppercase tracking-wider text-muted"
-            htmlFor="dinner-duration"
-          >
-            How long
-          </label>
-          <select
-            id="dinner-duration"
-            value={planDuration}
-            onChange={(event) => setPlanDuration(Number(event.target.value) as 60 | 90 | 120)}
-            className="mt-2 w-full rounded-xl border border-white/15 bg-ink px-3 py-3 text-sm text-cream outline-none focus:border-acid"
-          >
-            <option value={60}>1 hour</option>
-            <option value={90}>1½ hours</option>
-            <option value={120}>2 hours</option>
-          </select>
-          {calendarError && (
-            <p role="alert" className="mt-2 text-sm text-flare">
-              {calendarError}
-            </p>
-          )}
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => openCalendar("google")}
-              className="rounded-full bg-ember px-4 py-3 text-sm font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
-            >
-              Google Calendar ↗
-            </button>
-            <button
-              type="button"
-              onClick={() => openCalendar("outlook")}
-              className="rounded-full border border-white/15 px-4 py-3 text-sm font-semibold hover:bg-white/5 active:scale-[0.98] transition"
-            >
-              Outlook ↗
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={addToCalendar}
-            className="mt-2 w-full rounded-full border border-white/10 px-5 py-2.5 text-sm font-semibold text-muted hover:border-white/20 hover:text-cream active:scale-[0.98] transition"
-          >
-            Download .ics for Apple Calendar
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const start = new Date(planStart);
-              if (Number.isNaN(start.getTime()) || start.getTime() < Date.now()) {
-                setCalendarError(
-                  Number.isNaN(start.getTime())
-                    ? "Pick a time first."
-                    : "Pick a time that hasn’t happened yet.",
-                );
-                return;
-              }
-              onPlan({ start: start.toISOString(), duration: planDuration });
-              setPlannerOpen(false);
-              setCalendarError(null);
-            }}
-            className="mt-2 w-full rounded-full px-5 py-2 text-xs font-semibold text-muted hover:text-cream transition"
-          >
-            Save for everyone
-          </button>
-          {planned && (
-            <button
-              type="button"
-              onClick={() => {
-                onPlan(null);
-                setPlannerOpen(false);
-                setCalendarError(null);
-              }}
-              className="mt-1 w-full rounded-full px-5 py-2 text-xs font-semibold text-flare/80 transition hover:text-flare"
-            >
-              Clear meetup time for everyone
-            </button>
-          )}
-        </Modal>
+        <MeetupPlanner
+          restaurant={restaurant}
+          rightSwipes={rightSwipes}
+          totalParticipants={totalParticipants}
+          planned={planned}
+          onPlan={onPlan}
+          onClose={() => setPlannerOpen(false)}
+        />
       )}
     </div>
   );

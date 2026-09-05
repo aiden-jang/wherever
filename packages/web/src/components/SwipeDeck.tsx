@@ -624,7 +624,7 @@ export function SwipeDeck({
       <div className="mt-4 flex items-center justify-center gap-5">
         <button
           type="button"
-          aria-label="Hard pass"
+          aria-label="Pass"
           onClick={() => commit("left")}
           className="grid place-items-center h-16 w-16 rounded-full border border-white/15 text-2xl hover:border-flare hover:text-flare hover:scale-105 active:scale-95 transition"
         >

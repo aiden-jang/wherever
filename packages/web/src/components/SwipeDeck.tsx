@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
-import type { Restaurant, SwipeDirection, VisitedPlace } from "@wherever/shared";
+import { line, type Restaurant, type SwipeDirection, type VisitedPlace } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
@@ -282,7 +282,7 @@ function TopCard({
         className="absolute top-6 right-6 rotate-[14deg] rounded-xl border-2 border-flare bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-flare backdrop-blur-[2px]"
         style={{ opacity: nope }}
       >
-        HARD PASS
+        NOPE
       </motion.span>
     </motion.div>
   );
@@ -372,6 +372,28 @@ export function SwipeDeck({
       return false;
     }
   });
+  /*
+   * Why a spent button did nothing, said at the moment it does nothing.
+   *
+   * The veto and the super-like used to be `disabled`, which swallows the click, so the only
+   * feedback for tapping one twice was silence and the button looked broken. `aria-disabled` keeps
+   * it focusable and clickable so it can answer for itself.
+   */
+  const [spentNote, setSpentNote] = useState<string | null>(null);
+  const saySpent = useCallback(
+    (moment: "vetoSpent" | "superSpent") => {
+      const text = line(moment, Date.now());
+      setSpentNote(text);
+      onAnnounce?.(text);
+    },
+    [onAnnounce],
+  );
+  useEffect(() => {
+    if (!spentNote) return;
+    const t = setTimeout(() => setSpentNote(null), 4000);
+    return () => clearTimeout(t);
+  }, [spentNote]);
+
   const dismissHint = useCallback(() => {
     setShowHint(false);
     try {
@@ -621,13 +643,17 @@ export function SwipeDeck({
           </div>
         </div>
 
-        {showHint && (
+        {showHint && !spentNote && (
           <p className="mt-4 text-center text-xs text-muted animate-pulse lg:hidden">
             Tap for details, drag or tap below to vote. <span className="text-flare">✕ pass</span>
             {" · "}
             <span className="text-acid">♥ eat</span>
           </p>
         )}
+
+        {/* Every width, unlike the first-run hint above: the keyboard legend that carries this on a
+            wide screen is `lg:` only, so a phone has nowhere else to learn why nothing happened. */}
+        {spentNote && <p className="mt-4 text-center text-xs text-flare">{spentNote}</p>}
 
         {/* mt-4, not mt-8: the whole swiping column has to clear a 720px laptop, and the buttons stay
           at 64px because they are the primary target on a phone. See the main in Lobby. */}
@@ -642,9 +668,11 @@ export function SwipeDeck({
           </button>
           <button
             type="button"
-            aria-label={vetoUsed ? "Veto used" : "Veto (one per round, kills it outright)"}
-            disabled={vetoUsed}
-            onClick={() => commit("left", false, true)}
+            aria-label={
+              vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"
+            }
+            aria-disabled={vetoUsed}
+            onClick={() => (vetoUsed ? saySpent("vetoSpent") : commit("left", false, true))}
             className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
               vetoUsed
                 ? "border-white/10 text-white/25"
@@ -655,9 +683,9 @@ export function SwipeDeck({
           </button>
           <button
             type="button"
-            aria-label={superUsed ? "Super-like used" : "Super-like (one per round)"}
-            disabled={superUsed}
-            onClick={() => commit("right", true)}
+            aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}
+            aria-disabled={superUsed}
+            onClick={() => (superUsed ? saySpent("superSpent") : commit("right", true))}
             className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
               superUsed
                 ? "border-white/10 text-white/25"

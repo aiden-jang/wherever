@@ -10,9 +10,11 @@
  * the interface being present is not the same as it being able to do the job.
  */
 export async function qrScanSupported(): Promise<boolean> {
-  const api = (window as unknown as {
-    BarcodeDetector?: { getSupportedFormats: () => Promise<string[]> };
-  }).BarcodeDetector;
+  const api = (
+    window as unknown as {
+      BarcodeDetector?: { getSupportedFormats: () => Promise<string[]> };
+    }
+  ).BarcodeDetector;
   if (!api || !navigator.mediaDevices?.getUserMedia) return false;
   try {
     return (await api.getSupportedFormats()).includes("qr_code");

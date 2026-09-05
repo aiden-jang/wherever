@@ -12,8 +12,8 @@ on a real gap:
 > console step, not something the code can enforce.
 
 Google Maps Platform moved to **per-SKU monthly free tiers** (≈1,000 free
-Nearby Search and 1,000 free Place Photo calls/month), and its billing *budgets
-are alerts, not hard caps*. A key with no per-API quota, or a quota set too
+Nearby Search and 1,000 free Place Photo calls/month), and its billing _budgets
+are alerts, not hard caps_. A key with no per-API quota, or a quota set too
 high, can bill real money if the app gets shared around. For a portfolio demo
 that should cost **$0**, "please remember to set a console quota" is not good
 enough — the app itself should refuse to spend past the free tier.

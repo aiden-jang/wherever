@@ -51,11 +51,7 @@ export function passesReviews(reviewCount: number | null, minReviews?: number): 
  * Exact price tiers win when set (e.g. only $$ and $$$); otherwise fall back to the legacy "up to
  * maxPriceTier" cap. Lets a group say "mid-range only" instead of just "nothing above $$$".
  */
-export function passesPrice(
-  tier: PriceTier,
-  priceTiers?: PriceTier[],
-  maxPriceTier?: PriceTier,
-): boolean {
+export function passesPrice(tier: PriceTier, priceTiers?: PriceTier[], maxPriceTier?: PriceTier): boolean {
   if (priceTiers && priceTiers.length > 0) return priceTiers.includes(tier);
   return tier <= (maxPriceTier ?? 4);
 }
@@ -78,15 +74,81 @@ export function passesAmenities(
  * empty the moment somebody picks a vibe is worse than one that ignores the filter.
  */
 const MOCK_DECK: Restaurant[] = [
-  { id: "mock-1", name: "The Usual", category: "Burgers", priceTier: 2, rating: 4.3, reviewCount: 820, distanceMeters: 400, imageUrl: null, address: "12 Main St", amenities: { takeout: true, delivery: true, goodForGroups: true, goodForChildren: true } },
-  { id: "mock-2", name: "Probably Fine Tacos", category: "Tacos", priceTier: 1, rating: 4.6, reviewCount: 1540, distanceMeters: 750, imageUrl: null, address: "88 2nd Ave", amenities: { takeout: true, delivery: true, outdoorSeating: true } },
-  { id: "mock-3", name: "Noodle Situation", category: "Ramen", priceTier: 2, rating: 4.1, reviewCount: 210, distanceMeters: 1100, imageUrl: null, address: "5 Bowl Ln", amenities: { takeout: true, reservable: true, servesVegetarianFood: true } },
-  { id: "mock-4", name: "Salad, I Guess", category: "Healthy", priceTier: 2, rating: 3.9, reviewCount: 47, distanceMeters: 300, imageUrl: null, address: "200 Green St", amenities: { takeout: true, delivery: true, servesVegetarianFood: true, outdoorSeating: true } },
-  { id: "mock-5", name: "Late Night Pizza Decisions", category: "Pizza", priceTier: 1, rating: 4.4, reviewCount: 3020, distanceMeters: 950, imageUrl: null, address: "1 Slice Blvd", amenities: { takeout: true, delivery: true, goodForGroups: true } },
+  {
+    id: "mock-1",
+    name: "The Usual",
+    category: "Burgers",
+    priceTier: 2,
+    rating: 4.3,
+    reviewCount: 820,
+    distanceMeters: 400,
+    imageUrl: null,
+    address: "12 Main St",
+    amenities: { takeout: true, delivery: true, goodForGroups: true, goodForChildren: true },
+  },
+  {
+    id: "mock-2",
+    name: "Probably Fine Tacos",
+    category: "Tacos",
+    priceTier: 1,
+    rating: 4.6,
+    reviewCount: 1540,
+    distanceMeters: 750,
+    imageUrl: null,
+    address: "88 2nd Ave",
+    amenities: { takeout: true, delivery: true, outdoorSeating: true },
+  },
+  {
+    id: "mock-3",
+    name: "Noodle Situation",
+    category: "Ramen",
+    priceTier: 2,
+    rating: 4.1,
+    reviewCount: 210,
+    distanceMeters: 1100,
+    imageUrl: null,
+    address: "5 Bowl Ln",
+    amenities: { takeout: true, reservable: true, servesVegetarianFood: true },
+  },
+  {
+    id: "mock-4",
+    name: "Salad, I Guess",
+    category: "Healthy",
+    priceTier: 2,
+    rating: 3.9,
+    reviewCount: 47,
+    distanceMeters: 300,
+    imageUrl: null,
+    address: "200 Green St",
+    amenities: { takeout: true, delivery: true, servesVegetarianFood: true, outdoorSeating: true },
+  },
+  {
+    id: "mock-5",
+    name: "Late Night Pizza Decisions",
+    category: "Pizza",
+    priceTier: 1,
+    rating: 4.4,
+    reviewCount: 3020,
+    distanceMeters: 950,
+    imageUrl: null,
+    address: "1 Slice Blvd",
+    amenities: { takeout: true, delivery: true, goodForGroups: true },
+  },
   // Every other entry is tier 1 or 2, so "fancy" (tiers 3-4, 4.4 stars, reservable) matched nothing
   // and emptied the demo deck the moment a group picked it. The deck has to be able to answer every
   // vibe the app offers.
-  { id: "mock-6", name: "The Reservation", category: "Italian", priceTier: 4, rating: 4.7, reviewCount: 1180, distanceMeters: 1900, imageUrl: null, address: "9 Tablecloth Row", amenities: { reservable: true, servesCocktails: true, goodForGroups: true } },
+  {
+    id: "mock-6",
+    name: "The Reservation",
+    category: "Italian",
+    priceTier: 4,
+    rating: 4.7,
+    reviewCount: 1180,
+    distanceMeters: 1900,
+    imageUrl: null,
+    address: "9 Tablecloth Row",
+    amenities: { reservable: true, servesCocktails: true, goodForGroups: true },
+  },
 ];
 
 /**
@@ -176,14 +238,15 @@ const CURRENCY_SYMBOL: Record<string, string> = {
 
 function formatMoney(m?: GoogleMoney): string | null {
   if (!m?.units) return null;
-  const symbol = m.currencyCode ? CURRENCY_SYMBOL[m.currencyCode] ?? `${m.currencyCode} ` : "";
+  const symbol = m.currencyCode ? (CURRENCY_SYMBOL[m.currencyCode] ?? `${m.currencyCode} `) : "";
   return `${symbol}${m.units}`;
 }
 
 /** Turn Google's start/end money range into a compact label like "$10–30", "$10+", or "Up to $30". */
-export function formatPriceRange(
-  range?: { startPrice?: GoogleMoney; endPrice?: GoogleMoney },
-): string | null {
+export function formatPriceRange(range?: {
+  startPrice?: GoogleMoney;
+  endPrice?: GoogleMoney;
+}): string | null {
   if (!range) return null;
   const start = formatMoney(range.startPrice);
   const end = formatMoney(range.endPrice);
@@ -213,9 +276,7 @@ const GOOGLE_PRICE_TIER: Record<string, PriceTier> = {
  * truth). Empty or unmapped -> a generic restaurant search.
  */
 export function googleTypesFor(categories: string[]): string[] {
-  const types = categories
-    .map((c) => googleTypeFor(c))
-    .filter((t): t is string => Boolean(t));
+  const types = categories.map((c) => googleTypeFor(c)).filter((t): t is string => Boolean(t));
   return types.length > 0 ? [...new Set(types)] : ["restaurant"];
 }
 
@@ -238,18 +299,14 @@ export function photoProxyUrl(name: string, base = ""): string {
 }
 
 /** Great-circle distance in meters between two lat/lng points. */
-export function haversineMeters(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number },
-): number {
+export function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 6_371_000;
   const toRad = (d: number): number => (d * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
   const lat1 = toRad(a.lat);
   const lat2 = toRad(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
   return Math.round(2 * R * Math.asin(Math.sqrt(h)));
 }
 
@@ -310,7 +367,8 @@ export function mapGooglePlace(
      * upstream en-dash ends up sitting next to our own typography. A time range reads the same either
      * way, and it is the one character that makes a page look machine-set.
      */
-    hours: p.currentOpeningHours?.weekdayDescriptions?.map((line) => line.replace(/\s[–—]\s/g, " - ")) ?? null,
+    hours:
+      p.currentOpeningHours?.weekdayDescriptions?.map((line) => line.replace(/\s[–—]\s/g, " - ")) ?? null,
     businessStatus: p.businessStatus ?? null,
     priceRange: formatPriceRange(p.priceRange),
     editorialSummary: p.editorialSummary?.text ?? null,
@@ -406,16 +464,16 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
     const data = (await res.json()) as { places?: GooglePlace[] };
     const places = (data.places ?? []).filter((p) => p.id && p.displayName?.text);
     // Open-now reads the raw place, so filter before mapping (Restaurant carries no hours).
-    const visible = filters.openNow
-      ? places.filter((p) => p.currentOpeningHours?.openNow === true)
-      : places;
-    return visible
-      .map((p) => mapGooglePlace(p, center, this.publicApiBase))
-      // Google filters by cuisine + radius server-side; the rest is filtered here.
-      .filter((r) => passesPrice(r.priceTier, filters.priceTiers, filters.maxPriceTier))
-      .filter((r) => passesRating(r.rating, filters.minRating))
-      .filter((r) => passesReviews(r.reviewCount, filters.minReviews))
-      .filter((r) => passesAmenities(r.amenities, filters.amenities));
+    const visible = filters.openNow ? places.filter((p) => p.currentOpeningHours?.openNow === true) : places;
+    return (
+      visible
+        .map((p) => mapGooglePlace(p, center, this.publicApiBase))
+        // Google filters by cuisine + radius server-side; the rest is filtered here.
+        .filter((r) => passesPrice(r.priceTier, filters.priceTiers, filters.maxPriceTier))
+        .filter((r) => passesRating(r.rating, filters.minRating))
+        .filter((r) => passesReviews(r.reviewCount, filters.minReviews))
+        .filter((r) => passesAmenities(r.amenities, filters.amenities))
+    );
   }
 }
 

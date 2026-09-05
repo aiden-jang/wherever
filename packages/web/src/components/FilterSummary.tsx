@@ -12,7 +12,9 @@ import {
 } from "@wherever/shared";
 
 function radiusLabel(meters: number): string {
-  return RADIUS_OPTIONS.find((option) => option.meters === meters)?.label ?? `${Math.round(meters / 1000)} km`;
+  return (
+    RADIUS_OPTIONS.find((option) => option.meters === meters)?.label ?? `${Math.round(meters / 1000)} km`
+  );
 }
 
 /** Human-sized evidence of the rules a restaurant survived. */
@@ -35,7 +37,8 @@ export function filterSummaryChips(filters: SessionFilters): string[] {
     chips.push(`${(timer ?? `${filters.roundSeconds}s`).toLowerCase()} timer`);
   }
   for (const amenity of filters.amenities ?? []) chips.push(amenityLabel(amenity).toLowerCase());
-  for (const category of filters.excludedCategories ?? []) chips.push(`no ${cuisineLabel(category).toLowerCase()}`);
+  for (const category of filters.excludedCategories ?? [])
+    chips.push(`no ${cuisineLabel(category).toLowerCase()}`);
   if (filters.revealVoters) chips.push("votes shown");
   if (filters.sort === "distance") {
     const sort = SORT_OPTIONS.find((option) => option.value === "distance")?.label ?? "closest";
@@ -65,7 +68,10 @@ export function FilterSummary({
   const chips = (
     <div className="flex flex-wrap justify-center gap-2">
       {filterSummaryChips(filters).map((chip) => (
-        <span key={chip} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted">
+        <span
+          key={chip}
+          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted"
+        >
           {chip}
         </span>
       ))}
@@ -83,9 +89,7 @@ export function FilterSummary({
         className="w-full rounded-2xl border border-transparent px-2 py-2 transition hover:border-white/10"
       >
         {chips}
-        <span className="mt-2 block text-xs font-semibold text-muted">
-          {open ? "done" : "change these"}
-        </span>
+        <span className="mt-2 block text-xs font-semibold text-muted">{open ? "done" : "change these"}</span>
       </button>
       {open && (
         <div className="mt-3 rounded-2xl border border-white/10 p-4 text-left">

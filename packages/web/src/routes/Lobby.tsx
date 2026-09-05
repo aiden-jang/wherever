@@ -45,7 +45,11 @@ function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
           autoFocus
           onChange={(e) => setName(e.target.value)}
         />
-        <button type="submit" disabled={!name.trim()} className="mt-3 w-full rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition">
+        <button
+          type="submit"
+          disabled={!name.trim()}
+          className="mt-3 w-full rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
+        >
           Join the session
         </button>
       </form>
@@ -167,11 +171,7 @@ function useJoinLeaveToasts(
  * A one-off toast when *you* become the host (the previous host left and the server handed it off).
  * Seeds silently once the session is known, so the original host isn't toasted on load.
  */
-function useHostPromotionToasts(
-  isHost: boolean,
-  ready: boolean,
-  onEvent?: (text: string) => void,
-): Toast[] {
+function useHostPromotionToasts(isHost: boolean, ready: boolean, onEvent?: (text: string) => void): Toast[] {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const prev = useRef<boolean | null>(null);
   const onEventRef = useRef(onEvent);
@@ -276,13 +276,7 @@ function ParticipantChip({ p }: { p: Participant }) {
 
 /** Only rendered when the host turned reveal on, and the server only sends `finishedIds` then, so an
  *  anonymous round has no identities to leak. */
-function VoterAvatars({
-  participants,
-  finishedIds,
-}: {
-  participants: Participant[];
-  finishedIds: string[];
-}) {
+function VoterAvatars({ participants, finishedIds }: { participants: Participant[]; finishedIds: string[] }) {
   const done = new Set(finishedIds);
   return (
     <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -296,9 +290,7 @@ function VoterAvatars({
           >
             <span
               className={`grid h-9 w-9 place-items-center rounded-full text-xs font-bold transition-colors ${
-                finished
-                  ? "bg-gradient-to-br from-ember to-flare text-ink"
-                  : "bg-white/10 text-muted"
+                finished ? "bg-gradient-to-br from-ember to-flare text-ink" : "bg-white/10 text-muted"
               }`}
             >
               {initialsFor(p.displayName)}
@@ -319,10 +311,15 @@ function VoterAvatars({
 function GroupTasteMap({ pulse }: { pulse: TastePulse }) {
   const appetite = pulse.rightRate < 30 ? "selective" : pulse.rightRate < 60 ? "curious" : "easy crowd";
   const aligned = pulse.strongestOverlap >= Math.max(2, Math.ceil(pulse.activeVoters * 0.6));
-  const overlap = aligned ? "same wavelength" : pulse.strongestOverlap >= 2 ? "a little spark" : "still exploring";
-  const price = pulse.averagePriceTier === null
-    ? "no yeses yet"
-    : "$".repeat(Math.max(1, Math.min(4, Math.round(pulse.averagePriceTier))));
+  const overlap = aligned
+    ? "same wavelength"
+    : pulse.strongestOverlap >= 2
+      ? "a little spark"
+      : "still exploring";
+  const price =
+    pulse.averagePriceTier === null
+      ? "no yeses yet"
+      : "$".repeat(Math.max(1, Math.min(4, Math.round(pulse.averagePriceTier))));
 
   return (
     <div
@@ -332,9 +329,13 @@ function GroupTasteMap({ pulse }: { pulse: TastePulse }) {
     >
       <span className="font-semibold text-ember">group pulse</span>
       <span className="text-muted">{appetite}</span>
-      <span aria-hidden className="text-white/20">·</span>
+      <span aria-hidden className="text-white/20">
+        ·
+      </span>
       <span className="text-muted">{overlap}</span>
-      <span aria-hidden className="text-white/20">·</span>
+      <span aria-hidden className="text-white/20">
+        ·
+      </span>
       <span className="font-semibold tracking-wide text-cream">{price}</span>
     </div>
   );
@@ -421,8 +422,32 @@ export default function Lobby() {
 }
 
 function LobbyRoom({ code, displayName }: { code: string; displayName: string }) {
-  const { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, errorSeq, status, everConnected, participantId, reactions, send } =
-    useSessionSocket(code, displayName);
+  const {
+    session,
+    deck,
+    demo,
+    vibeEffect,
+    behindBy,
+    nudges,
+    superUsed,
+    vetoUsed,
+    roundEndsAt,
+    alreadyVoted,
+    progress,
+    match,
+    planned,
+    arrivals,
+    vibeCounts,
+    myVibe,
+    visited,
+    error,
+    errorSeq,
+    status,
+    everConnected,
+    participantId,
+    reactions,
+    send,
+  } = useSessionSocket(code, displayName);
   const [announcement, setAnnouncement] = useState("");
   /*
    * The host's start button, closed for the round it is fetching. Cleared on either outcome: the
@@ -469,9 +494,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           ? `Swiping · Wherever, Honestly`
           : `Wherever, Honestly`;
   }, [session?.status, match]);
-  useEffect(() => () => {
-    document.title = "Wherever, Honestly";
-  }, []);
+  useEffect(
+    () => () => {
+      document.title = "Wherever, Honestly";
+    },
+    [],
+  );
 
   // Identify self by stable participantId, not display name (two people can share a name, which
   // would misattach host controls). Fall back to name only until identity arrives.
@@ -537,7 +565,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   const hurryWait = Math.max(0, 20 - Math.floor((now - hurriedAt) / 1000));
   const [codeCopied, setCodeCopied] = useState(false);
   const [codeCopyFailed, setCodeCopyFailed] = useState(false);
-  const [inviteStatus, setInviteStatus] = useState<'sharing' | 'shared' | 'copied' | 'failed' | null>(null);
+  const [inviteStatus, setInviteStatus] = useState<"sharing" | "shared" | "copied" | "failed" | null>(null);
   async function copyCode() {
     try {
       await navigator.clipboard.writeText(code);
@@ -552,21 +580,21 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setTimeout(() => setCodeCopied(false), 1200);
   }
 
-  const finishInvite = (status: 'shared' | 'copied'): void => {
+  const finishInvite = (status: "shared" | "copied"): void => {
     setInviteStatus(status);
     window.setTimeout(() => setInviteStatus(null), 2200);
   };
 
   async function copyInviteLink(): Promise<void> {
     if (inviteStatus) return;
-    setInviteStatus('sharing');
+    setInviteStatus("sharing");
     try {
       await navigator.clipboard.writeText(location.href);
       buzz(8);
-      play('tap');
-      finishInvite('copied');
+      play("tap");
+      finishInvite("copied");
     } catch {
-      setInviteStatus('failed');
+      setInviteStatus("failed");
       window.setTimeout(() => setInviteStatus(null), 2600);
     }
   }
@@ -579,7 +607,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     buzz(8);
     play("tap");
     const url = location.href;
-    setInviteStatus('sharing');
+    setInviteStatus("sharing");
     if (navigator.share) {
       try {
         await navigator.share({
@@ -587,10 +615,10 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           text: "Come help pick where we're eating.",
           url,
         });
-        finishInvite('shared');
+        finishInvite("shared");
         return;
       } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
+        if (err instanceof Error && err.name === "AbortError") {
           setInviteStatus(null);
           return;
         }
@@ -598,9 +626,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     }
     try {
       await navigator.clipboard.writeText(url);
-      finishInvite('copied');
+      finishInvite("copied");
     } catch {
-      setInviteStatus('failed');
+      setInviteStatus("failed");
       window.setTimeout(() => setInviteStatus(null), 2600);
     }
   }
@@ -630,38 +658,40 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
         <LiveRegion message={announcement} />
         <Toasts toasts={screenToasts} />
-        <FloatingReactions
-          reactions={reactions}
-          roster={(session?.participants ?? []).map((p) => p.id)}
-        />
+        <FloatingReactions reactions={reactions} roster={(session?.participants ?? []).map((p) => p.id)} />
         <Suspense fallback={<p className="text-muted">Counting…</p>}>
-        <MatchScreen
-          key={match.kind === "match" ? match.restaurant.id : "no-match"}
-          match={match}
-          visited={visited}
-          filters={session?.filters}
-          isHost={isHost}
-          planned={planned}
-          arrivals={arrivals}
-          participants={session?.participants ?? arrivals.map((arrival) => ({
-            id: arrival.participantId,
-            displayName: arrival.displayName,
-            isHost: false,
-            connected: true,
-          }))}
-          participantId={participantId}
-          onAgain={() => send({ type: "again" })}
-          onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
-          onPlan={(nextPlan) => send({ type: "set_plan", planned: nextPlan })}
-          onNeverAgain={(restaurantId, neverAgain) =>
-            send({ type: "set_never_again", restaurantId, neverAgain })
-          }
-          onArrival={(arrivalStatus, travelMinutes) => send({
-            type: "set_arrival",
-            status: arrivalStatus,
-            ...(travelMinutes ? { travelMinutes } : {}),
-          })}
-        />
+          <MatchScreen
+            key={match.kind === "match" ? match.restaurant.id : "no-match"}
+            match={match}
+            visited={visited}
+            filters={session?.filters}
+            isHost={isHost}
+            planned={planned}
+            arrivals={arrivals}
+            participants={
+              session?.participants ??
+              arrivals.map((arrival) => ({
+                id: arrival.participantId,
+                displayName: arrival.displayName,
+                isHost: false,
+                connected: true,
+              }))
+            }
+            participantId={participantId}
+            onAgain={() => send({ type: "again" })}
+            onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
+            onPlan={(nextPlan) => send({ type: "set_plan", planned: nextPlan })}
+            onNeverAgain={(restaurantId, neverAgain) =>
+              send({ type: "set_never_again", restaurantId, neverAgain })
+            }
+            onArrival={(arrivalStatus, travelMinutes) =>
+              send({
+                type: "set_arrival",
+                status: arrivalStatus,
+                ...(travelMinutes ? { travelMinutes } : {}),
+              })
+            }
+          />
         </Suspense>
         {/* The one moment everyone is looking at the same thing, and the reaction bar used to
             disappear exactly then. */}
@@ -696,10 +726,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
         <LiveRegion message={announcement} />
         <Toasts toasts={screenToasts} />
-        <FloatingReactions
-          reactions={reactions}
-          roster={(session?.participants ?? []).map((p) => p.id)}
-        />
+        <FloatingReactions reactions={reactions} roster={(session?.participants ?? []).map((p) => p.id)} />
         {demo && <DemoBanner reason={demo} />}
         {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}
         {deck && deck.length > 0 ? (
@@ -707,24 +734,26 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             {/* The group panel is handed to the deck rather than placed beside it: the deck owns
                 the round state, so it is the only thing that can put its own status in the same
                 column on a wide screen instead of stacking it under a card that is already tall. */}
-              <SwipeDeck
-                key={deck.map((r) => r.id).join(",")}
-                restaurants={deck}
-                alreadyVoted={alreadyVoted}
-                visited={visited}
-                superSpent={superUsed}
-                vetoSpent={vetoUsed}
-                onSwipe={(restaurantId, direction, isSuper, isVeto) =>
-                  send({ type: "swipe", restaurantId, direction, super: isSuper, veto: isVeto })
-                }
-                onUndo={(restaurantId) => send({ type: "undo_swipe", restaurantId })}
-                onAnnounce={setAnnouncement}
-                aside={
-                  <>
+            <SwipeDeck
+              key={deck.map((r) => r.id).join(",")}
+              restaurants={deck}
+              alreadyVoted={alreadyVoted}
+              visited={visited}
+              superSpent={superUsed}
+              vetoSpent={vetoUsed}
+              onSwipe={(restaurantId, direction, isSuper, isVeto) =>
+                send({ type: "swipe", restaurantId, direction, super: isSuper, veto: isVeto })
+              }
+              onUndo={(restaurantId) => send({ type: "undo_swipe", restaurantId })}
+              onAnnounce={setAnnouncement}
+              aside={
+                <>
                   {progress?.tastePulse && <GroupTasteMap pulse={progress.tastePulse} />}
-                  {session?.filters.revealVoters && progress?.finishedIds && session.participants.length > 0 && (
-                    <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
-                  )}
+                  {session?.filters.revealVoters &&
+                    progress?.finishedIds &&
+                    session.participants.length > 0 && (
+                      <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
+                    )}
                   {progress && <LiveVotes count={progress.votesCast ?? 0} />}
                   {progress && progress.totalParticipants > 0 && (
                     <p className="mt-3 text-sm text-muted tabular-nums">
@@ -782,17 +811,16 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                   <div className="mt-3">
                     <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
                   </div>
-                  </>
-                }
-              />
+                </>
+              }
+            />
           </>
         ) : deck ? (
           <div className="text-center max-w-sm">
             <div className="text-glyph">🍽️</div>
             <h1 className="mt-4 font-display text-state font-bold">Nothing survived the filters.</h1>
             <p className="mt-2 text-muted">
-              Your standards met this neighborhood and won. Try again with a wider radius or fewer
-              filters.
+              Your standards met this neighborhood and won. Try again with a wider radius or fewer filters.
             </p>
             <Link
               to="/"
@@ -825,7 +853,11 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           {code}
         </button>
         <p className="mt-1 text-xs text-muted">
-          {codeCopied ? "Copied the code." : codeCopyFailed ? "Couldn’t copy it. Select the code instead." : "Tap the code to copy it"}
+          {codeCopied
+            ? "Copied the code."
+            : codeCopyFailed
+              ? "Couldn’t copy it. Select the code instead."
+              : "Tap the code to copy it"}
         </p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <button
@@ -835,15 +867,15 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             aria-live="polite"
             className="rounded-full border border-white/15 px-5 py-2 text-sm font-medium hover:bg-white/5 active:scale-95 transition disabled:cursor-default disabled:opacity-60"
           >
-            {inviteStatus === 'sharing'
-              ? 'Opening…'
-              : inviteStatus === 'shared'
-                ? 'Invite sent'
-                : inviteStatus === 'copied'
-                  ? 'Link copied'
-                  : inviteStatus === 'failed'
-                    ? 'Couldn’t copy link'
-                    : 'Invite the group'}
+            {inviteStatus === "sharing"
+              ? "Opening…"
+              : inviteStatus === "shared"
+                ? "Invite sent"
+                : inviteStatus === "copied"
+                  ? "Link copied"
+                  : inviteStatus === "failed"
+                    ? "Couldn’t copy link"
+                    : "Invite the group"}
           </button>
           <button
             type="button"
@@ -882,14 +914,18 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       <div className="w-full mt-10">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-xl font-bold">The committee</h2>
-          <span className="text-sm text-muted">{count} {count === 1 ? "opinion" : "opinions"}</span>
+          <span className="text-sm text-muted">
+            {count} {count === 1 ? "opinion" : "opinions"}
+          </span>
         </div>
         <div className="flex flex-col gap-2">
           {session?.participants.length ? (
             session.participants.map((p) => <ParticipantChip key={p.id} p={p} />)
           ) : (
             <p className="text-muted text-sm">
-              {status === "connecting" ? "Finding your people..." : "Just you so far. That code won't share itself."}
+              {status === "connecting"
+                ? "Finding your people..."
+                : "Just you so far. That code won't share itself."}
             </p>
           )}
         </div>

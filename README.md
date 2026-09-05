@@ -13,12 +13,12 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
   that kills one place outright, anonymously, and the group is told when it took their top pick.
 - **Super-like.** One weighted pick per round that can tip a close race, with a gold flash to the whole room.
 - **Round timer (optional).** The host sets a countdown; when it's up, the votes so far decide — no more waiting on the slow one.
-- **Filter like you mean it.** Cuisines to include *or* exclude, exact price levels, amenities (outdoor seating, veg-friendly, dog-friendly, takes-reservations…), rating/review floors, and one-tap presets ("Cheap & close", "Date night").
+- **Filter like you mean it.** Cuisines to include _or_ exclude, exact price levels, amenities (outdoor seating, veg-friendly, dog-friendly, takes-reservations…), rating/review floors, and one-tap presets ("Cheap & close", "Date night").
 - **Show who's voted, or don't.** The host chooses; anonymous is the default and enforced server-side.
 - **No accounts.** Type a name, share a code, done.
 - **Remembers where you went.** Already-visited spots stop showing up.
 - **Joins the way people actually share.** Point your camera at somebody's join QR, or share the
-  invite link *into* the installed app from any chat and land straight in the session.
+  invite link _into_ the installed app from any chat and land straight in the session.
 - **Behaves like an app on the home screen.** Long-press for "Start a session" or "Join with a code",
   a badge on the icon counting the cards the room is waiting on you for, and the screen stays awake
   while a round is running, because a table of dark phones is how a round stalls.

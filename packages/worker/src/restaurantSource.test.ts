@@ -17,7 +17,6 @@ import {
 } from "./restaurantSource.js";
 import { VIBES, type SessionFilters } from "@wherever/shared";
 
-
 describe("mapGooglePlace", () => {
   const center = { lat: 40.7128, lng: -74.006 };
 
@@ -206,10 +205,7 @@ describe("photoProxyUrl", () => {
 
 describe("googleTypesFor", () => {
   it("maps known cuisines and dedupes", () => {
-    expect(googleTypesFor(["Pizza", "pizza", "Sushi"])).toEqual([
-      "pizza_restaurant",
-      "sushi_restaurant",
-    ]);
+    expect(googleTypesFor(["Pizza", "pizza", "Sushi"])).toEqual(["pizza_restaurant", "sushi_restaurant"]);
   });
 
   it("falls back to a generic restaurant search when empty or unmapped", () => {

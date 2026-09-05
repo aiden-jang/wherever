@@ -61,7 +61,9 @@ export function VibeDial({
                 <span className="font-display text-sm font-bold">{option.label}</span>
                 {votes > 0 && <span className="ml-auto text-xs tabular-nums text-white/50">{votes}</span>}
               </span>
-              <span className="relative mt-0.5 block text-2xs leading-snug text-white/45">{option.blurb}</span>
+              <span className="relative mt-0.5 block text-2xs leading-snug text-white/45">
+                {option.blurb}
+              </span>
             </button>
           );
         })}

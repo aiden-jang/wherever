@@ -250,4 +250,3 @@ export const ROUND_TIMER_OPTIONS: RoundTimerOption[] = [
   { seconds: 120, label: "2 min" },
   { seconds: 300, label: "5 min" },
 ];
-

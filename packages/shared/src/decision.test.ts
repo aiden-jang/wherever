@@ -169,41 +169,50 @@ describe("promoteAlternative", () => {
   });
 
   it("refuses a restaurant that was not a ranked finalist", () => {
-    expect(promoteAlternative({ restaurant: deck[0]!, rightSwipes: 2, tiedWith: 0,
-      vetoedTop: false, alternatives: [] }, "ghost"))
-      .toBeNull();
+    expect(
+      promoteAlternative(
+        { restaurant: deck[0]!, rightSwipes: 2, tiedWith: 0, vetoedTop: false, alternatives: [] },
+        "ghost",
+      ),
+    ).toBeNull();
   });
 });
 
 describe("taste pulse", () => {
   it("stays hidden until enough anonymous group activity exists", () => {
-    expect(tastePulse(deck, [
-      vote("p1", "a", "right"),
-      vote("p1", "b", "left"),
-      vote("p1", "c", "right"),
-      vote("p1", "a", "right"),
-    ])).toBeNull();
+    expect(
+      tastePulse(deck, [
+        vote("p1", "a", "right"),
+        vote("p1", "b", "left"),
+        vote("p1", "c", "right"),
+        vote("p1", "a", "right"),
+      ]),
+    ).toBeNull();
     expect(tastePulse(deck, [vote("p1", "a", "right"), vote("p2", "a", "right")])).toBeNull();
   });
 
   it("summarizes openness, overlap, and price without naming a place or person", () => {
     const pricedDeck = deck.map((place, index) => ({ ...place, priceTier: (index + 1) as 1 | 2 | 3 }));
-    expect(tastePulse(pricedDeck, [
-      vote("p1", "a", "right"),
-      vote("p1", "b", "left"),
-      vote("p2", "a", "right"),
-      vote("p2", "c", "right"),
-    ])).toEqual({ rightRate: 75, activeVoters: 2, strongestOverlap: 2, averagePriceTier: 1.7 });
+    expect(
+      tastePulse(pricedDeck, [
+        vote("p1", "a", "right"),
+        vote("p1", "b", "left"),
+        vote("p2", "a", "right"),
+        vote("p2", "c", "right"),
+      ]),
+    ).toEqual({ rightRate: 75, activeVoters: 2, strongestOverlap: 2, averagePriceTier: 1.7 });
   });
 
   it("ignores votes for places outside the round", () => {
-    expect(tastePulse(deck, [
-      vote("p1", "ghost", "right"),
-      vote("p1", "a", "right"),
-      vote("p2", "a", "right"),
-      vote("p2", "b", "left"),
-      vote("p2", "c", "left"),
-    ])?.rightRate).toBe(50);
+    expect(
+      tastePulse(deck, [
+        vote("p1", "ghost", "right"),
+        vote("p1", "a", "right"),
+        vote("p2", "a", "right"),
+        vote("p2", "b", "left"),
+        vote("p2", "c", "left"),
+      ])?.rightRate,
+    ).toBe(50);
   });
 });
 
@@ -244,10 +253,7 @@ describe("tallyRightSwipes", () => {
   });
 
   it("ignores left swipes entirely", () => {
-    const counts = tallyRightSwipes([
-      vote("p1", "a", "left"),
-      vote("p2", "b", "left"),
-    ]);
+    const counts = tallyRightSwipes([vote("p1", "a", "left"), vote("p2", "b", "left")]);
     expect(counts.size).toBe(0);
   });
 });
@@ -258,20 +264,12 @@ describe("decideWinner", () => {
   });
 
   it("returns null when everyone swiped left on everything", () => {
-    const votes = [
-      vote("p1", "a", "left"),
-      vote("p1", "b", "left"),
-      vote("p2", "a", "left"),
-    ];
+    const votes = [vote("p1", "a", "left"), vote("p1", "b", "left"), vote("p2", "a", "left")];
     expect(decideWinner(deck, votes)).toBeNull();
   });
 
   it("picks the restaurant with the most right-swipes", () => {
-    const votes = [
-      vote("p1", "a", "right"),
-      vote("p2", "a", "right"),
-      vote("p3", "b", "right"),
-    ];
+    const votes = [vote("p1", "a", "right"), vote("p2", "a", "right"), vote("p3", "b", "right")];
     const result = decideWinner(deck, votes);
     expect(result?.restaurant.id).toBe("a");
     expect(result?.rightSwipes).toBe(2);
@@ -301,10 +299,7 @@ describe("decideWinner", () => {
   });
 
   it("breaks ties by deck order (earlier card wins)", () => {
-    const votes = [
-      vote("p1", "b", "right"),
-      vote("p2", "c", "right"),
-    ];
+    const votes = [vote("p1", "b", "right"), vote("p2", "c", "right")];
     // b and c each have 1; b comes before c in the deck.
     expect(decideWinner(deck, votes)?.restaurant.id).toBe("b");
   });
@@ -317,11 +312,7 @@ describe("decideWinner", () => {
 
 describe("countFinished", () => {
   it("counts a participant who voted on every deck item", () => {
-    const votes = [
-      vote("p1", "a", "right"),
-      vote("p1", "b", "left"),
-      vote("p1", "c", "right"),
-    ];
+    const votes = [vote("p1", "a", "right"), vote("p1", "b", "left"), vote("p1", "c", "right")];
     expect(countFinished(votes, ["p1"], 3)).toBe(1);
   });
 
@@ -390,26 +381,47 @@ describe("veto", () => {
 
   it("still counts as that person answering the card", () => {
     // Three-card deck: a veto plus two plain swipes means they are done, not stuck on two of three.
-    const votes = [veto("p1", "a"), { participantId: "p1", restaurantId: "b", direction: "left" as const }, yes("p1", "c")];
+    const votes = [
+      veto("p1", "a"),
+      { participantId: "p1", restaurantId: "b", direction: "left" as const },
+      yes("p1", "c"),
+    ];
     expect(countFinished(votes, ["p1"], deck.length)).toBe(1);
   });
 
   it("does not count toward the winner's headcount", () => {
     const votes = [yes("p1", "b"), yes("p2", "b"), veto("p3", "a")];
-    expect(decideWinner(deck, votes)).toEqual({ restaurant: deck[1], rightSwipes: 2, alternatives: [], tiedWith: 0, vetoedTop: false });
+    expect(decideWinner(deck, votes)).toEqual({
+      restaurant: deck[1],
+      rightSwipes: 2,
+      alternatives: [],
+      tiedWith: 0,
+      vetoedTop: false,
+    });
   });
 });
 
 describe("when a veto took the group's favourite", () => {
   const place = (id: string): Restaurant => ({ id, name: id }) as Restaurant;
   const deck = [place("a"), place("b")];
-  const like = (who: string, what: string): Vote => ({ participantId: who, restaurantId: what, direction: "right" });
-  const veto = (who: string, what: string): Vote => ({ participantId: who, restaurantId: what, direction: "left", veto: true });
+  const like = (who: string, what: string): Vote => ({
+    participantId: who,
+    restaurantId: what,
+    direction: "right",
+  });
+  const veto = (who: string, what: string): Vote => ({
+    participantId: who,
+    restaurantId: what,
+    direction: "left",
+    veto: true,
+  });
 
   it("says so when a vetoed place outscored the winner", () => {
     // Three people wanted "a"; one person killed it. "b" wins on one vote and reads as a clean win.
     const result = decideWinner(deck, [
-      like("p1", "a"), like("p2", "a"), like("p3", "a"),
+      like("p1", "a"),
+      like("p2", "a"),
+      like("p3", "a"),
       veto("p4", "a"),
       like("p1", "b"),
     ]);

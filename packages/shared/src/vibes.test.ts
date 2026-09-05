@@ -39,7 +39,12 @@ describe("reading the group", () => {
   });
 
   it("ignores a vibe nobody picked rather than counting a zero", () => {
-    expect(resolveVibe({ cozy: 3, fancy: 0 })).toMatchObject({ vibe: "cozy", votes: 3, total: 3, divided: false });
+    expect(resolveVibe({ cozy: 3, fancy: 0 })).toMatchObject({
+      vibe: "cozy",
+      votes: 3,
+      total: 3,
+      divided: false,
+    });
   });
 
   it("takes the clear winner", () => {
@@ -62,7 +67,11 @@ describe("reading the group", () => {
   });
 
   it("is not divided when one vibe leads outright", () => {
-    expect(resolveVibe({ quick: 2, fancy: 1 })).toMatchObject({ vibe: "quick", divided: false, runnersUp: [] });
+    expect(resolveVibe({ quick: 2, fancy: 1 })).toMatchObject({
+      vibe: "quick",
+      divided: false,
+      runnersUp: [],
+    });
   });
 
   it("counts only the people who picked, not the group", () => {

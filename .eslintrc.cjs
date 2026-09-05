@@ -6,18 +6,8 @@ module.exports = {
   plugins: ["@typescript-eslint"],
   extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   env: { node: true, browser: true, es2022: true },
-  ignorePatterns: [
-    "dist",
-    "build",
-    "node_modules",
-    ".wrangler",
-    "*.config.ts",
-    "*.config.js",
-  ],
+  ignorePatterns: ["dist", "build", "node_modules", ".wrangler", "*.config.ts", "*.config.js"],
   rules: {
-    "@typescript-eslint/no-unused-vars": [
-      "warn",
-      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
-    ],
+    "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
   },
 };

@@ -43,9 +43,7 @@ export function FloatingReactions({
       {reactions.map((r) =>
         r.kind ? (
           <span key={r.id} className="verdict-flash absolute inset-0 grid place-items-center">
-            <span
-              className={`absolute inset-0 ${r.kind === "veto" ? "bg-flare/20" : "bg-acid/20"}`}
-            />
+            <span className={`absolute inset-0 ${r.kind === "veto" ? "bg-flare/20" : "bg-acid/20"}`} />
             <span className="relative text-7xl drop-shadow-2xl">{r.emoji}</span>
           </span>
         ) : (
@@ -56,9 +54,7 @@ export function FloatingReactions({
           >
             <span className="text-4xl">{r.emoji}</span>
             {r.from && (
-              <span className="mt-0.5 max-w-24 truncate text-2xs font-semibold text-cream/80">
-                {r.from}
-              </span>
+              <span className="mt-0.5 max-w-24 truncate text-2xs font-semibold text-cream/80">{r.from}</span>
             )}
           </span>
         ),

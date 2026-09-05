@@ -26,10 +26,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, max
  * canvas (no dependency) so it can be shared as a file or downloaded. Returns null if the
  * canvas 2D context is unavailable.
  */
-export async function renderShareCard(
-  r: Restaurant,
-  details?: WinnerCardDetails,
-): Promise<Blob | null> {
+export async function renderShareCard(r: Restaurant, details?: WinnerCardDetails): Promise<Blob | null> {
   const S = 1080;
   const canvas = document.createElement("canvas");
   canvas.width = S;

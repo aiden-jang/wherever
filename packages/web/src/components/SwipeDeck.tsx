@@ -1,11 +1,6 @@
 import type { CSSProperties } from "react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import {
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-} from "framer-motion";
+import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import type { Restaurant, SwipeDirection, VisitedPlace } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -47,7 +42,11 @@ function CardFace({
       {/* data-card-photo marks the photo zone: TopCard's tap handler cycles photos here and opens
           details everywhere else. */}
       <div data-card-photo className="relative">
-        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,340px)]" />
+        <RestaurantPhoto
+          imageUrl={photoUrl ?? null}
+          category={restaurant.category}
+          className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,340px)]"
+        />
         {photoCount > 1 && (
           <div className="pointer-events-none absolute inset-x-3 top-2 flex gap-1">
             {Array.from({ length: photoCount }).map((_, i) => (
@@ -68,9 +67,7 @@ function CardFace({
       </div>
       <div className="h-[3px] w-full shrink-0" style={{ background: cuisine.gradient }} aria-hidden />
       <div className="p-5">
-        <div className="font-display text-2xl font-bold leading-tight line-clamp-2">
-          {restaurant.name}
-        </div>
+        <div className="font-display text-2xl font-bold leading-tight line-clamp-2">{restaurant.name}</div>
         {/* Category on its own line (it's the long one), then the short stats — each atomic value
             kept on one line so "3.6 mi" can never split across a wrap. */}
         <div className="mt-2 truncate text-sm text-muted">
@@ -148,9 +145,7 @@ function cardDescription(r: Restaurant, revisit?: string | null): string {
   const parts: (string | null)[] = [r.name, categoryLabel(r.category)];
   if (r.rating) {
     parts.push(
-      r.reviewCount
-        ? `${r.rating} stars, ${reviewCountLabel(r.reviewCount)} reviews`
-        : `${r.rating} stars`,
+      r.reviewCount ? `${r.rating} stars, ${reviewCountLabel(r.reviewCount)} reviews` : `${r.rating} stars`,
     );
   }
   parts.push(priceLabel(r.priceTier), distanceText(r.distanceMeters));
@@ -358,8 +353,12 @@ export function SwipeDeck({
   const [vetoUsed, setVetoUsed] = useState(vetoSpent);
   // Only choices made in this mount are rewindable. Votes restored after a reconnect have no safe
   // local ordering, so guessing which was "last" could remove the wrong restaurant on the server.
-  const historyRef = useRef<{ index: number; restaurantId: string; direction: SwipeDirection; super: boolean; veto: boolean }[]>([]);
-  const [choices, setChoices] = useState<{ restaurantId: string; direction: SwipeDirection; super: boolean; veto: boolean }[]>([]);
+  const historyRef = useRef<
+    { index: number; restaurantId: string; direction: SwipeDirection; super: boolean; veto: boolean }[]
+  >([]);
+  const [choices, setChoices] = useState<
+    { restaurantId: string; direction: SwipeDirection; super: boolean; veto: boolean }[]
+  >([]);
   const [canUndo, setCanUndo] = useState(false);
   // The card whose full details are open in the sheet (null = closed). Tapping a card opens it;
   // it never blocks voting since a drag isn't a tap.
@@ -397,8 +396,17 @@ export function SwipeDeck({
       play(isVeto ? "veto" : isSuper ? "superLike" : dir === "right" ? "like" : "pass");
       if (isSuper) setSuperUsed(true);
       if (isVeto) setVetoUsed(true);
-      historyRef.current.push({ index: i, restaurantId: current.id, direction: dir, super: isSuper, veto: isVeto });
-      setChoices((previous) => [...previous, { restaurantId: current.id, direction: dir, super: isSuper, veto: isVeto }]);
+      historyRef.current.push({
+        index: i,
+        restaurantId: current.id,
+        direction: dir,
+        super: isSuper,
+        veto: isVeto,
+      });
+      setChoices((previous) => [
+        ...previous,
+        { restaurantId: current.id, direction: dir, super: isSuper, veto: isVeto },
+      ]);
       setCanUndo(true);
       dismissHint();
       setExitDir(dir);
@@ -505,7 +513,9 @@ export function SwipeDeck({
                 ) : (
                   <ul className="space-y-1">
                     {likedChoices.map((choice) => {
-                      const restaurant = restaurants.find((candidate) => candidate.id === choice.restaurantId);
+                      const restaurant = restaurants.find(
+                        (candidate) => candidate.id === choice.restaurantId,
+                      );
                       if (!restaurant) return null;
                       return (
                         <li key={choice.restaurantId}>
@@ -549,38 +559,38 @@ export function SwipeDeck({
   return (
     <div className={SPLIT}>
       <div className="mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none">
-      <div className="relative h-[clamp(288px,48dvh,360px)] lg:h-[clamp(360px,64dvh,520px)]">
-        {/* Background cards, peeking behind the top one. */}
-        {upcoming
-          .map((r, i) => (
-            /* Two elements on purpose: the wrapper carries the deal animation, the inner one carries
+        <div className="relative h-[clamp(288px,48dvh,360px)] lg:h-[clamp(360px,64dvh,520px)]">
+          {/* Background cards, peeking behind the top one. */}
+          {upcoming
+            .map((r, i) => (
+              /* Two elements on purpose: the wrapper carries the deal animation, the inner one carries
                the stack's own transform. One element cannot do both, because the animation ends at
                `transform: none` and would drop the card out of the stack as it landed. */
-            <div
-              key={r.id}
-              className={`absolute inset-0 ${dealing ? "deal-in" : ""}`}
-              style={dealing ? { animationDelay: `${(i + 1) * 90}ms` } : undefined}
-            >
               <div
-                className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 overflow-hidden transition-transform duration-200"
-                style={{
-                  transform: `scale(${1 - (i + 1) * 0.05}) translateY(${(i + 1) * 14}px)`,
-                  zIndex: -i - 1,
-                }}
+                key={r.id}
+                className={`absolute inset-0 ${dealing ? "deal-in" : ""}`}
+                style={dealing ? { animationDelay: `${(i + 1) * 90}ms` } : undefined}
               >
-                <CardFace
-                  restaurant={r}
-                  photoUrl={r.imageUrl}
-                  photoCount={0}
-                  photoIdx={0}
-                  revisit={revisitNote(visited, r.id)}
-                />
+                <div
+                  className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 overflow-hidden transition-transform duration-200"
+                  style={{
+                    transform: `scale(${1 - (i + 1) * 0.05}) translateY(${(i + 1) * 14}px)`,
+                    zIndex: -i - 1,
+                  }}
+                >
+                  <CardFace
+                    restaurant={r}
+                    photoUrl={r.imageUrl}
+                    photoCount={0}
+                    photoIdx={0}
+                    revisit={revisitNote(visited, r.id)}
+                  />
+                </div>
               </div>
-            </div>
-          ))
-          .reverse()}
+            ))
+            .reverse()}
 
-        {/*
+          {/*
           No AnimatePresence here, deliberately.
           
           It was wrapping this card so the outgoing one could fly off, and the exit animation never
@@ -593,110 +603,110 @@ export function SwipeDeck({
           is what the screen already looked like, minus the pile of dead cards behind it. Restoring
           the throw animation is a separate job and wants a real thumb to tune against.
         */}
-        {/* Named for the view transition into the match screen: the browser pairs this box with the
+          {/* Named for the view transition into the match screen: the browser pairs this box with the
             one in `MatchScreen` carrying the same name and tweens between them. `contents` cannot
             carry it - a box is required - so the name goes on the wrapper that has one. */}
-        <div
-          className={dealing ? "deal-in absolute inset-0" : "contents"}
-          style={{ viewTransitionName: "chosen-card" } as CSSProperties}
-        >
-          <TopCard
-            key={restaurants[index]!.id}
-            restaurant={restaurants[index]!}
-            exitDir={exitDir}
-            revisit={revisitNote(visited, restaurants[index]!.id)}
-            onCommit={commit}
-            onOpenDetail={setDetail}
-          />
+          <div
+            className={dealing ? "deal-in absolute inset-0" : "contents"}
+            style={{ viewTransitionName: "chosen-card" } as CSSProperties}
+          >
+            <TopCard
+              key={restaurants[index]!.id}
+              restaurant={restaurants[index]!}
+              exitDir={exitDir}
+              revisit={revisitNote(visited, restaurants[index]!.id)}
+              onCommit={commit}
+              onOpenDetail={setDetail}
+            />
+          </div>
         </div>
-      </div>
 
-      {showHint && (
-        <p className="mt-4 text-center text-xs text-muted animate-pulse lg:hidden">
-          Tap for details, drag or tap below to vote. <span className="text-flare">✕ pass</span>
-          {" · "}
-          <span className="text-acid">♥ eat</span>
-        </p>
-      )}
+        {showHint && (
+          <p className="mt-4 text-center text-xs text-muted animate-pulse lg:hidden">
+            Tap for details, drag or tap below to vote. <span className="text-flare">✕ pass</span>
+            {" · "}
+            <span className="text-acid">♥ eat</span>
+          </p>
+        )}
 
-      {/* mt-4, not mt-8: the whole swiping column has to clear a 720px laptop, and the buttons stay
+        {/* mt-4, not mt-8: the whole swiping column has to clear a 720px laptop, and the buttons stay
           at 64px because they are the primary target on a phone. See the main in Lobby. */}
-      <div className="mt-4 flex items-center justify-center gap-5">
-        <button
-          type="button"
-          aria-label="Pass"
-          onClick={() => commit("left")}
-          className="grid place-items-center h-16 w-16 rounded-full border border-white/15 text-2xl hover:border-flare hover:text-flare hover:scale-105 active:scale-95 transition"
-        >
-          ✕
-        </button>
-        <button
-          type="button"
-          aria-label={vetoUsed ? "Veto used" : "Veto (one per round, kills it outright)"}
-          disabled={vetoUsed}
-          onClick={() => commit("left", false, true)}
-          className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
-            vetoUsed
-              ? "border-white/10 text-white/25"
-              : "border-flare text-flare hover:scale-105 active:scale-95 hover:bg-flare/10"
-          }`}
-        >
-          🚫
-        </button>
-        <button
-          type="button"
-          aria-label={superUsed ? "Super-like used" : "Super-like (one per round)"}
-          disabled={superUsed}
-          onClick={() => commit("right", true)}
-          className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
-            superUsed
-              ? "border-white/10 text-white/25"
-              : "border-grape text-grape hover:scale-105 active:scale-95 hover:bg-grape/10"
-          }`}
-        >
-          ⭐
-        </button>
-        <button
-          type="button"
-          aria-label="Let's eat"
-          onClick={() => commit("right")}
-          className="grid place-items-center h-16 w-16 rounded-full bg-acid text-ink text-2xl font-bold hover:scale-105 active:scale-95 transition"
-        >
-          ♥
-        </button>
-      </div>
+        <div className="mt-4 flex items-center justify-center gap-5">
+          <button
+            type="button"
+            aria-label="Pass"
+            onClick={() => commit("left")}
+            className="grid place-items-center h-16 w-16 rounded-full border border-white/15 text-2xl hover:border-flare hover:text-flare hover:scale-105 active:scale-95 transition"
+          >
+            ✕
+          </button>
+          <button
+            type="button"
+            aria-label={vetoUsed ? "Veto used" : "Veto (one per round, kills it outright)"}
+            disabled={vetoUsed}
+            onClick={() => commit("left", false, true)}
+            className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
+              vetoUsed
+                ? "border-white/10 text-white/25"
+                : "border-flare text-flare hover:scale-105 active:scale-95 hover:bg-flare/10"
+            }`}
+          >
+            🚫
+          </button>
+          <button
+            type="button"
+            aria-label={superUsed ? "Super-like used" : "Super-like (one per round)"}
+            disabled={superUsed}
+            onClick={() => commit("right", true)}
+            className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
+              superUsed
+                ? "border-white/10 text-white/25"
+                : "border-grape text-grape hover:scale-105 active:scale-95 hover:bg-grape/10"
+            }`}
+          >
+            ⭐
+          </button>
+          <button
+            type="button"
+            aria-label="Let's eat"
+            onClick={() => commit("right")}
+            className="grid place-items-center h-16 w-16 rounded-full bg-acid text-ink text-2xl font-bold hover:scale-105 active:scale-95 transition"
+          >
+            ♥
+          </button>
+        </div>
       </div>
 
       {/* The second column, and the reason it is not mostly empty: on a wide screen the deck's own
           status used to stack under a card that already runs to the bottom of the viewport, leaving
           this half holding one line of text. Under the deck on a phone, in the same order. */}
       <div className={RAIL}>
-      <p className="mt-3 text-center text-sm text-muted tabular-nums lg:mt-0 lg:text-left">
-        {index + 1} / {restaurants.length}
-        {!superUsed && <span className="ml-2 text-grape">· ⭐ super</span>}
-        {!vetoUsed && <span className="ml-2 text-flare">· 🚫 veto, kills it</span>}
-      </p>
-      {/* Every one of these already worked; nothing said so, and a key nobody knows about is a
+        <p className="mt-3 text-center text-sm text-muted tabular-nums lg:mt-0 lg:text-left">
+          {index + 1} / {restaurants.length}
+          {!superUsed && <span className="ml-2 text-grape">· ⭐ super</span>}
+          {!vetoUsed && <span className="ml-2 text-flare">· 🚫 veto, kills it</span>}
+        </p>
+        {/* Every one of these already worked; nothing said so, and a key nobody knows about is a
           feature nobody has. Desktop only: there is no keyboard to speak of on the phone layout. */}
-      <p className="mt-3 hidden items-center justify-center gap-2 text-2xs text-muted lg:flex lg:justify-start">
-        <Key>←</Key> pass
-        <Key>→</Key> eat
-        {/* The cap dims, the word does not: fading the word too put it under 4.5:1, and dimming it
+        <p className="mt-3 hidden items-center justify-center gap-2 text-2xs text-muted lg:flex lg:justify-start">
+          <Key>←</Key> pass
+          <Key>→</Key> eat
+          {/* The cap dims, the word does not: fading the word too put it under 4.5:1, and dimming it
             far enough to be legible would have erased the difference it exists to show. */}
-        <Key dim={superUsed}>↑</Key> super
-        <Key dim={vetoUsed}>↓</Key> veto
-        <Key dim={!canUndo}>⌫</Key> undo
-      </p>
-      {canUndo && (
-        <button
-          type="button"
-          onClick={undoLast}
-          className="mx-auto mt-2 block px-3 py-1 text-xs font-medium text-muted transition hover:text-cream hover:underline lg:mx-0"
-        >
-          Undo last vote
-        </button>
-      )}
-      {aside}
+          <Key dim={superUsed}>↑</Key> super
+          <Key dim={vetoUsed}>↓</Key> veto
+          <Key dim={!canUndo}>⌫</Key> undo
+        </p>
+        {canUndo && (
+          <button
+            type="button"
+            onClick={undoLast}
+            className="mx-auto mt-2 block px-3 py-1 text-xs font-medium text-muted transition hover:text-cream hover:underline lg:mx-0"
+          >
+            Undo last vote
+          </button>
+        )}
+        {aside}
       </div>
 
       {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}

@@ -8,8 +8,14 @@
 
 /** First user-perceived character, so an emoji or an accented letter is not cut in half. */
 function firstGrapheme(word: string): string {
-  const Seg = (Intl as { Segmenter?: new (l?: string, o?: { granularity: string }) => { segment(s: string): Iterable<{ segment: string }> } })
-    .Segmenter;
+  const Seg = (
+    Intl as {
+      Segmenter?: new (
+        l?: string,
+        o?: { granularity: string },
+      ) => { segment(s: string): Iterable<{ segment: string }> };
+    }
+  ).Segmenter;
   if (Seg) {
     for (const { segment } of new Seg(undefined, { granularity: "grapheme" }).segment(word)) return segment;
     return "";

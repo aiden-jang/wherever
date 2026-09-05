@@ -21,7 +21,7 @@ const MAX_STATE = 12;
 const ALREADY_OVER = {
   "packages/web/src/components/MatchScreen.tsx": { lines: 968 },
   "packages/worker/src/sessionRoom.ts": { lines: 1038 },
-  "packages/web/src/routes/Lobby.tsx": { lines: 960, state: 14 },
+  "packages/web/src/routes/Lobby.tsx": { lines: 847 },
   "packages/web/src/components/SwipeDeck.tsx": { lines: 765 },
   "packages/web/src/components/FilterFields.tsx": { lines: 614 },
   "packages/worker/src/restaurantSource.ts": { lines: 512 },

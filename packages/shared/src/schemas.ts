@@ -97,6 +97,7 @@ const setPlanSchema = z.object({
     .nullable(),
 });
 
+/* Accepted and then ignored: see SetArrivalMessage in protocol.ts for when to delete this. */
 const setArrivalSchema = z.object({
   type: z.literal("set_arrival"),
   status: z.enum(["planning", "heading_out", "here"]).nullable(),

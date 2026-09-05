@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type {
   ClientMessage,
-  ArrivalUpdate,
   DecisionAlternative,
   PlannedMeetup,
   Restaurant,
@@ -114,7 +113,6 @@ export function useSessionSocket(code: string, displayName: string) {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [match, setMatch] = useState<MatchState>(null);
   const [planned, setPlanned] = useState<PlannedMeetup | null>(null);
-  const [arrivals, setArrivals] = useState<ArrivalUpdate[]>([]);
   // Tallies for the group and this client's own pick. The server never sends anybody else's.
   const [vibeCounts, setVibeCounts] = useState<Partial<Record<Vibe, number>>>({});
   const [myVibe, setMyVibe] = useState<Vibe | null>(null);
@@ -151,7 +149,6 @@ export function useSessionSocket(code: string, displayName: string) {
           // A fresh deck means a new round: clear any prior match outcome.
           setMatch(null);
           setPlanned(null);
-          setArrivals([]);
           setProgress(null);
           setDeck(msg.restaurants);
           setDemo(msg.demo ?? null);
@@ -199,8 +196,6 @@ export function useSessionSocket(code: string, displayName: string) {
           return setVisited(msg.visited);
         case "plan":
           return setPlanned(msg.planned);
-        case "arrivals":
-          return setArrivals(msg.arrivals);
         case "vibes":
           setVibeCounts(msg.counts);
           return setMyVibe(msg.yours);
@@ -325,7 +320,6 @@ export function useSessionSocket(code: string, displayName: string) {
     progress,
     match,
     planned,
-    arrivals,
     vibeCounts,
     myVibe,
     visited,

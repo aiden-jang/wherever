@@ -5,9 +5,6 @@ import {
   line,
   matchReasons,
   nearMissLine,
-  type ArrivalStatus,
-  type ArrivalUpdate,
-  type Participant,
   type PlannedMeetup,
   type Restaurant,
   type SessionFilters,
@@ -25,7 +22,6 @@ import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 import { renderShareCard } from "./shareCard.js";
 import { filterSummaryChips } from "./FilterSummary.js";
-import { ArrivalPulse } from "./ArrivalPulse.js";
 
 /*
  * Same line for everybody in the room: the seed comes from the winner's id, not a clock or a random,
@@ -183,13 +179,9 @@ export function MatchScreen({
   filters,
   isHost,
   planned,
-  arrivals,
-  participants,
-  participantId,
   onAgain,
   onChooseAlternative,
   onPlan,
-  onArrival,
   onNeverAgain,
 }: {
   match: NonNullable<MatchState>;
@@ -197,13 +189,9 @@ export function MatchScreen({
   filters?: SessionFilters;
   isHost: boolean;
   planned: PlannedMeetup | null;
-  arrivals: ArrivalUpdate[];
-  participants: Participant[];
-  participantId: string | null;
   onAgain: () => void;
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
-  onArrival: (status: ArrivalStatus | null, travelMinutes?: number) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
 }) {
   const navigate = useNavigate();
@@ -260,13 +248,9 @@ export function MatchScreen({
       filters={filters}
       isHost={isHost}
       planned={planned}
-      arrivals={arrivals}
-      participants={participants}
-      participantId={participantId}
       onAgain={onAgain}
       onChooseAlternative={onChooseAlternative}
       onPlan={onPlan}
-      onArrival={onArrival}
       onNeverAgain={onNeverAgain}
       navigate={navigate}
     />
@@ -279,13 +263,9 @@ function WinnerScreen({
   filters,
   isHost,
   planned,
-  arrivals,
-  participants,
-  participantId,
   onAgain,
   onChooseAlternative,
   onPlan,
-  onArrival,
   onNeverAgain,
   navigate,
 }: {
@@ -294,13 +274,9 @@ function WinnerScreen({
   filters?: SessionFilters;
   isHost: boolean;
   planned: PlannedMeetup | null;
-  arrivals: ArrivalUpdate[];
-  participants: Participant[];
-  participantId: string | null;
   onAgain: () => void;
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
-  onArrival: (status: ArrivalStatus | null, travelMinutes?: number) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
   navigate: ReturnType<typeof useNavigate>;
 }) {
@@ -451,7 +427,7 @@ function WinnerScreen({
       */}
       {/*
         Two columns from lg: what happened on the left, what to do about it on the right.
-        This screen carries a winner, a tally, the reasons, a meetup plan, arrival status, the
+        This screen carries a winner, a tally, the reasons, a meetup plan, the
         receipt, the backups and the history, and all of it was a 384px column no matter how
         wide the window -- a phone screen with a thousand pixels of dark either side. One cut,
         so a phone still reads it top to bottom in exactly the order it always did.
@@ -634,14 +610,6 @@ function WinnerScreen({
               </span>
             </button>
           )}
-          <ArrivalPulse
-            destination={restaurant.name}
-            participants={participants}
-            arrivals={arrivals}
-            planned={planned}
-            participantId={participantId}
-            onArrival={onArrival}
-          />
           <div
             className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10"
             role="progressbar"

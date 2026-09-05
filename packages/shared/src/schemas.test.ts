@@ -29,7 +29,12 @@ describe("shared meetup plan messages", () => {
   });
 });
 
-describe("arrival status messages", () => {
+/*
+ * The arrival pulse is deleted; the message is still parsed so a client on the previous bundle gets
+ * silence rather than an error toast. When this fails because the schema is gone, that is the
+ * cleanup working: delete this block with it.
+ */
+describe("arrival status messages, accepted and ignored for one release", () => {
   it("accepts planning, arrival statuses, trip estimates, and clearing", () => {
     expect(
       clientMessageSchema.safeParse({ type: "set_arrival", status: "planning", travelMinutes: 25 }).success,

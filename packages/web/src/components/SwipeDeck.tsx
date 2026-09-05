@@ -366,7 +366,13 @@ export function SwipeDeck({
   // it never blocks voting since a drag isn't a tap.
   const [detail, setDetail] = useState<Restaurant | null>(null);
 
-  // First-run gesture hint: shown once ever, then remembered.
+  /*
+   * First-run gesture hint: shown once ever, then remembered.
+   *
+   * The first swipe dismisses it and nothing else does. It used to also time out after five
+   * seconds, which is about how long the line takes to read and less time than a first-timer spends
+   * looking at the restaurant rather than the hint. A swipe is the signal that it landed.
+   */
   const [showHint, setShowHint] = useState(() => {
     try {
       return !localStorage.getItem(HINT_KEY);
@@ -466,13 +472,6 @@ export function SwipeDeck({
     const back = restaurants[previous.index];
     if (back) onAnnounce?.(undoAnnouncement(back.name, previous.index + 1, restaurants.length));
   }, [onUndo, onAnnounce, restaurants]);
-
-  // Don't let the hint linger if they just sit there.
-  useEffect(() => {
-    if (!showHint) return;
-    const t = setTimeout(dismissHint, 5000);
-    return () => clearTimeout(t);
-  }, [showHint, dismissHint]);
 
   // Desktop: arrow keys swipe. Suspended while the detail sheet is open so arrows don't vote the
   // card behind it (the sheet has its own concerns, e.g. dismissing).

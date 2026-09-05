@@ -68,7 +68,6 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     progress,
     match,
     planned,
-    arrivals,
     vibeCounts,
     myVibe,
     visited,
@@ -299,29 +298,11 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             filters={session?.filters}
             isHost={isHost}
             planned={planned}
-            arrivals={arrivals}
-            participants={
-              session?.participants ??
-              arrivals.map((arrival) => ({
-                id: arrival.participantId,
-                displayName: arrival.displayName,
-                isHost: false,
-                connected: true,
-              }))
-            }
-            participantId={participantId}
             onAgain={() => send({ type: "again" })}
             onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
             onPlan={(nextPlan) => send({ type: "set_plan", planned: nextPlan })}
             onNeverAgain={(restaurantId, neverAgain) =>
               send({ type: "set_never_again", restaurantId, neverAgain })
-            }
-            onArrival={(arrivalStatus, travelMinutes) =>
-              send({
-                type: "set_arrival",
-                status: arrivalStatus,
-                ...(travelMinutes ? { travelMinutes } : {}),
-              })
             }
           />
         </Suspense>

@@ -9,8 +9,6 @@ import {
   decideWinner,
   vetoedRestaurantIds,
   type DecisionResult,
-  type ArrivalStatus,
-  type ArrivalUpdate,
   type Participant,
   type PlannedMeetup,
   type Restaurant,
@@ -64,7 +62,6 @@ const NUDGE_COOLDOWN_MS = 20_000;
 type ClientMap = Record<string, { participantId: string; isHost: boolean }>;
 /** Votes keyed by `${participantId}:${restaurantId}` for idempotency. */
 type VoteMap = Record<string, Vote>;
-type ArrivalMap = Record<string, ArrivalUpdate>;
 /**
  * Who picked which vibe. Never leaves this object - clients get tallies only, so "nobody finds out
  * who said fancy" is a property of the server rather than of every screen that renders it.
@@ -138,8 +135,6 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleChooseAlternative(ws, msg.restaurantId);
       case "set_plan":
         return this.handleSetPlan(ws, msg.planned);
-      case "set_arrival":
-        return this.handleSetArrival(ws, msg.status, msg.travelMinutes);
       case "set_vibe":
         return this.handleSetVibe(ws, msg.vibe);
       case "set_filters":
@@ -450,10 +445,6 @@ export class SessionRoom extends DurableObject<Env> {
         type: "plan",
         planned: (await this.ctx.storage.get<PlannedMeetup>("plannedMeetup")) ?? null,
       });
-      this.send(ws, {
-        type: "arrivals",
-        arrivals: Object.values((await this.ctx.storage.get<ArrivalMap>("arrivals")) ?? {}),
-      });
     }
   }
 
@@ -639,34 +630,6 @@ export class SessionRoom extends DurableObject<Env> {
     this.broadcast({ type: "plan", planned });
   }
 
-  /** Arrival updates are self-owned, but shared and durable for people joining the plan later. */
-  private async handleSetArrival(
-    ws: WebSocket,
-    status: ArrivalStatus | null,
-    travelMinutes?: number,
-  ): Promise<void> {
-    const att = ws.deserializeAttachment() as SocketAttachment | null;
-    if (!att) return;
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta || meta.status !== "decided") return;
-    const arrivals = (await this.ctx.storage.get<ArrivalMap>("arrivals")) ?? {};
-    if (status) {
-      const previous = arrivals[att.participantId];
-      const estimate = travelMinutes ?? previous?.travelMinutes;
-      arrivals[att.participantId] = {
-        participantId: att.participantId,
-        displayName: att.displayName,
-        status,
-        ...(estimate ? { travelMinutes: estimate } : {}),
-        updatedAt: new Date().toISOString(),
-      };
-    } else {
-      delete arrivals[att.participantId];
-    }
-    await this.ctx.storage.put("arrivals", arrivals);
-    this.broadcast({ type: "arrivals", arrivals: Object.values(arrivals) });
-  }
-
   // ---- core round logic ----
 
   /** Recompute + broadcast progress, then decide if everyone connected is done. */
@@ -769,7 +732,6 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.delete("votes");
     await this.ctx.storage.delete("winner");
     await this.ctx.storage.delete("plannedMeetup");
-    await this.ctx.storage.delete("arrivals");
     await this.ctx.storage.put("againRounds", rounds + 1);
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);

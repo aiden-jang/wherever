@@ -76,16 +76,14 @@ export interface SetPlanMessage {
 
 export type ArrivalStatus = "planning" | "heading_out" | "here";
 
-export interface ArrivalUpdate {
-  participantId: string;
-  displayName: string;
-  status: ArrivalStatus;
-  /** Self-reported trip estimate; used for leave-by and ETA copy, never live location. */
-  travelMinutes?: number;
-  updatedAt?: string;
-}
-
-/** Each participant owns their own arrival status; null quietly clears it. */
+/*
+ * The arrival pulse is gone: self-reported presence is the thing nobody actually taps, and one of
+ * its three statuses had no button at all, so "getting ready" could only ever read zero.
+ *
+ * The message is still parsed and then ignored, so a client left open on the previous bundle taps
+ * check-in and gets silence rather than "Unrecognized message." Delete this, its schema and its test
+ * on the next deploy after the one that removes the feature.
+ */
 export interface SetArrivalMessage {
   type: "set_arrival";
   status: ArrivalStatus | null;
@@ -287,11 +285,6 @@ export interface VibesMessage {
   yours: Vibe | null;
 }
 
-export interface ArrivalsMessage {
-  type: "arrivals";
-  arrivals: ArrivalUpdate[];
-}
-
 export type ServerMessage =
   | SessionStateMessage
   | DeckMessage
@@ -303,7 +296,6 @@ export type ServerMessage =
   | ErrorMessage
   | IdentityMessage
   | PlanMessage
-  | ArrivalsMessage
   | VibesMessage
   | ReactionMessage
   | NudgeMessage;

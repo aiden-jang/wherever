@@ -21,7 +21,7 @@ export const VIBES: VibeOption[] = [
   {
     id: "cozy",
     label: "cozy",
-    emoji: "🕯️",
+    emoji: "🫖",
     blurb: "Close by, warm, and nobody rushes you out.",
     filters: { priceTiers: [2, 3], radiusMeters: 1600, minRating: 4.2 },
   },

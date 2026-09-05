@@ -30,7 +30,7 @@ export const DEFAULT_FILTERS: SessionFilters = {
   revealVoters: false,
 };
 
-export const REACTION_EMOJIS = ["🔥", "😍", "🤤", "😂", "👀", "🙅"] as const;
+export const REACTION_EMOJIS = ["🔥", "😩", "🤌", "💀", "👀", "🙃"] as const;
 
 export interface CuisineOption {
   value: string;

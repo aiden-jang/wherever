@@ -3,7 +3,7 @@
 // Worker / Durable Object trusts it.
 
 import { z } from "zod";
-import { REACTION_EMOJIS } from "./constants.js";
+import { ACCEPTED_REACTION_EMOJIS } from "./constants.js";
 import { VIBE_IDS } from "./vibes.js";
 
 export const priceTierSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
@@ -122,7 +122,7 @@ const setNeverAgainSchema = z.object({
 
 const reactSchema = z.object({
   type: z.literal("react"),
-  emoji: z.enum(REACTION_EMOJIS),
+  emoji: z.enum(ACCEPTED_REACTION_EMOJIS),
 });
 
 const nudgeThemSchema = z.object({ type: z.literal("nudge_them") });

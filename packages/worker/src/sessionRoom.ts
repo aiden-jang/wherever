@@ -105,10 +105,7 @@ export class SessionRoom extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  override async webSocketMessage(
-    ws: WebSocket,
-    raw: string | ArrayBuffer,
-  ): Promise<void> {
+  override async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
     if (typeof raw !== "string") return;
 
     let parsed: unknown;
@@ -211,11 +208,7 @@ export class SessionRoom extends DurableObject<Env> {
    * Only for a place the group has actually been. This is a note on a visit, not a way to blacklist
    * any id you like - without the check, anybody with the code could quietly shrink the deck.
    */
-  private async handleSetNeverAgain(
-    ws: WebSocket,
-    restaurantId: string,
-    neverAgain: boolean,
-  ): Promise<void> {
+  private async handleSetNeverAgain(ws: WebSocket, restaurantId: string, neverAgain: boolean): Promise<void> {
     // Anyone in the room may set this -- it is the group's memory, not the host's. But it was the one
     // mutation that never looked at who was asking, so a socket that opened and never joined could
     // block a restaurant from every future deck. Not host-only; joined.
@@ -251,7 +244,11 @@ export class SessionRoom extends DurableObject<Env> {
     const votes = await this.getVotes();
     const participants = this.connectedParticipants();
     const finished = new Set(
-      finishedParticipantIds(votes, participants.map((p) => p.participantId), deck.length),
+      finishedParticipantIds(
+        votes,
+        participants.map((p) => p.participantId),
+        deck.length,
+      ),
     );
     for (const socket of this.ctx.getWebSockets()) {
       if (socket === ws) continue; // the host has not finished either, and nudging yourself is daft
@@ -397,11 +394,7 @@ export class SessionRoom extends DurableObject<Env> {
 
   // ---- handlers ----
 
-  private async handleJoin(
-    ws: WebSocket,
-    displayName: string,
-    clientId?: string,
-  ): Promise<void> {
+  private async handleJoin(ws: WebSocket, displayName: string, clientId?: string): Promise<void> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta) {
       return this.send(ws, {
@@ -535,9 +528,7 @@ export class SessionRoom extends DurableObject<Env> {
     // normal right-swipe.
     let superLike = isSuper && direction === "right";
     if (superLike) {
-      const spent = Object.values(votes).some(
-        (v) => v.participantId === att.participantId && v.super,
-      );
+      const spent = Object.values(votes).some((v) => v.participantId === att.participantId && v.super);
       if (spent) superLike = false;
     }
     // One veto per participant per round, enforced here for the same reason as the super-like: the
@@ -545,9 +536,7 @@ export class SessionRoom extends DurableObject<Env> {
     // contention outright, so a client that simply sent the flag twice could quietly clear the deck.
     let vetoing = isVeto && direction === "left";
     if (vetoing) {
-      const spent = Object.values(votes).some(
-        (v) => v.participantId === att.participantId && v.veto,
-      );
+      const spent = Object.values(votes).some((v) => v.participantId === att.participantId && v.veto);
       if (spent) vetoing = false;
     }
     // Keyed by participant+restaurant: a re-vote overwrites, never double-counts.
@@ -651,7 +640,11 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /** Arrival updates are self-owned, but shared and durable for people joining the plan later. */
-  private async handleSetArrival(ws: WebSocket, status: ArrivalStatus | null, travelMinutes?: number): Promise<void> {
+  private async handleSetArrival(
+    ws: WebSocket,
+    status: ArrivalStatus | null,
+    travelMinutes?: number,
+  ): Promise<void> {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att) return;
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
@@ -795,9 +788,7 @@ export class SessionRoom extends DurableObject<Env> {
 
   // ---- helpers ----
 
-  private async resolveIdentity(
-    clientId?: string,
-  ): Promise<{ participantId: string; isHost: boolean }> {
+  private async resolveIdentity(clientId?: string): Promise<{ participantId: string; isHost: boolean }> {
     const map = (await this.ctx.storage.get<ClientMap>("clientMap")) ?? {};
     if (clientId && map[clientId]) {
       const entry = map[clientId];
@@ -902,10 +893,7 @@ export class SessionRoom extends DurableObject<Env> {
 
   private async getVisited(code: string): Promise<VisitedPlace[]> {
     const db = drizzle(this.env.DB);
-    const rows = await db
-      .select()
-      .from(visitedPlaces)
-      .where(eq(visitedPlaces.sessionCode, code));
+    const rows = await db.select().from(visitedPlaces).where(eq(visitedPlaces.sessionCode, code));
     return rows.map((r) => ({
       restaurantId: r.restaurantId,
       name: r.name,
@@ -914,11 +902,7 @@ export class SessionRoom extends DurableObject<Env> {
     }));
   }
 
-  private async recordVisit(
-    code: string,
-    restaurantId: string,
-    name: string,
-  ): Promise<void> {
+  private async recordVisit(code: string, restaurantId: string, name: string): Promise<void> {
     const db = drizzle(this.env.DB);
     const existing = await db
       .select({ id: visitedPlaces.id })

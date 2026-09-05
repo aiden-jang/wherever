@@ -83,12 +83,9 @@ export interface DecisionAlternative {
 }
 
 /** Promote one ranked backup without throwing away the group's original tally. */
-export function promoteAlternative(
-  result: DecisionResult,
-  restaurantId: string,
-): DecisionResult | null {
+export function promoteAlternative(result: DecisionResult, restaurantId: string): DecisionResult | null {
   const alternatives = result.alternatives ?? [];
-  const promoted = alternatives.find(choice => choice.restaurant.id === restaurantId);
+  const promoted = alternatives.find((choice) => choice.restaurant.id === restaurantId);
   if (!promoted) return null;
 
   return {
@@ -100,7 +97,7 @@ export function promoteAlternative(
     rightSwipes: promoted.rightSwipes,
     alternatives: [
       { restaurant: result.restaurant, rightSwipes: result.rightSwipes },
-      ...alternatives.filter(choice => choice.restaurant.id !== restaurantId),
+      ...alternatives.filter((choice) => choice.restaurant.id !== restaurantId),
     ].slice(0, 2),
   };
 }
@@ -148,10 +145,7 @@ export function vetoedRestaurantIds(votes: Vote[]): Set<string> {
  * A plain left swipe is only a downvote. A veto is absolute and beats any number of right-swipes,
  * super-likes included: one a big enough majority could overrule would not be a veto.
  */
-export function decideWinner(
-  deck: Restaurant[],
-  votes: Vote[],
-): DecisionResult | null {
+export function decideWinner(deck: Restaurant[], votes: Vote[]): DecisionResult | null {
   const scores = tallyScores(votes); // weighted — decides the winner
   const counts = tallyRightSwipes(votes); // unweighted — the headcount we display
   const vetoed = vetoedRestaurantIds(votes);
@@ -231,11 +225,7 @@ export function cardsBehind(votes: Vote[], participantId: string): number {
  * Order follows participantIds. Used both to decide when the round is over and, when the host opted
  * to reveal it, to show who's already done.
  */
-export function finishedParticipantIds(
-  votes: Vote[],
-  participantIds: string[],
-  deckSize: number,
-): string[] {
+export function finishedParticipantIds(votes: Vote[], participantIds: string[], deckSize: number): string[] {
   if (deckSize === 0) return [];
   const votedByParticipant = new Map<string, Set<string>>();
   for (const v of votes) {
@@ -253,10 +243,6 @@ export function finishedParticipantIds(
  * How many of the given participants have cast a vote on every deck item.
  * Used to decide when the round is over.
  */
-export function countFinished(
-  votes: Vote[],
-  participantIds: string[],
-  deckSize: number,
-): number {
+export function countFinished(votes: Vote[], participantIds: string[], deckSize: number): number {
   return finishedParticipantIds(votes, participantIds, deckSize).length;
 }

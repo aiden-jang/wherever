@@ -40,7 +40,13 @@ export function ArrivalPulse({
   const arrivalById = new Map(arrivals.map((arrival) => [arrival.participantId, arrival]));
   const denominator = Math.max(1, pulse.total);
   const myTiming = myArrivalUpdate
-    ? journeyTiming(planned, myArrivalUpdate.status, myArrivalUpdate.travelMinutes, myArrivalUpdate.updatedAt, clockNow)
+    ? journeyTiming(
+        planned,
+        myArrivalUpdate.status,
+        myArrivalUpdate.travelMinutes,
+        myArrivalUpdate.updatedAt,
+        clockNow,
+      )
     : null;
 
   useEffect(() => {
@@ -102,7 +108,13 @@ export function ArrivalPulse({
             disabled={shareStatus !== null}
             className="shrink-0 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-2xs font-bold text-muted transition hover:border-acid/30 hover:text-acid disabled:opacity-70"
           >
-            {shareStatus === "sharing" ? "Opening…" : shareStatus === "shared" ? "Shared ✓" : shareStatus === "copied" ? "Copied ✓" : "Share pulse"}
+            {shareStatus === "sharing"
+              ? "Opening…"
+              : shareStatus === "shared"
+                ? "Shared ✓"
+                : shareStatus === "copied"
+                  ? "Copied ✓"
+                  : "Share pulse"}
           </button>
         </div>
 
@@ -115,14 +127,29 @@ export function ArrivalPulse({
           aria-valuenow={pulse.checkedIn}
           aria-valuetext={`${pulse.checkedIn} of ${pulse.total} people checked in`}
         >
-          <span className="h-full bg-acid transition-[width] duration-500" style={{ width: `${pulse.here / denominator * 100}%` }} />
-          <span className="h-full bg-ember transition-[width] duration-500" style={{ width: `${pulse.headingOut / denominator * 100}%` }} />
-          <span className="h-full bg-grape transition-[width] duration-500" style={{ width: `${pulse.planning / denominator * 100}%` }} />
+          <span
+            className="h-full bg-acid transition-[width] duration-500"
+            style={{ width: `${(pulse.here / denominator) * 100}%` }}
+          />
+          <span
+            className="h-full bg-ember transition-[width] duration-500"
+            style={{ width: `${(pulse.headingOut / denominator) * 100}%` }}
+          />
+          <span
+            className="h-full bg-grape transition-[width] duration-500"
+            style={{ width: `${(pulse.planning / denominator) * 100}%` }}
+          />
         </div>
         <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-          <span className="rounded-xl bg-acid/10 px-2 py-2 text-2xs font-bold text-acid"><strong className="block text-base leading-none">{pulse.here}</strong>here</span>
-          <span className="rounded-xl bg-ember/10 px-2 py-2 text-2xs font-bold text-ember"><strong className="block text-base leading-none">{pulse.headingOut}</strong>moving</span>
-          <span className="rounded-xl bg-grape/15 px-2 py-2 text-2xs font-bold text-purple-300"><strong className="block text-base leading-none">{pulse.planning}</strong>getting ready</span>
+          <span className="rounded-xl bg-acid/10 px-2 py-2 text-2xs font-bold text-acid">
+            <strong className="block text-base leading-none">{pulse.here}</strong>here
+          </span>
+          <span className="rounded-xl bg-ember/10 px-2 py-2 text-2xs font-bold text-ember">
+            <strong className="block text-base leading-none">{pulse.headingOut}</strong>moving
+          </span>
+          <span className="rounded-xl bg-grape/15 px-2 py-2 text-2xs font-bold text-purple-300">
+            <strong className="block text-base leading-none">{pulse.planning}</strong>getting ready
+          </span>
         </div>
 
         {participants.length > 0 && (
@@ -136,14 +163,22 @@ export function ArrivalPulse({
               return (
                 <li
                   key={participant.id}
-                  title={arrival ? `${participant.displayName}: ${timing?.label}` : `${participant.displayName}: not checked in`}
+                  title={
+                    arrival
+                      ? `${participant.displayName}: ${timing?.label}`
+                      : `${participant.displayName}: not checked in`
+                  }
                   className={`flex min-w-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-2 text-2xs ${late ? "border-flare/30 bg-flare/10 text-flare" : arrival ? "border-white/10 bg-black/15 text-cream/90" : "border-dashed border-white/15 text-muted"}`}
                 >
-                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-2xs font-bold ${arrival?.status === "here" ? "bg-acid text-ink" : arrival?.status === "heading_out" ? "bg-ember/20 text-ember" : arrival?.status === "planning" ? "bg-grape/20 text-purple-300" : "bg-white/[0.06] text-muted"}`}>
+                  <span
+                    className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-2xs font-bold ${arrival?.status === "here" ? "bg-acid text-ink" : arrival?.status === "heading_out" ? "bg-ember/20 text-ember" : arrival?.status === "planning" ? "bg-grape/20 text-purple-300" : "bg-white/[0.06] text-muted"}`}
+                  >
                     {initialsFor(participant.displayName)}
                   </span>
                   <span className="max-w-20 truncate">{participant.displayName}</span>
-                  <span className="font-semibold">{late ? `${timing!.overdueMinutes}m late` : timing?.label ?? "check-in?"}</span>
+                  <span className="font-semibold">
+                    {late ? `${timing!.overdueMinutes}m late` : (timing?.label ?? "check-in?")}
+                  </span>
                 </li>
               );
             })}
@@ -157,7 +192,9 @@ export function ArrivalPulse({
             <div className="mb-2.5 rounded-2xl border border-white/10 bg-black/15 p-3">
               <div className="flex items-center justify-between gap-3">
                 <span>
-                  <span className="block text-2xs font-bold uppercase tracking-[0.12em] text-muted">My trip</span>
+                  <span className="block text-2xs font-bold uppercase tracking-[0.12em] text-muted">
+                    My trip
+                  </span>
                   <span className="mt-0.5 block text-xs text-cream">
                     {journeyTiming(planned, "planning", travelMinutes, undefined, clockNow).label}
                   </span>
@@ -191,7 +228,12 @@ export function ArrivalPulse({
             </div>
           )}
           <div className="grid grid-cols-2 gap-2" role="group" aria-label="Update my arrival status">
-            {([["heading_out", "Heading out"], ["here", "I’m here"]] as const).map(([status, label]) => (
+            {(
+              [
+                ["heading_out", "Heading out"],
+                ["here", "I’m here"],
+              ] as const
+            ).map(([status, label]) => (
               <button
                 key={status}
                 type="button"
@@ -203,7 +245,9 @@ export function ArrivalPulse({
               </button>
             ))}
           </div>
-          <p className="mt-2 text-center text-2xs text-muted">Self-reported only. Wherever never tracks your location.</p>
+          <p className="mt-2 text-center text-2xs text-muted">
+            Self-reported only. Wherever never tracks your location.
+          </p>
         </div>
       )}
     </section>

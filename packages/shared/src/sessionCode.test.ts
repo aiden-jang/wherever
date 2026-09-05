@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CODE_ALPHABET, CODE_LENGTH, isCompleteCode, sessionCodeFrom, sessionCodeFromShare } from "./sessionCode.js";
+import {
+  CODE_ALPHABET,
+  CODE_LENGTH,
+  isCompleteCode,
+  sessionCodeFrom,
+  sessionCodeFromShare,
+} from "./sessionCode.js";
 
 describe("reading a pasted session code", () => {
   it("takes a plain code", () => {

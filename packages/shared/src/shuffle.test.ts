@@ -47,9 +47,7 @@ describe("dealing in no particular order", () => {
 
   it("reaches every position, rather than nudging the deck", () => {
     // A weak shuffle leaves the first card first most of the time. Over many seeds it should not.
-    const firsts = new Set(
-      Array.from({ length: 50 }, (_, i) => shuffleDeck(deck(12), `seed-${i}`)[0]!.id),
-    );
+    const firsts = new Set(Array.from({ length: 50 }, (_, i) => shuffleDeck(deck(12), `seed-${i}`)[0]!.id));
     expect(firsts.size).toBeGreaterThan(6);
   });
 });

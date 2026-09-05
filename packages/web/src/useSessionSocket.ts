@@ -27,7 +27,17 @@ export interface Progress {
 }
 
 export type MatchState =
-  | { kind: "match"; restaurant: Restaurant; rightSwipes: number; alternatives: DecisionAlternative[]; totalParticipants: number; vetoedCount: number; tiedWith: number; vetoedTop: boolean; round: number }
+  | {
+      kind: "match";
+      restaurant: Restaurant;
+      rightSwipes: number;
+      alternatives: DecisionAlternative[];
+      totalParticipants: number;
+      vetoedCount: number;
+      tiedWith: number;
+      vetoedTop: boolean;
+      round: number;
+    }
   | { kind: "none"; vetoedCount: number }
   | null;
 
@@ -125,8 +135,7 @@ export function useSessionSocket(code: string, displayName: string) {
 
     const proto = location.protocol === "https:" ? "wss" : "ws";
     // In prod the Worker may live on another origin; in dev Vite proxies /ws.
-    const wsBase =
-      import.meta.env.VITE_WS_BASE ?? `${proto}://${location.host}`;
+    const wsBase = import.meta.env.VITE_WS_BASE ?? `${proto}://${location.host}`;
 
     let disposed = false;
     let attempts = 0;
@@ -169,17 +178,19 @@ export function useSessionSocket(code: string, displayName: string) {
            * `flushSync` is required: React batches by default, so otherwise the transition captures the old
            * DOM, resolves, and animates nothing.
            */
-          return withTransition(() => setMatch({
-            kind: "match",
-            restaurant: msg.restaurant,
-            rightSwipes: msg.rightSwipes,
-            alternatives: msg.alternatives ?? [],
-            totalParticipants: msg.totalParticipants,
-            vetoedCount: msg.vetoedCount ?? 0,
-            tiedWith: msg.tiedWith ?? 0,
-            vetoedTop: msg.vetoedTop ?? false,
-            round: msg.round ?? 1,
-          }));
+          return withTransition(() =>
+            setMatch({
+              kind: "match",
+              restaurant: msg.restaurant,
+              rightSwipes: msg.rightSwipes,
+              alternatives: msg.alternatives ?? [],
+              totalParticipants: msg.totalParticipants,
+              vetoedCount: msg.vetoedCount ?? 0,
+              tiedWith: msg.tiedWith ?? 0,
+              vetoedTop: msg.vetoedTop ?? false,
+              round: msg.round ?? 1,
+            }),
+          );
         case "nudge":
           return setNudges((n) => n + 1);
         case "no_match":
@@ -300,5 +311,30 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return { session, deck, demo, vibeEffect, behindBy, nudges, superUsed, vetoUsed, roundEndsAt, alreadyVoted, progress, match, planned, arrivals, vibeCounts, myVibe, visited, error, errorSeq, status, everConnected, participantId, reactions, send };
+  return {
+    session,
+    deck,
+    demo,
+    vibeEffect,
+    behindBy,
+    nudges,
+    superUsed,
+    vetoUsed,
+    roundEndsAt,
+    alreadyVoted,
+    progress,
+    match,
+    planned,
+    arrivals,
+    vibeCounts,
+    myVibe,
+    visited,
+    error,
+    errorSeq,
+    status,
+    everConnected,
+    participantId,
+    reactions,
+    send,
+  };
 }

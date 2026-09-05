@@ -3,7 +3,6 @@ import { DEFAULT_FILTERS } from "@wherever/shared";
 
 export { DEFAULT_FILTERS };
 
-
 // Same origin everywhere now: the Worker serves this app and the API. The override only exists
 // for pointing a local web build at a deployed Worker.
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
@@ -47,9 +46,7 @@ export function getLocation(): Promise<{ lat: number; lng: number } | null> {
  * key). Returns null on a bad/empty query or no match, so the caller can show a friendly message
  * without a throw. `label` is Google's formatted address, for display.
  */
-export async function geocode(
-  query: string,
-): Promise<{ lat: number; lng: number; label: string } | null> {
+export async function geocode(query: string): Promise<{ lat: number; lng: number; label: string } | null> {
   const q = query.trim();
   if (q.length < 2) return null;
   const res = await fetch(`${API_BASE}/api/geocode?q=${encodeURIComponent(q)}`);

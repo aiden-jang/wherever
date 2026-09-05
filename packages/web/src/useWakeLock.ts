@@ -13,9 +13,11 @@ import { useEffect } from "react";
  */
 export function useWakeLock(active: boolean) {
   useEffect(() => {
-    const api = (navigator as Navigator & {
-      wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> };
-    }).wakeLock;
+    const api = (
+      navigator as Navigator & {
+        wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> };
+      }
+    ).wakeLock;
     if (!active || !api) return;
 
     let held: { release: () => Promise<void> } | null = null;

@@ -52,12 +52,12 @@ obvious alternative.
 
 What that looks like in practice:
 
-- *Enforced here, not by hiding a control. A hidden button is not a rule.*
-- *`windowMs: 0` looks like the cheap way to reach the expiry path and is not.*
-- *Book notes slightly ahead of `currentTime`, never at it. A note booked for exactly now lands in the
-  past and the hardware skips it, which eats the attack and leaves the tail - so it is easy to miss.*
-- *A flag and not a name, on purpose. The veto is anonymous, and naming what it killed narrows the
-  vetoer down to one person in a group of four.*
+- _Enforced here, not by hiding a control. A hidden button is not a rule._
+- _`windowMs: 0` looks like the cheap way to reach the expiry path and is not._
+- _Book notes slightly ahead of `currentTime`, never at it. A note booked for exactly now lands in the
+  past and the hardware skips it, which eats the attack and leaves the tail - so it is easy to miss._
+- _A flag and not a name, on purpose. The veto is anonymous, and naming what it killed narrows the
+  vetoer down to one person in a group of four._
 
 Everything else goes, and the reasoning behind a whole feature lives here or in `docs/adr/` rather
 than in a docstring where it rots. The tree sits at about 1,600 comment lines across 13,000 of source,

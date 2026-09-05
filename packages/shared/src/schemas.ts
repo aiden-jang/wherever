@@ -6,12 +6,7 @@ import { z } from "zod";
 import { REACTION_EMOJIS } from "./constants.js";
 import { VIBE_IDS } from "./vibes.js";
 
-export const priceTierSchema = z.union([
-  z.literal(1),
-  z.literal(2),
-  z.literal(3),
-  z.literal(4),
-]);
+export const priceTierSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
 
 export const sessionFiltersSchema = z.object({
   radiusMeters: z.number().int().positive().max(50_000),
@@ -94,10 +89,12 @@ const chooseAlternativeSchema = z.object({
 
 const setPlanSchema = z.object({
   type: z.literal("set_plan"),
-  planned: z.object({
-    start: z.string().datetime({ offset: true }),
-    duration: z.union([z.literal(60), z.literal(90), z.literal(120)]),
-  }).nullable(),
+  planned: z
+    .object({
+      start: z.string().datetime({ offset: true }),
+      duration: z.union([z.literal(60), z.literal(90), z.literal(120)]),
+    })
+    .nullable(),
 });
 
 const setArrivalSchema = z.object({

@@ -47,11 +47,13 @@ export function ScanQr({ onCode, onClose }: ScanQrProps) {
       el.srcObject = stream;
       await el.play().catch(() => {});
 
-      const Detector = (window as unknown as {
-        BarcodeDetector: new (o: { formats: string[] }) => {
-          detect: (s: CanvasImageSource) => Promise<{ rawValue: string }[]>;
-        };
-      }).BarcodeDetector;
+      const Detector = (
+        window as unknown as {
+          BarcodeDetector: new (o: { formats: string[] }) => {
+            detect: (s: CanvasImageSource) => Promise<{ rawValue: string }[]>;
+          };
+        }
+      ).BarcodeDetector;
       const detector = new Detector({ formats: ["qr_code"] });
 
       /* Polled on a timer rather than every animation frame. A QR does not move, and detection at

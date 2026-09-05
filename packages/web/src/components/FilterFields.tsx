@@ -63,14 +63,9 @@ export function LocationPicker({
    * neighbourhood is picked, or choosing one would hide the way to undo it.
    */
   const showNyc =
-    Boolean(filters.area) ||
-    filters.lat == null ||
-    filters.lng == null ||
-    isInNYC(filters.lat, filters.lng);
+    Boolean(filters.area) || filters.lat == null || filters.lng == null || isInNYC(filters.lat, filters.lng);
 
-  const activeNeighborhood = filters.area
-    ? NEIGHBORHOODS.find((n) => n.value === filters.area)
-    : undefined;
+  const activeNeighborhood = filters.area ? NEIGHBORHOODS.find((n) => n.value === filters.area) : undefined;
 
   const useNearMe = () =>
     onChange({ ...filters, area: undefined, lat: undefined, lng: undefined, locationLabel: undefined });
@@ -83,7 +78,7 @@ export function LocationPicker({
     const hit = await geocode(query);
     setBusy(false);
     if (!hit) {
-      setErr("Couldn't find that. Try a zip, or \"Town, State\".");
+      setErr('Couldn\'t find that. Try a zip, or "Town, State".');
       return;
     }
     onChange({ ...filters, lat: hit.lat, lng: hit.lng, locationLabel: hit.label, area: undefined });
@@ -155,54 +150,56 @@ export function LocationPicker({
 
       {/* NYC neighborhood shortcuts, collapsed by default, and only where they mean anything. */}
       {showNyc && (
-      <div>
-        <button
-          type="button"
-          aria-expanded={nycOpen}
-          onClick={() => setNycOpen((o) => !o)}
-          className="flex w-full items-center justify-between rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="text-muted">NYC neighborhoods</span>
-            {activeNeighborhood && (
-              <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
-                {activeNeighborhood.label}
-              </span>
-            )}
-          </span>
-          <span className="shrink-0 text-muted">
-            <Chevron open={nycOpen} />
-          </span>
-        </button>
-        {nycOpen && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {NEIGHBORHOODS.map((n) => {
-              const on = filters.area === n.value;
-              return (
-                <button
-                  key={n.value}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() =>
-                    onChange({
-                      ...filters,
-                      area: n.value,
-                      lat: undefined,
-                      lng: undefined,
-                      locationLabel: undefined,
-                    })
-                  }
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    on ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
-                  }`}
-                >
-                  {n.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        <div>
+          <button
+            type="button"
+            aria-expanded={nycOpen}
+            onClick={() => setNycOpen((o) => !o)}
+            className="flex w-full items-center justify-between rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="text-muted">NYC neighborhoods</span>
+              {activeNeighborhood && (
+                <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
+                  {activeNeighborhood.label}
+                </span>
+              )}
+            </span>
+            <span className="shrink-0 text-muted">
+              <Chevron open={nycOpen} />
+            </span>
+          </button>
+          {nycOpen && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {NEIGHBORHOODS.map((n) => {
+                const on = filters.area === n.value;
+                return (
+                  <button
+                    key={n.value}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      onChange({
+                        ...filters,
+                        area: n.value,
+                        lat: undefined,
+                        lng: undefined,
+                        locationLabel: undefined,
+                      })
+                    }
+                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      on
+                        ? "bg-acid text-ink border-acid font-semibold"
+                        : "border-white/10 text-cream hover:border-white/30"
+                    }`}
+                  >
+                    {n.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -252,9 +249,7 @@ export function FilterFields({
     const has = filters.categories.includes(value);
     onChange({
       ...filters,
-      categories: has
-        ? filters.categories.filter((c) => c !== value)
-        : [...filters.categories, value],
+      categories: has ? filters.categories.filter((c) => c !== value) : [...filters.categories, value],
     });
   }
 
@@ -311,7 +306,9 @@ export function FilterFields({
                 aria-pressed={on}
                 onClick={() => toggleCuisine(c.value)}
                 className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                  on ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
+                  on
+                    ? "bg-acid text-ink border-acid font-semibold"
+                    : "border-white/10 text-cream hover:border-white/30"
                 }`}
               >
                 <span className="mr-1">{c.emoji}</span>
@@ -473,7 +470,9 @@ export function FilterFields({
                       aria-pressed={on}
                       onClick={() => toggleAmenity(a.key)}
                       className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                        on ? "bg-acid text-ink border-acid font-semibold" : "border-white/10 text-cream hover:border-white/30"
+                        on
+                          ? "bg-acid text-ink border-acid font-semibold"
+                          : "border-white/10 text-cream hover:border-white/30"
                       }`}
                     >
                       <span className="mr-1">{a.emoji}</span>
@@ -496,7 +495,9 @@ export function FilterFields({
                       aria-pressed={on}
                       onClick={() => toggleExclude(c.value)}
                       className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                        on ? "bg-flare text-ink border-flare font-semibold" : "border-white/10 text-cream hover:border-white/30"
+                        on
+                          ? "bg-flare text-ink border-flare font-semibold"
+                          : "border-white/10 text-cream hover:border-white/30"
                       }`}
                     >
                       <span className="mr-1">{c.emoji}</span>

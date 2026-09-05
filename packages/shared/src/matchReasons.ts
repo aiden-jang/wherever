@@ -8,7 +8,9 @@ export interface MatchReason {
 
 function distanceReason(meters: number): string {
   const miles = meters / 1609.344;
-  return miles < 0.1 ? "A few steps away" : `${miles < 1 ? miles.toFixed(1) : Math.round(miles * 10) / 10} mi away`;
+  return miles < 0.1
+    ? "A few steps away"
+    : `${miles < 1 ? miles.toFixed(1) : Math.round(miles * 10) / 10} mi away`;
 }
 
 function categoryMatched(category: string, requested: string[]): string | null {

@@ -7,19 +7,11 @@ import { play } from "../components/sound.js";
 import { useLine } from "../useLine.js";
 import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
 import type { SessionFilters } from "@wherever/shared";
-import {
-} from "@wherever/shared";
+import {} from "@wherever/shared";
 import { Modal } from "../components/Modal.js";
 import { ScanQr } from "../components/ScanQr.js";
 import { qrScanSupported } from "../qrScan.js";
-import {
-  createSession,
-  getLocation,
-  rememberName,
-  recallName,
-  DEFAULT_FILTERS,
-} from "../api.js";
-
+import { createSession, getLocation, rememberName, recallName, DEFAULT_FILTERS } from "../api.js";
 
 interface TeaserCard {
   name: string;
@@ -35,9 +27,42 @@ interface TeaserCard {
 }
 
 const CARDS: TeaserCard[] = [
-  { name: "Late Night Pizza Decisions", category: "Pizza", emoji: "🍕", image: "/teaser-pizza.jpg", price: "$", rating: "4.4", distance: "0.9 mi", gradient: "linear-gradient(135deg, var(--color-ember), var(--color-flare))", rotation: "-8deg", offset: "translate(-38px, 26px)" },
-  { name: "Noodle Situation", category: "Ramen", emoji: "🍜", image: "/teaser-ramen.jpg", price: "$$", rating: "4.1", distance: "1.1 mi", gradient: "linear-gradient(135deg, var(--color-grape), var(--color-flare))", rotation: "5deg", offset: "translate(30px, 12px)" },
-  { name: "Probably Fine Tacos", category: "Tacos", emoji: "🌮", image: "/teaser-tacos.jpg", price: "$", rating: "4.6", distance: "0.5 mi", gradient: "linear-gradient(135deg, var(--color-flame), var(--color-ember))", rotation: "-1deg", offset: "translate(0, 0)" },
+  {
+    name: "Late Night Pizza Decisions",
+    category: "Pizza",
+    emoji: "🍕",
+    image: "/teaser-pizza.jpg",
+    price: "$",
+    rating: "4.4",
+    distance: "0.9 mi",
+    gradient: "linear-gradient(135deg, var(--color-ember), var(--color-flare))",
+    rotation: "-8deg",
+    offset: "translate(-38px, 26px)",
+  },
+  {
+    name: "Noodle Situation",
+    category: "Ramen",
+    emoji: "🍜",
+    image: "/teaser-ramen.jpg",
+    price: "$$",
+    rating: "4.1",
+    distance: "1.1 mi",
+    gradient: "linear-gradient(135deg, var(--color-grape), var(--color-flare))",
+    rotation: "5deg",
+    offset: "translate(30px, 12px)",
+  },
+  {
+    name: "Probably Fine Tacos",
+    category: "Tacos",
+    emoji: "🌮",
+    image: "/teaser-tacos.jpg",
+    price: "$",
+    rating: "4.6",
+    distance: "0.5 mi",
+    gradient: "linear-gradient(135deg, var(--color-flame), var(--color-ember))",
+    rotation: "-1deg",
+    offset: "translate(0, 0)",
+  },
 ];
 
 function StatusLine() {
@@ -189,11 +214,6 @@ function TeaserStack() {
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
 
-
-
-
-
-
 function CreateForm({ onError }: { onError: (m: string) => void }) {
   const go = useTransitionNavigate();
   const [name, setName] = useState(recallName());
@@ -221,8 +241,7 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
       // Apply browser geolocation only in the pure "near me" case. If the host picked a neighborhood
       // (area) or searched a zip/town (lat/lng already in filters), that explicit center wins and we
       // must NOT overlay the device location on top of it. Don't re-invoke geolocation here either.
-      const usingExplicitCenter =
-        Boolean(filters.area) || (filters.lat != null && filters.lng != null);
+      const usingExplicitCenter = Boolean(filters.area) || (filters.lat != null && filters.lng != null);
       const code = await createSession(name.trim(), {
         ...filters,
         ...(usingExplicitCenter ? {} : (loc ?? {})),
@@ -236,11 +255,23 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      <input className={inputClass} placeholder="Your name" value={name} maxLength={24} autoComplete="name" onChange={(e) => setName(e.target.value)} autoFocus />
+      <input
+        className={inputClass}
+        placeholder="Your name"
+        value={name}
+        maxLength={24}
+        autoComplete="name"
+        onChange={(e) => setName(e.target.value)}
+        autoFocus
+      />
       {/* Location only. Everything else is set in the lobby, where the group can see it and where
           somebody is waiting for people to join anyway. */}
       <LocationPicker filters={filters} onChange={setFilters} />
-      <button type="submit" disabled={!name.trim() || busy} className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition">
+      <button
+        type="submit"
+        disabled={!name.trim() || busy}
+        className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
+      >
         {busy ? "Shuffling the deck..." : "Deal the cards"}
       </button>
       {locOff && (
@@ -262,8 +293,12 @@ function JoinForm() {
   const [canScan, setCanScan] = useState(false);
   useEffect(() => {
     let alive = true;
-    void qrScanSupported().then((ok) => { if (alive) setCanScan(ok); });
-    return () => { alive = false; };
+    void qrScanSupported().then((ok) => {
+      if (alive) setCanScan(ok);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   function submit(e: React.FormEvent) {
@@ -284,7 +319,15 @@ function JoinForm() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <input className={inputClass} placeholder="Your name" value={name} maxLength={24} autoComplete="name" onChange={(e) => setName(e.target.value)} autoFocus />
+      <input
+        className={inputClass}
+        placeholder="Your name"
+        value={name}
+        maxLength={24}
+        autoComplete="name"
+        onChange={(e) => setName(e.target.value)}
+        autoFocus
+      />
       {/* No maxLength: a pasted invite link has to arrive whole for the parser to find the code in it. */}
       <input
         className={`${inputClass} tracking-[0.4em] uppercase`}
@@ -298,7 +341,11 @@ function JoinForm() {
         spellCheck={false}
         onChange={(e) => setCode(sessionCodeFrom(e.target.value))}
       />
-      <button type="submit" disabled={!name.trim() || !isCompleteCode(code)} className="rounded-2xl border border-white/15 px-6 py-3 text-lg font-semibold disabled:opacity-50 hover:bg-white/5 transition">
+      <button
+        type="submit"
+        disabled={!name.trim() || !isCompleteCode(code)}
+        className="rounded-2xl border border-white/15 px-6 py-3 text-lg font-semibold disabled:opacity-50 hover:bg-white/5 transition"
+      >
         Join
       </button>
       {canScan ? (
@@ -343,7 +390,9 @@ export default function Landing() {
 
         <h1 className="mt-6 font-display font-extrabold tracking-tight text-6xl sm:text-7xl leading-[0.95]">
           Wherever<span className="text-ember">,</span>
-          <span className="block bg-gradient-to-r from-ember via-flare to-grape bg-clip-text text-transparent">Honestly</span>
+          <span className="block bg-gradient-to-r from-ember via-flare to-grape bg-clip-text text-transparent">
+            Honestly
+          </span>
         </h1>
 
         <p className="mt-5 text-lg text-muted max-w-md mx-auto lg:mx-0">
@@ -351,10 +400,18 @@ export default function Landing() {
         </p>
 
         <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-          <button type="button" onClick={() => setModal("create")} className="rounded-full bg-ember px-8 py-4 text-lg font-semibold text-ink shadow-lg shadow-ember/30 hover:scale-[1.03] hover:shadow-ember/50 transition-transform">
+          <button
+            type="button"
+            onClick={() => setModal("create")}
+            className="rounded-full bg-ember px-8 py-4 text-lg font-semibold text-ink shadow-lg shadow-ember/30 hover:scale-[1.03] hover:shadow-ember/50 transition-transform"
+          >
             Start a session
           </button>
-          <button type="button" onClick={() => setModal("join")} className="rounded-full border border-white/15 px-8 py-4 text-lg font-semibold hover:border-white/40 hover:bg-white/5 transition-colors">
+          <button
+            type="button"
+            onClick={() => setModal("join")}
+            className="rounded-full border border-white/15 px-8 py-4 text-lg font-semibold hover:border-white/40 hover:bg-white/5 transition-colors"
+          >
             Join with a code
           </button>
         </div>
@@ -363,7 +420,10 @@ export default function Landing() {
       </section>
 
       <section className="relative h-[420px] flex items-center justify-center">
-        <div className="float relative h-full w-full flex items-center justify-center" style={{ animation: "float-soft 6s ease-in-out infinite" }}>
+        <div
+          className="float relative h-full w-full flex items-center justify-center"
+          style={{ animation: "float-soft 6s ease-in-out infinite" }}
+        >
           <TeaserStack />
         </div>
       </section>

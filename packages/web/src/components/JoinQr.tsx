@@ -46,7 +46,14 @@ export function JoinQr({ code, url }: JoinQrProps) {
         aria-controls={panelId}
         className="group inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-muted hover:bg-white/5 hover:text-cream active:scale-95 transition"
       >
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
           <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM15 14h2v2h-2zM19 14h1v3h-3v3h-3v-2M19 19h1v1h-1z" />
         </svg>
         {open ? "Hide join QR" : "Show join QR"}

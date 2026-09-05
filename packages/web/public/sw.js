@@ -13,11 +13,7 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
-      ),
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))),
   );
   self.clients.claim();
 });
@@ -46,10 +42,13 @@ self.addEventListener("fetch", (event) => {
         .catch(async () => {
           const hit = await caches.match(SHELL);
           // respondWith(undefined) is a network error, not a fallback. First visit offline lands here.
-          return hit ?? new Response("Offline, and nothing cached yet.", {
-            status: 503,
-            headers: { "content-type": "text/plain; charset=utf-8" },
-          });
+          return (
+            hit ??
+            new Response("Offline, and nothing cached yet.", {
+              status: 503,
+              headers: { "content-type": "text/plain; charset=utf-8" },
+            })
+          );
         }),
     );
     return;

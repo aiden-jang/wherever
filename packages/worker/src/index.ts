@@ -27,14 +27,13 @@ const app = new Hono<{ Bindings: Env }>();
  *
  * Conditional on purpose. A route that already chose its own caching knows something this does not.
  */
-app.use('*', async (c, next) => {
+app.use("*", async (c, next) => {
   await next();
-  if (!c.res.headers.get('cache-control')) {
-    c.header('Cache-Control', 'no-store, max-age=0');
-    c.header('Pragma', 'no-cache');
+  if (!c.res.headers.get("cache-control")) {
+    c.header("Cache-Control", "no-store, max-age=0");
+    c.header("Pragma", "no-cache");
   }
 });
-
 
 // Log the real error server-side (visible in `wrangler tail` / Workers Logs) while keeping the
 // client response generic. Without this, Hono swallows the cause as a bare "Internal Server Error".
@@ -43,9 +42,7 @@ app.onError((err, c) => {
   return c.json({ error: "Something broke on our end. Not your fault." }, 500);
 });
 
-app.get("/api/health", (c) =>
-  c.json({ ok: true, source: c.env.RESTAURANT_SOURCE ?? "mock" }),
-);
+app.get("/api/health", (c) => c.json({ ok: true, source: c.env.RESTAURANT_SOURCE ?? "mock" }));
 
 // This month's Google usage vs. the caps that stop the app from calling Google. Handy for keeping
 // an eye on how close you are to the free tier.
@@ -58,9 +55,7 @@ app.get("/api/usage", async (c) => {
 // persist it. The Durable Object is created lazily on first WS connect.
 app.post("/api/sessions", async (c) => {
   const ip = c.req.header("cf-connecting-ip") ?? "local";
-  const limiter = c.env.RATE_LIMITER.get(
-    c.env.RATE_LIMITER.idFromName(`create:${ip}`),
-  );
+  const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(`create:${ip}`));
   if (!(await limiter.hit(CREATE_LIMIT, CREATE_WINDOW_MS))) {
     return c.json({ error: "Slow down. Too many sessions." }, 429);
   }

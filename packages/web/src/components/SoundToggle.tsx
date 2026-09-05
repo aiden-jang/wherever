@@ -19,7 +19,17 @@ export function SoundToggle() {
       title={muted ? "Sound off" : "Sound on"}
       className="rounded-full border border-white/15 p-2 text-muted hover:text-cream hover:border-white/30 transition-colors"
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
         <path d="M11 5 6 9H2v6h4l5 4V5z" />
         {muted ? (
           <>

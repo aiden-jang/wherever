@@ -39,8 +39,6 @@ if ("serviceWorker" in navigator) {
       });
     });
   } else {
-    void navigator.serviceWorker
-      .getRegistrations()
-      .then((regs) => regs.forEach((r) => void r.unregister()));
+    void navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => void r.unregister()));
   }
 }

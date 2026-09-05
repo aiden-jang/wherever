@@ -30,7 +30,13 @@ export const VIBES: VibeOption[] = [
     label: "quick",
     emoji: "⚡",
     blurb: "In, fed, out. Somewhere open right now.",
-    filters: { priceTiers: [1, 2], radiusMeters: 800, openNow: true, sort: "distance", amenities: ["takeout"] },
+    filters: {
+      priceTiers: [1, 2],
+      radiusMeters: 800,
+      openNow: true,
+      sort: "distance",
+      amenities: ["takeout"],
+    },
   },
   {
     id: "fancy",
@@ -98,7 +104,9 @@ export interface VibeReading {
  * quick, it has said it does not know, and a coin flip should not hide most of the city.
  */
 export function resolveVibe(counts: Partial<Record<Vibe, number>>): VibeReading {
-  const tallied = VIBES.map((option) => [option.id, counts[option.id] ?? 0] as const).filter(([, n]) => n > 0);
+  const tallied = VIBES.map((option) => [option.id, counts[option.id] ?? 0] as const).filter(
+    ([, n]) => n > 0,
+  );
   const total = tallied.reduce((sum, [, n]) => sum + n, 0);
   if (tallied.length === 0) return { vibe: null, votes: 0, total: 0, divided: false, runnersUp: [] };
 
@@ -145,10 +153,14 @@ export function vibeEffect(vibe: Vibe, base: SessionFilters): string[] {
   if (wanted.radiusMeters !== undefined && wanted.radiusMeters !== base.radiusMeters) {
     const km = wanted.radiusMeters / 1000;
     const distance = km >= 1 ? `${Number.isInteger(km) ? km : km.toFixed(1)} km` : `${wanted.radiusMeters} m`;
-    out.push(`${wanted.radiusMeters > base.radiusMeters ? "widened" : "tightened"} the search to ${distance}`);
+    out.push(
+      `${wanted.radiusMeters > base.radiusMeters ? "widened" : "tightened"} the search to ${distance}`,
+    );
   }
   if (wanted.minRating !== undefined && wanted.minRating !== base.minRating) {
-    out.push(wanted.minRating === 0 ? "dropped the rating floor" : `raised the rating floor to ${wanted.minRating}`);
+    out.push(
+      wanted.minRating === 0 ? "dropped the rating floor" : `raised the rating floor to ${wanted.minRating}`,
+    );
   }
   // Only a narrowing is news. The default allows every tier, so "kept $, $$, $$$, $$$$" would be
   // reporting that nothing happened.
@@ -158,7 +170,8 @@ export function vibeEffect(vibe: Vibe, base: SessionFilters): string[] {
   }
   if (wanted.shuffle && !base.shuffle) out.push("dealt the deck in no particular order");
   if (wanted.openNow && !base.openNow) out.push("only somewhere open now");
-  if (wanted.amenities && wanted.amenities.length > 0) out.push(`asked for ${wanted.amenities.join(" and ")}`);
+  if (wanted.amenities && wanted.amenities.length > 0)
+    out.push(`asked for ${wanted.amenities.join(" and ")}`);
   return out;
 }
 

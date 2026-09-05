@@ -1,4 +1,6 @@
 import { resolveVibe, VIBES, vibeOption, vibeReadingLine, type Vibe } from "@wherever/shared";
+import { buzz } from "./haptics.js";
+import { play } from "./sound.js";
 
 /*
  * The bar shows that three people want quick without showing which three. Nothing is disabled and nothing
@@ -44,7 +46,11 @@ export function VibeDial({
               key={option.id}
               type="button"
               // Tapping your own pick again clears it, so there is a way out of an accidental tap.
-              onClick={() => onPick(picked ? null : option.id)}
+              onClick={() => {
+                buzz(8);
+                play("tap");
+                onPick(picked ? null : option.id);
+              }}
               aria-pressed={picked}
               className={`relative overflow-hidden rounded-2xl border px-3 py-2.5 text-left transition ${
                 picked ? "border-white/70 bg-white/10" : "border-white/15 hover:border-white/35"

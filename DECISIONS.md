@@ -1,6 +1,6 @@
 # Decisions and trade-offs
 
-*Moved out of the README, which is the front door and was carrying the whole house.*
+_Moved out of the README, which is the front door and was carrying the whole house._
 
 ## Decisions & trade-offs
 
@@ -462,7 +462,7 @@ feels solid or broken:
 
 - **Reconnect.** A dropped client reconnects and the Worker replays full session state, so a flaky
   phone connection never desyncs the deck or loses your votes.
-- **Host hand-off, with a grace window.** A refresh or a brief blip does *not* demote the host — a
+- **Host hand-off, with a grace window.** A refresh or a brief blip does _not_ demote the host — a
   short grace timer means host only passes to another player if they're really gone, so the session
   never gets stuck with no one able to start or decide.
 - **No leaks.** Stale sessions are pruned on a daily cron and bounded by a TTL, so abandoned rooms
@@ -481,6 +481,6 @@ reports it is back online, resetting the attempt count, because that is a new ch
 seventh go at the old one.
 
 **Sample restaurants say why they are sample restaurants.** The deck falls back to a seeded mock when
-the month's Google budget is spent *or* when no live source is configured, and those are different
+the month's Google budget is spent _or_ when no live source is configured, and those are different
 sentences. The banner used to assert the budget for both, which is a small lie about the one thing this
 app is careful with.

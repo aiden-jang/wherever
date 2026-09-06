@@ -217,7 +217,7 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {
-    await beginHostGraceIfNeeded(this.ctx, ws);
+    await beginHostGraceIfNeeded(this.ctx, this.env, ws);
     await this.broadcastState(ws);
     // A departure drops the participant count — re-check completion (excluding the closing socket,
     // which getWebSockets still returns here) so a finished group decides instead of stalling on

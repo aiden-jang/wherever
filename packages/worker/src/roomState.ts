@@ -12,6 +12,9 @@ export interface SessionMeta {
   filters: SessionFilters;
 }
 
+/** Who a returning browser is, so a refresh reclaims its seat rather than taking a new one. */
+export type ClientMap = Record<string, { participantId: string; isHost: boolean }>;
+
 /** Hung on the WebSocket, so a message can be attributed without a lookup. */
 export interface SocketAttachment {
   participantId: string;

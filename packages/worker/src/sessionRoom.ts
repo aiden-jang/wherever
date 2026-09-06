@@ -29,12 +29,17 @@ import {
 } from "./hostHandover.js";
 import { sendVibes, setVibe, vibeCounts } from "./vibeTally.js";
 import { attachmentsOn, broadcastTo, participantsOn, resultMessage, sendTo } from "./roomSockets.js";
-import { fetchFreshDeck, getOrCreateDeck, readDemoMode, recordVisit, visitedFor } from "./deckSource.js";
+import { getOrCreateDeck, nextRoundDeck, readDemoMode, recordVisit, visitedFor } from "./deckSource.js";
 
 /** Attached to each WebSocket so presence survives DO hibernation. */
 
 // Each "again" round is a paid Places fetch; cap how many a single session can trigger.
 const MAX_AGAIN_ROUNDS = 20;
+const AGAIN_REFUSALS = {
+  capped: "you've been through a lot of rounds. start a fresh session to keep going.",
+  unavailable: "couldn't load more spots right now. give it a moment and try again.",
+  empty: "That's everywhere nearby, picked clean. Start a fresh session with a wider radius to keep eating.",
+} as const;
 
 // Grace window after the host's last socket drops before host is handed to someone else. Long enough
 // that a refresh or a brief network blip keeps the host as host; short enough that a group isn't
@@ -551,43 +556,31 @@ export class SessionRoom extends DurableObject<Env> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "decided") return;
 
-    // The cap counts paid fetches, so only a new deck answers to it.
     const rounds = (await this.ctx.storage.get<number>("againRounds")) ?? 0;
-    if (mode === "new" && rounds >= MAX_AGAIN_ROUNDS) {
-      const message = "you've been through a lot of rounds. start a fresh session to keep going.";
-      return this.send(ws, { type: "error", message });
-    }
-
     const dealt = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
     let deck: Restaurant[];
+    let paid = false;
     if (mode === "same") {
       if (dealt.length === 0) {
         return this.send(ws, { type: "error", message: "nothing to vote on again. deal a new list." });
       }
       deck = dealt;
     } else {
-      // Fetch BEFORE tearing down the current result, or a picked-clean area leaves a late joiner
-      // on a null winner being told nobody liked anything. The whole deck just swiped is excluded,
-      // not only the winner: "new places" that opens on the same six is the complaint being fixed.
-      try {
-        deck = await fetchFreshDeck({
+      const next = await nextRoundDeck(
+        {
           ...this.deckRequest(meta, new Set(dealt.map((r) => r.id))),
           vibeCounts: await vibeCounts(this.ctx.storage),
-        });
-      } catch {
-        const message = "couldn't load more spots right now. give it a moment and try again.";
-        return this.send(ws, { type: "error", message });
-      }
-      if (deck.length === 0) {
-        const message =
-          "That's everywhere nearby, picked clean. Start a fresh session with a wider radius to keep eating.";
-        return this.send(ws, { type: "error", message });
-      }
+        },
+        rounds < MAX_AGAIN_ROUNDS,
+      );
+      if ("error" in next) return this.send(ws, { type: "error", message: AGAIN_REFUSALS[next.error] });
+      deck = next.deck;
+      paid = next.paid;
     }
 
     await this.ctx.storage.delete("votes");
     await this.ctx.storage.delete("winner");
-    if (mode === "new") await this.ctx.storage.put("againRounds", rounds + 1);
+    if (paid) await this.ctx.storage.put("againRounds", rounds + 1);
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
     const roundEndsAt = await this.setRoundDeadline(meta);

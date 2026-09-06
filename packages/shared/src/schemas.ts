@@ -87,16 +87,6 @@ const chooseAlternativeSchema = z.object({
   restaurantId,
 });
 
-const setPlanSchema = z.object({
-  type: z.literal("set_plan"),
-  planned: z
-    .object({
-      start: z.string().datetime({ offset: true }),
-      duration: z.union([z.literal(60), z.literal(90), z.literal(120)]),
-    })
-    .nullable(),
-});
-
 const setVibeSchema = z.object({
   type: z.literal("set_vibe"),
   // Derived from VIBES so a new vibe cannot be added to the app and rejected at the door.
@@ -130,7 +120,6 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   decideNowSchema,
   againSchema,
   chooseAlternativeSchema,
-  setPlanSchema,
   setVibeSchema,
   setFiltersSchema,
   setNeverAgainSchema,

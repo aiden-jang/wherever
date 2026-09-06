@@ -29,13 +29,7 @@ function wazeDirectionsUrl(r: Restaurant): string {
   return `https://www.waze.com/ul?q=${encodeURIComponent(destination)}&navigate=yes`;
 }
 
-/*
- * Which map app is opening, asked once at the moment people actually leave.
- *
- * `addressCopied` stays with the caller rather than moving in here: the winner card has its own
- * copy-address button, and two independent flags would let one say "Address copied" while the other
- * still offers to copy the same string.
- */
+/** Which map app is opening, asked once at the moment people actually leave. */
 export function DirectionsDialog({
   restaurant,
   addressCopied,

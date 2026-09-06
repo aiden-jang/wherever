@@ -193,7 +193,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     const t = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(t);
   }, [hurriedAt]);
-  const hurryWait = Math.max(0, 20 - Math.floor((now - hurriedAt) / 1000));
+  const hurryWait = Math.max(0, 10 - Math.floor((now - hurriedAt) / 1000));
   const [codeCopied, setCodeCopied] = useState(false);
   const [codeCopyFailed, setCodeCopyFailed] = useState(false);
   const [inviteStatus, setInviteStatus] = useState<"sharing" | "shared" | "copied" | "failed" | null>(null);

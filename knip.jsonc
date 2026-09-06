@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs"],
+      "project": ["scripts/*.mjs"],
+    },
+    "packages/shared": {
+      // The index is inferred from package.json; the tests are the other way in.
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"],
+    },
+    "packages/worker": {
+      // The Worker entry comes from wrangler.toml's `main`, which knip reads for itself.
+      /* apply-migrations.ts is vitest's setupFile. knip cannot read it out of vitest.config.ts,
+         which fails to load here because it reads ./migrations relative to the wrong directory. */
+      "entry": ["test/**/*.test.ts", "src/**/*.test.ts", "test/apply-migrations.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"],
+    },
+    "packages/web": {
+      // The SPA entry comes from index.html, which knip reads for itself.
+      "entry": ["scripts/*.mjs"],
+      "project": ["src/**/*.{ts,tsx}", "scripts/*.mjs"],
+    },
+  },
+  // `cloudflare:test` is the vitest-pool-workers virtual module, not a package on disk.
+  "ignoreDependencies": ["cloudflare"],
+  // Plenty here is exported so a sibling test can reach it while still being used only inside its
+  // own file. Reporting those buries the finding that matters: a symbol used nowhere at all.
+  "ignoreExportsUsedInFile": true,
+}

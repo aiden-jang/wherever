@@ -382,6 +382,21 @@ Closing that also closed a leak. The super-like broadcast carried the sender's d
 veto deliberately carried none. A super-like is a weighted vote, so "the server never sends per-voter
 identities" has to hold on every channel, not just the progress payload. It sends no name now.
 
+**"New places" could not have worked.** Nearby Search returns at most twenty places and has no
+pagination, and the whole result set went out as round one's deck. So running it back excluded every
+card just swiped, asked Google the identical question, got the identical twenty back, crossed them all
+out and reported the area picked clean. It did that on the first press, in any city.
+
+A round is ten cards now and the overflow is held as a reserve, so the second round is dealt from
+places already paid for: free, instant, and genuinely new. The cap on `again` counts paid fetches, so
+a reserve round does not spend one. Alongside it the session remembers every id it has ever dealt, not
+just the deck in hand, because otherwise the fetch after the reserve drains would offer round one's
+places back as new ones. "Picked clean" now means what it says.
+
+Not fixed by this: once the reserve is empty the next fetch is still the same twenty places, so a long
+night in a thin area ends the same way. Widening the radius each time you run it back is the answer to
+that, and it is a separate change.
+
 **A super-like is nobody else's business until the result.** It fanned out to the room like a veto,
 but the two are not alike. A veto takes a place off everybody's list, so "something just died" is a
 true thing to tell the room. A super-like changes nothing anyone can see: it is a weight applied at

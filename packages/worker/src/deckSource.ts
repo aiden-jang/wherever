@@ -57,6 +57,11 @@ export async function readDemoMode(storage: DurableObjectStorage): Promise<DemoR
   return held === null || held === false ? undefined : held;
 }
 
+/* One round's worth. Nearby Search caps out at 20 places, so dealing every one of them in round one
+   leaves nothing for a second, and twenty cards is a long sit besides. */
+const ROUND_SIZE = 10;
+const MIN_ROUND = 3;
+
 interface DeckRequest {
   storage: DurableObjectStorage;
   env: Env;
@@ -117,11 +122,65 @@ export async function fetchFreshDeck({
   /* Everywhere the group has been, minus the ones whose cooldown expired. Excluding them forever meant
      a group that actually used the app shrank its own deck one dinner at a time. See revisit.ts. */
   const blocked = blockedIds(await visitedFor(env, meta.code));
-  const filtered = all.filter((r) => !blocked.has(r.id) && !exclude.has(r.id));
+  /* Every card this session has already been dealt, not just the deck in hand. The reserve means a
+     later fetch would otherwise offer round one's places back as new ones. */
+  const seen = new Set((await storage.get<string[]>("seenIds")) ?? []);
+  const filtered = all.filter((r) => !blocked.has(r.id) && !exclude.has(r.id) && !seen.has(r.id));
   // Seeded on the code so the same session always deals the same chaos, which is debuggable.
-  const deck = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
+  const ordered = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
+  const deck = ordered.slice(0, ROUND_SIZE);
   await storage.put("deck", deck);
+  await storage.put("reserve", ordered.slice(ROUND_SIZE));
+  await rememberDealt(storage, deck);
   await storage.put("demoMode", demo ?? null);
+  return deck;
+}
+
+async function rememberDealt(storage: DurableObjectStorage, deck: Restaurant[]): Promise<void> {
+  const seen = new Set((await storage.get<string[]>("seenIds")) ?? []);
+  for (const r of deck) seen.add(r.id);
+  await storage.put("seenIds", [...seen]);
+}
+
+/**
+ * Where a re-run's cards come from: the reserve if it holds a round, otherwise a paid fetch.
+ *
+ * `canPay` is the caller's round cap, asked only once the free option is gone, because the cap
+ * counts paid fetches and a reserve round is not one.
+ */
+export async function nextRoundDeck(
+  request: DeckRequest,
+  canPay: boolean,
+): Promise<{ deck: Restaurant[]; paid: boolean } | { error: "capped" | "unavailable" | "empty" }> {
+  const held = await dealFromReserve(request.storage);
+  if (held) return { deck: held, paid: false };
+  if (!canPay) return { error: "capped" };
+  let deck: Restaurant[];
+  // Fetch BEFORE the caller tears down the current result, or a picked-clean area leaves a late
+  // joiner on a null winner being told nobody liked anything.
+  try {
+    deck = await fetchFreshDeck(request);
+  } catch {
+    return { error: "unavailable" };
+  }
+  return deck.length === 0 ? { error: "empty" } : { deck, paid: true };
+}
+
+/**
+ * The next round's cards, if the last fetch brought back more than one round's worth.
+ *
+ * Nearby Search has no pagination, so asking again with the same filters returns the same places and
+ * excluding the ones just swiped empties it. Holding the overflow is what makes "new places" mean
+ * anything, and it costs nothing: the group is being dealt places already paid for.
+ */
+export async function dealFromReserve(storage: DurableObjectStorage): Promise<Restaurant[] | null> {
+  const reserve = (await storage.get<Restaurant[]>("reserve")) ?? [];
+  // A round of one or two is worse than saying the area is spent, so a thin reserve is not dealt.
+  if (reserve.length < MIN_ROUND) return null;
+  const deck = reserve.slice(0, ROUND_SIZE);
+  await storage.put("deck", deck);
+  await storage.put("reserve", reserve.slice(ROUND_SIZE));
+  await rememberDealt(storage, deck);
   return deck;
 }
 

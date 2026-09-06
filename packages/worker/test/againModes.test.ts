@@ -64,29 +64,50 @@ describe("running it back", () => {
   });
 
   /*
-   * `new` excludes the whole deck just swiped, not only the winner. The sample source holds six
-   * places, so having seen all six there is genuinely nothing left and the room is told so. Before
-   * the exclusion widened, this returned the five that were not picked and called them new.
+   * Nearby Search has no pagination, so asking again with the same filters returns the same places.
+   * The overflow from the first fetch is what makes `new` mean anything: before it was held back,
+   * the whole result set went out in round one and every re-run answered "picked clean".
    */
-  it("will not pass off the deck you just swiped as new places", async () => {
+  it("deals places it held back rather than asking for the same ones again", async () => {
     const h = await host();
     h.send({ type: "start_round" });
-    const dealt = await h.waitFor("deck");
-    await decide(h, dealt.restaurants);
+    const first = await h.waitFor("deck");
+    await decide(h, first.restaurants);
 
     const before = h.seen.length;
     h.send({ type: "again", deck: "new" });
-    for (let i = 0; i < 200; i += 1) {
-      const reply = h.seen.slice(before).find((m) => m.type === "deck" || m.type === "error");
-      if (reply) {
-        expect(reply.type).toBe("error");
+    const second = await h.waitFor("deck", before);
+
+    expect(second.restaurants.length).toBeGreaterThan(0);
+    const firstIds = new Set(first.restaurants.map((r) => r.id));
+    expect(second.restaurants.filter((r) => firstIds.has(r.id))).toEqual([]);
+
+    h.close();
+  });
+
+  it("says the area is spent only once it genuinely is", async () => {
+    const h = await host();
+    h.send({ type: "start_round" });
+    await decide(h, (await h.waitFor("deck")).restaurants);
+
+    // Round after round until the held-back cards run out; the sample source is finite.
+    for (let i = 0; i < 10; i += 1) {
+      const before = h.seen.length;
+      h.send({ type: "again", deck: "new" });
+      let reply: ServerMessage | undefined;
+      for (let j = 0; j < 200 && !reply; j += 1) {
+        reply = h.seen.slice(before).find((m) => m.type === "deck" || m.type === "error");
+        if (!reply) await new Promise((r) => setTimeout(r, 10));
+      }
+      if (!reply) throw new Error("no answer to `again`");
+      if (reply.type === "error") {
         expect((reply as { message: string }).message).toMatch(/picked clean/i);
         h.close();
         return;
       }
-      await new Promise((r) => setTimeout(r, 10));
+      await decide(h, (reply as { restaurants: { id: string }[] }).restaurants);
     }
-    throw new Error("no answer to `again`");
+    throw new Error("the sample deck never ran out");
   });
 
   it("does not spend a capped round on `same`", async () => {
@@ -107,7 +128,7 @@ describe("running it back", () => {
     /*
      * And the cap is still there for the mode that pays for it. Asking for new places after all
      * those same-deck rounds must not be refused *for being over the cap* — the sample source is
-     * six places deep so it answers "picked clean", which is a different and correct refusal.
+     * finite, so it answers with the held-back cards or "picked clean", both of which are correct.
      */
     const before = h.seen.length;
     h.send({ type: "again", deck: "new" });

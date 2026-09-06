@@ -39,6 +39,9 @@ jobs:
       # apps; this step is what keeps it true.
       - run: pnpm run format:check
       - run: pnpm build
+      # After the build: most classes here are Tailwind utilities that only exist in the output once
+      # Tailwind has seen them used, so a token missing from it produces no CSS anywhere.
+      - run: pnpm run dead-classes
       - run: pnpm test
 
   # Auto-deploy to Cloudflare on merge to main, only after the checks above pass.

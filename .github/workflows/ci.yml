@@ -28,6 +28,10 @@ jobs:
       # silently, using the fallback or inheriting.
       - run: pnpm run comments
       - run: pnpm run css-vars
+      # Prose rots with nothing to fail: a rename leaves a doc naming a symbol that is gone.
+      - run: pnpm run check:docs
+      # An export nothing imports and a dependency nothing uses are both dead weight nobody notices.
+      - run: pnpm run knip
       - run: pnpm typecheck
       - run: pnpm lint
       # .prettierrc had no printWidth, so `pnpm format` reflowed the whole repo to prettier's 80

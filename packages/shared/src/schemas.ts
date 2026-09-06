@@ -87,6 +87,22 @@ const chooseAlternativeSchema = z.object({
   restaurantId,
 });
 
+/*
+ * The meetup planner is gone, and this is here so a client left open on the previous bundle taps
+ * "set meetup time" and gets silence rather than "Unrecognized message." Nothing handles it: the
+ * dispatch has no case, so it parses and falls through. Delete this and its test on the next deploy
+ * after the one that removed the feature.
+ */
+const setPlanSchema = z.object({
+  type: z.literal("set_plan"),
+  planned: z
+    .object({
+      start: z.string().datetime({ offset: true }),
+      duration: z.union([z.literal(60), z.literal(90), z.literal(120)]),
+    })
+    .nullable(),
+});
+
 const setVibeSchema = z.object({
   type: z.literal("set_vibe"),
   // Derived from VIBES so a new vibe cannot be added to the app and rejected at the door.
@@ -120,6 +136,7 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   decideNowSchema,
   againSchema,
   chooseAlternativeSchema,
+  setPlanSchema,
   setVibeSchema,
   setFiltersSchema,
   setNeverAgainSchema,

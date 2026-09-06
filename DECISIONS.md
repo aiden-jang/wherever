@@ -416,6 +416,14 @@ set when the weighted winner is not the one plain right-swipes would have picked
 reads "⭐ A super-like tipped it past the headcount." That is the moment it means something, and the
 first moment there is anything to point at.
 
+It is not hidden below three people the way the veto is, and that asymmetry is deliberate. In a room
+of two the line does tell you who spent the star, but "1 of 2 picked it" already told you who liked
+the winner, so it leaks nothing the screen was not showing anyway. Suppressing it would cost more
+than it saves: two people, a star on one place and a plain like on another, and the screen shows a
+winner and a runner-up each on one vote with nothing to say why one of them won. That is the exact
+confusion the line exists to answer, in the smallest room there is. The veto is gated because
+attribution turns it into an argument; wanting somewhere for dinner is not the same kind of thing.
+
 **Ending the round early asks first.** "just decide now" was a bare underlined link that decided
 instantly. It is the one control that acts on everybody else's behalf, and it read like a shortcut
 rather than what it is. It now takes two steps and says the consequence in between: "2 people are

@@ -80,7 +80,7 @@ const undoSwipeSchema = z.object({
 
 const decideNowSchema = z.object({ type: z.literal("decide_now") });
 
-const againSchema = z.object({ type: z.literal("again") });
+const againSchema = z.object({ type: z.literal("again"), deck: z.enum(["new", "same"]).optional() });
 
 const chooseAlternativeSchema = z.object({
   type: z.literal("choose_alternative"),

@@ -52,9 +52,17 @@ export interface DecideNowMessage {
   type: "decide_now";
 }
 
-/** Host starts a fresh round, excluding places the group already picked. */
+/**
+ * Host runs the round again, either way.
+ *
+ * `new` fetches places the group has not seen, which costs a Places search and counts against the
+ * per-session cap. `same` re-deals the deck already in hand: free, uncapped, and the honest answer
+ * to "we picked wrong", where the group wants another go at the list rather than a different list.
+ * Optional and defaulting to `new`, so a client on the previous bundle still means what it used to.
+ */
 export interface AgainMessage {
   type: "again";
+  deck?: "new" | "same";
 }
 
 /** Host promotes one of the ranked backups; all clients receive the same updated result. */

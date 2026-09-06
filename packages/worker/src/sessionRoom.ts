@@ -130,7 +130,7 @@ export class SessionRoom extends DurableObject<Env> {
       case "decide_now":
         return this.handleDecideNow(ws);
       case "again":
-        return this.handleAgain(ws);
+        return this.handleAgain(ws, msg.deck ?? "new");
       case "choose_alternative":
         return this.handleChooseAlternative(ws, msg.restaurantId);
       case "set_plan":
@@ -686,53 +686,50 @@ export class SessionRoom extends DurableObject<Env> {
     await this.broadcastState();
   }
 
-  /** Host starts a fresh round; already-picked places are excluded. */
-  private async handleAgain(ws: WebSocket): Promise<void> {
+  /** Host runs the round again, on new places or on the same ones. */
+  private async handleAgain(ws: WebSocket, mode: "new" | "same"): Promise<void> {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att?.isHost) {
-      return this.send(ws, {
-        type: "error",
-        message: "Only the host can run it back.",
-      });
+      return this.send(ws, { type: "error", message: "Only the host can run it back." });
     }
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "decided") return;
 
-    // Hard server-side cap on "again" rounds: each one is a paid Places fetch, so bound how many
-    // times a single session can re-deal before it has to start fresh. (The Google daily quota is
-    // the outer hard limit; this stops one session from hammering it.)
+    // The cap counts paid fetches, so only a new deck answers to it.
     const rounds = (await this.ctx.storage.get<number>("againRounds")) ?? 0;
-    if (rounds >= MAX_AGAIN_ROUNDS) {
-      return this.send(ws, {
-        type: "error",
-        message: "you've been through a lot of rounds. start a fresh session to keep going.",
-      });
+    if (mode === "new" && rounds >= MAX_AGAIN_ROUNDS) {
+      const message = "you've been through a lot of rounds. start a fresh session to keep going.";
+      return this.send(ws, { type: "error", message });
     }
 
-    // Fetch the fresh deck BEFORE tearing down the current result. If the area is picked clean we
-    // must leave the existing winner/deck/status intact, otherwise a late joiner would arrive to a
-    // null winner and be told "nobody liked anything" even though a match was reached.
+    const dealt = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
     let deck: Restaurant[];
-    try {
-      deck = await this.fetchFreshDeck(meta); // excludes visited; caches into "deck"
-    } catch {
-      return this.send(ws, {
-        type: "error",
-        message: "couldn't load more spots right now. give it a moment and try again.",
-      });
-    }
-    if (deck.length === 0) {
-      return this.send(ws, {
-        type: "error",
-        message:
-          "That's everywhere nearby, picked clean. Start a fresh session with a wider radius to keep eating.",
-      });
+    if (mode === "same") {
+      if (dealt.length === 0) {
+        return this.send(ws, { type: "error", message: "nothing to vote on again. deal a new list." });
+      }
+      deck = dealt;
+    } else {
+      // Fetch BEFORE tearing down the current result, or a picked-clean area leaves a late joiner
+      // on a null winner being told nobody liked anything. The whole deck just swiped is excluded,
+      // not only the winner: "new places" that opens on the same six is the complaint being fixed.
+      try {
+        deck = await this.fetchFreshDeck(meta, new Set(dealt.map((r) => r.id)));
+      } catch {
+        const message = "couldn't load more spots right now. give it a moment and try again.";
+        return this.send(ws, { type: "error", message });
+      }
+      if (deck.length === 0) {
+        const message =
+          "That's everywhere nearby, picked clean. Start a fresh session with a wider radius to keep eating.";
+        return this.send(ws, { type: "error", message });
+      }
     }
 
     await this.ctx.storage.delete("votes");
     await this.ctx.storage.delete("winner");
     await this.ctx.storage.delete("plannedMeetup");
-    await this.ctx.storage.put("againRounds", rounds + 1);
+    if (mode === "new") await this.ctx.storage.put("againRounds", rounds + 1);
     meta.status = "swiping";
     await this.ctx.storage.put("meta", meta);
     const roundEndsAt = await this.setRoundDeadline(meta);
@@ -791,7 +788,10 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /** Fetch from the source, drop anything the group already picked, cache it. */
-  private async fetchFreshDeck(meta: SessionMeta): Promise<Restaurant[]> {
+  private async fetchFreshDeck(
+    meta: SessionMeta,
+    alsoExclude: ReadonlySet<string> = new Set(),
+  ): Promise<Restaurant[]> {
     const kind = this.env.RESTAURANT_SOURCE ?? "mock";
     const apiKey = kind === "google" ? this.env.GOOGLE_PLACES_API_KEY : undefined;
 
@@ -836,7 +836,7 @@ export class SessionRoom extends DurableObject<Env> {
        a group that actually used the app shrank its own deck one dinner at a time. See revisit.ts. */
     const visited = await this.getVisited(meta.code);
     const blocked = blockedIds(visited);
-    const filtered = all.filter((r) => !blocked.has(r.id));
+    const filtered = all.filter((r) => !blocked.has(r.id) && !alsoExclude.has(r.id));
     // Seeded on the code so the same session always deals the same chaos, which is debuggable.
     const deck = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
     await this.ctx.storage.put("deck", deck);

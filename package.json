@@ -18,8 +18,9 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "gates": "node scripts/check-gates.mjs",
     "size": "node scripts/check-size.mjs",
-    "verify": "pnpm run size && pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run test",
+    "verify": "pnpm run gates && pnpm run size && pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run test",
     "deploy:only": "pnpm --filter @wherever/worker run deploy"
   },
   "devDependencies": {

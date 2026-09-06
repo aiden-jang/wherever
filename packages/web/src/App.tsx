@@ -34,9 +34,6 @@ export default function App() {
               Wherever<span className="text-ember">,</span> Honestly
             </Link>
             <div className="flex items-center gap-2">
-              <span className="hidden sm:inline-block rounded-full border border-white/15 px-3 py-1 text-xs text-muted">
-                no group chat. ever.
-              </span>
               <SoundToggle />
             </div>
           </header>

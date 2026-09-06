@@ -348,7 +348,9 @@ body {
 }
 
 .reaction-rise {
-  animation: reaction-rise 2.4s ease-out forwards;
+  /* Kept just under the removal timeout in useSessionSocket: a rise that finishes early leaves
+     the emoji hanging in the air until the state drops it. */
+  animation: reaction-rise 4.3s ease-out forwards;
   will-change: transform, opacity;
 }
 
@@ -376,7 +378,7 @@ body {
 }
 
 .verdict-flash {
-  animation: verdict-flash 1.8s ease-out forwards;
+  animation: verdict-flash 2.6s ease-out forwards;
   will-change: transform, opacity;
 }
 

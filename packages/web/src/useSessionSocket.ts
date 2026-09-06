@@ -212,7 +212,7 @@ export function useSessionSocket(code: string, displayName: string) {
             },
           ]);
           // Drop it after the float animation so the list can't grow unbounded.
-          setTimeout(() => setReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
+          setTimeout(() => setReactions((prev) => prev.filter((r) => r.id !== id)), 4500);
           return;
         }
         case "identity":

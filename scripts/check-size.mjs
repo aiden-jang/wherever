@@ -19,16 +19,16 @@ const MAX_STATE = 12;
  * entry as the file shrinks; delete it once the file is under the ceiling.
  */
 const ALREADY_OVER = {
-  "packages/web/src/components/MatchScreen.tsx": { lines: 855 },
-  "packages/worker/src/sessionRoom.ts": { lines: 737 },
-  "packages/web/src/routes/Lobby.tsx": { lines: 573 },
+  "packages/web/src/components/MatchScreen.tsx": { lines: 720 },
+  "packages/worker/src/sessionRoom.ts": { lines: 712 },
+  "packages/web/src/routes/Lobby.tsx": { lines: 570 },
   "packages/web/src/components/SwipeDeck.tsx": { lines: 763 },
   "packages/web/src/components/FilterFields.tsx": { lines: 614 },
-  "packages/worker/src/restaurantSource.ts": { lines: 512 },
+  "packages/worker/src/restaurantSource.ts": { lines: 430 },
   "packages/web/src/routes/Landing.tsx": { lines: 448, state: 13 },
   // A hook, not a component, and the one place the state count says more than the line count: it is
   // the single subscription every screen reads, so every new server field lands here.
-  "packages/web/src/useSessionSocket.ts": { state: 22 },
+  "packages/web/src/useSessionSocket.ts": { state: 21 },
 };
 
 const files = globSync("packages/*/src/**/*.{ts,tsx}").filter((f) => !/\.test\.tsx?$/.test(f));

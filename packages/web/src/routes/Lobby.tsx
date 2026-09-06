@@ -67,7 +67,6 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     alreadyVoted,
     progress,
     match,
-    planned,
     vibeCounts,
     myVibe,
     visited,
@@ -173,8 +172,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
    * The server's refusals, on the screens that had nowhere to put them.
    *
    * `error` is rendered as a line of text on the create/lobby screen only. Everywhere else it was
-   * set and never shown: a host picking a meetup time in the past, or hitting the round limit on
-   * "run it back", pressed a button and watched nothing happen with no reason given.
+   * set and never shown: hitting the round limit on "run it back" pressed a button and watched
+   * nothing happen, with no reason given.
    */
   const errorToasts = useOneShotToast(error, setAnnouncement, error ? `error-${errorSeq}` : null);
   const screenToasts = [...allToasts, ...errorToasts];
@@ -297,10 +296,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             visited={visited}
             filters={session?.filters}
             isHost={isHost}
-            planned={planned}
             onAgain={(deck) => send({ type: "again", deck })}
             onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
-            onPlan={(nextPlan) => send({ type: "set_plan", planned: nextPlan })}
             onNeverAgain={(restaurantId, neverAgain) =>
               send({ type: "set_never_again", restaurantId, neverAgain })
             }

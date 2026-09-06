@@ -2,7 +2,9 @@
  * A ceiling on comments, run by `pnpm run verify`, because a cleanup pass is a moment and drift is
  * permanent.
  *
- * 19% is high, and it is where this repo already stands rather than a target it has been cut to.
+ * The ceiling is high, and it is where this repo already stands rather than a target it has been
+ * cut to. Re-measure it when a release deletes code rather than prose, which raises the share
+ * without a word being added; anything else that pushes it up is prose, and should trip.
  * The comments here are mostly design rules with the bug that prompted them attached: why the veto
  * needs a crowd, why a deck fetch happens before the status flips, why the reaction layer needs a
  * z-index. None of that is recoverable from the code. Set at the measured number so prose added to
@@ -17,7 +19,7 @@
  */
 import { globSync, readFileSync } from "node:fs";
 
-const SRC_CEILING = 0.19;
+const SRC_CEILING = 0.194;
 const SCRIPTS_CEILING = 0.25;
 /* Long enough that two files saying `// eslint-disable-next-line` are not called duplication. */
 const DUP_MIN_CHARS = 45;

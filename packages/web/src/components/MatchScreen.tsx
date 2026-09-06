@@ -5,7 +5,6 @@ import {
   line,
   matchReasons,
   nearMissLine,
-  type PlannedMeetup,
   type Restaurant,
   type SessionFilters,
   type VisitedPlace,
@@ -17,12 +16,10 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { DirectionsDialog, mapsUrl } from "./DirectionsDialog.js";
-import { MeetupPlanner, downloadInvite } from "./MeetupPlanner.js";
-import { PlanExtras } from "./PlanExtras.js";
+import { PlaceLinks } from "./PlaceLinks.js";
 import { RoundAgain } from "./RoundAgain.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
-import { renderShareCard } from "./shareCard.js";
 import { filterSummaryChips } from "./FilterSummary.js";
 
 /*
@@ -56,20 +53,10 @@ function planText(
   r: Restaurant,
   rightSwipes: number,
   totalParticipants: number,
-  planned?: { start: string; duration: number } | null,
   reasons: string[] = [],
   backup?: Restaurant,
 ): string {
   const where = r.address ? `\n${r.address}` : "";
-  const when = planned
-    ? `\nMeet there ${new Date(planned.start).toLocaleString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })} · ${planned.duration} min`
-    : "";
   const availability =
     r.businessStatus === "CLOSED_PERMANENTLY"
       ? " Permanently closed."
@@ -82,7 +69,7 @@ function planText(
             : " Closed right now.";
   const why = reasons.length > 0 ? `\nWhy it won: ${reasons.join(" · ")}` : "";
   const fallback = backup ? `\nPlan B: ${backup.name}\n${mapsUrl(backup)}` : "";
-  return `Dinner plan: ${r.name}${where}${when}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}${why}${fallback}`;
+  return `Dinner plan: ${r.name}${where}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}${why}${fallback}`;
 }
 
 function History({
@@ -180,20 +167,16 @@ export function MatchScreen({
   visited,
   filters,
   isHost,
-  planned,
   onAgain,
   onChooseAlternative,
-  onPlan,
   onNeverAgain,
 }: {
   match: NonNullable<MatchState>;
   visited: VisitedPlace[];
   filters?: SessionFilters;
   isHost: boolean;
-  planned: PlannedMeetup | null;
   onAgain: (deck: "new" | "same") => void;
   onChooseAlternative: (restaurantId: string) => void;
-  onPlan: (planned: PlannedMeetup | null) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
 }) {
   const navigate = useNavigate();
@@ -249,10 +232,8 @@ export function MatchScreen({
       visited={visited}
       filters={filters}
       isHost={isHost}
-      planned={planned}
       onAgain={onAgain}
       onChooseAlternative={onChooseAlternative}
-      onPlan={onPlan}
       onNeverAgain={onNeverAgain}
     />
   );
@@ -263,20 +244,16 @@ function WinnerScreen({
   visited,
   filters,
   isHost,
-  planned,
   onAgain,
   onChooseAlternative,
-  onPlan,
   onNeverAgain,
 }: {
   match: Extract<NonNullable<MatchState>, { kind: "match" }>;
   visited: VisitedPlace[];
   filters?: SessionFilters;
   isHost: boolean;
-  planned: PlannedMeetup | null;
   onAgain: (deck: "new" | "same") => void;
   onChooseAlternative: (restaurantId: string) => void;
-  onPlan: (planned: PlannedMeetup | null) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
 }) {
   const {
@@ -296,8 +273,6 @@ function WinnerScreen({
   const mapsAction = unavailable ? "See it in Google Maps ↗" : "Get directions";
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
-  const [cardResult, setCardResult] = useState<"making" | "shared" | "saved" | null>(null);
-  const [plannerOpen, setPlannerOpen] = useState(false);
   const [directionsOpen, setDirectionsOpen] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
   const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
@@ -319,7 +294,6 @@ function WinnerScreen({
       restaurant,
       rightSwipes,
       totalParticipants,
-      planned,
       reasons.map((reason) => reason.label),
       alternatives[0]?.restaurant,
     );
@@ -362,59 +336,6 @@ function WinnerScreen({
     }
   };
 
-  // A group-chat text gets people moving; a card is the little receipt someone keeps. The renderer
-  // is fully local and the native sheet gets the actual PNG when the platform supports file shares.
-  const saveWinnerCard = async () => {
-    if (cardResult) return;
-    setCardResult("making");
-    try {
-      const blob = await renderShareCard(restaurant, {
-        rightSwipes,
-        totalParticipants,
-        reasons: reasons.map((reason) => reason.label),
-        planned,
-        backup: alternatives[0]?.restaurant,
-      });
-      if (!blob) {
-        setCardResult(null);
-        return;
-      }
-      const fileName = `${
-        restaurant.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "") || "wherever"
-      }-winner.png`;
-      const file = new File([blob], fileName, { type: "image/png" });
-      const canShareFile =
-        typeof navigator.share === "function" &&
-        (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] }));
-      if (canShareFile) {
-        try {
-          await navigator.share({ title: `${restaurant.name} won`, files: [file] });
-          setCardResult("shared");
-          setTimeout(() => setCardResult(null), 2000);
-          return;
-        } catch (error) {
-          if (error instanceof Error && error.name === "AbortError") {
-            setCardResult(null);
-            return;
-          }
-        }
-      }
-      const href = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = href;
-      link.download = fileName;
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(href), 0);
-      setCardResult("saved");
-      setTimeout(() => setCardResult(null), 2000);
-    } catch {
-      setCardResult(null);
-    }
-  };
-
   return (
     <div className="relative w-full">
       {celebrate && <Confetti />}
@@ -426,7 +347,7 @@ function WinnerScreen({
       */}
       {/*
         Two columns from lg: what happened on the left, what to do about it on the right.
-        This screen carries a winner, a tally, the reasons, a meetup plan, the
+        This screen carries a winner, a tally, the reasons, the
         receipt, the backups and the history, and all of it was a 384px column no matter how
         wide the window -- a phone screen with a thousand pixels of dark either side. One cut,
         so a phone still reads it top to bottom in exactly the order it always did.
@@ -574,41 +495,6 @@ function WinnerScreen({
           </section>
         </div>
         <div className="min-w-0">
-          {planned && (
-            <button
-              type="button"
-              onClick={() => {
-                if (!isHost) return;
-                setPlannerOpen(true);
-              }}
-              className={`mx-auto mt-3 flex max-w-full items-center gap-3 rounded-2xl border border-acid/20 bg-acid/10 px-4 py-3 text-left transition ${isHost ? "hover:border-acid/40 active:scale-[0.99]" : "cursor-default"}`}
-              aria-label={isHost ? "Change meetup time" : "Meetup time set by the host"}
-            >
-              <span
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-acid/15 text-lg"
-                aria-hidden
-              >
-                ◷
-              </span>
-              <span className="min-w-0">
-                <span className="block text-2xs font-bold uppercase tracking-[0.16em] text-acid">
-                  meet there
-                </span>
-                <span className="block truncate text-sm font-semibold text-cream">
-                  {new Date(planned.start).toLocaleString(undefined, {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <span className="block text-xs text-muted">
-                  {planned.duration} minutes · {isHost ? "tap to change" : "set by the host"}
-                </span>
-              </span>
-            </button>
-          )}
           <div
             className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10"
             role="progressbar"
@@ -792,18 +678,7 @@ function WinnerScreen({
                     ? "Plan copied"
                     : "Send the plan"}
             </button>
-            <PlanExtras
-              restaurant={restaurant}
-              isHost={isHost}
-              planned={planned}
-              rightSwipes={rightSwipes}
-              totalParticipants={totalParticipants}
-              addressCopied={addressCopied}
-              onCopyAddress={() => void copyAddress()}
-              cardResult={cardResult}
-              onSaveCard={() => void saveWinnerCard()}
-              onPlanMeetup={() => setPlannerOpen(true)}
-            />
+            <PlaceLinks restaurant={restaurant} />
             {installOffer && (
               /* Asked here and nowhere else: the round just ended, so there is an actual reason. */
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">
@@ -838,16 +713,6 @@ function WinnerScreen({
           addressCopied={addressCopied}
           onCopyAddress={copyAddress}
           onClose={() => setDirectionsOpen(false)}
-        />
-      )}
-      {plannerOpen && (
-        <MeetupPlanner
-          restaurant={restaurant}
-          rightSwipes={rightSwipes}
-          totalParticipants={totalParticipants}
-          planned={planned}
-          onPlan={onPlan}
-          onClose={() => setPlannerOpen(false)}
         />
       )}
     </div>

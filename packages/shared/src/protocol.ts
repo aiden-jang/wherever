@@ -71,17 +71,6 @@ export interface ChooseAlternativeMessage {
   restaurantId: string;
 }
 
-export interface PlannedMeetup {
-  start: string;
-  duration: 60 | 90 | 120;
-}
-
-/** Host sets (or clears) the meetup time after a winner is chosen. */
-export interface SetPlanMessage {
-  type: "set_plan";
-  planned: PlannedMeetup | null;
-}
-
 /** Lobby only. A vibe changes the deck about to be dealt, so mid-round it would put two people on
  *  different sets of restaurants. `null` clears your pick. */
 export interface SetVibeMessage {
@@ -122,7 +111,6 @@ export type ClientMessage =
   | DecideNowMessage
   | AgainMessage
   | ChooseAlternativeMessage
-  | SetPlanMessage
   | SetVibeMessage
   | SetFiltersMessage
   | SetNeverAgainMessage
@@ -255,12 +243,6 @@ export interface ReactionMessage {
   kind?: "veto" | "super";
 }
 
-/** The shared meetup time. Persisted so late joiners and reconnects see the same plan. */
-export interface PlanMessage {
-  type: "plan";
-  planned: PlannedMeetup | null;
-}
-
 /**
  * How the group is feeling, as tallies and nothing else.
  *
@@ -286,7 +268,6 @@ export type ServerMessage =
   | HistoryMessage
   | ErrorMessage
   | IdentityMessage
-  | PlanMessage
   | VibesMessage
   | ReactionMessage
   | NudgeMessage;

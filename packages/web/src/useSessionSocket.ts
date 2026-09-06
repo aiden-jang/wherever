@@ -3,7 +3,6 @@ import { flushSync } from "react-dom";
 import type {
   ClientMessage,
   DecisionAlternative,
-  PlannedMeetup,
   Restaurant,
   ServerMessage,
   Vibe,
@@ -112,7 +111,6 @@ export function useSessionSocket(code: string, displayName: string) {
   const [roundEndsAt, setRoundEndsAt] = useState<number | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [match, setMatch] = useState<MatchState>(null);
-  const [planned, setPlanned] = useState<PlannedMeetup | null>(null);
   // Tallies for the group and this client's own pick. The server never sends anybody else's.
   const [vibeCounts, setVibeCounts] = useState<Partial<Record<Vibe, number>>>({});
   const [myVibe, setMyVibe] = useState<Vibe | null>(null);
@@ -148,7 +146,6 @@ export function useSessionSocket(code: string, displayName: string) {
         case "deck":
           // A fresh deck means a new round: clear any prior match outcome.
           setMatch(null);
-          setPlanned(null);
           setProgress(null);
           setDeck(msg.restaurants);
           setDemo(msg.demo ?? null);
@@ -194,8 +191,6 @@ export function useSessionSocket(code: string, displayName: string) {
           return setMatch({ kind: "none", vetoedCount: msg.vetoedCount ?? 0 });
         case "history":
           return setVisited(msg.visited);
-        case "plan":
-          return setPlanned(msg.planned);
         case "vibes":
           setVibeCounts(msg.counts);
           return setMyVibe(msg.yours);
@@ -319,7 +314,6 @@ export function useSessionSocket(code: string, displayName: string) {
     alreadyVoted,
     progress,
     match,
-    planned,
     vibeCounts,
     myVibe,
     visited,

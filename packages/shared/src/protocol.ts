@@ -82,22 +82,6 @@ export interface SetPlanMessage {
   planned: PlannedMeetup | null;
 }
 
-export type ArrivalStatus = "planning" | "heading_out" | "here";
-
-/*
- * The arrival pulse is gone: self-reported presence is the thing nobody actually taps, and one of
- * its three statuses had no button at all, so "getting ready" could only ever read zero.
- *
- * The message is still parsed and then ignored, so a client left open on the previous bundle taps
- * check-in and gets silence rather than "Unrecognized message." Delete this, its schema and its test
- * on the next deploy after the one that removes the feature.
- */
-export interface SetArrivalMessage {
-  type: "set_arrival";
-  status: ArrivalStatus | null;
-  travelMinutes?: number;
-}
-
 /** Lobby only. A vibe changes the deck about to be dealt, so mid-round it would put two people on
  *  different sets of restaurants. `null` clears your pick. */
 export interface SetVibeMessage {
@@ -139,7 +123,6 @@ export type ClientMessage =
   | AgainMessage
   | ChooseAlternativeMessage
   | SetPlanMessage
-  | SetArrivalMessage
   | SetVibeMessage
   | SetFiltersMessage
   | SetNeverAgainMessage

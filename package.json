@@ -24,7 +24,8 @@
     "css-vars": "node scripts/check-css-vars.mjs",
     "check:docs": "node scripts/check-docs.mjs",
     "knip": "knip",
-    "verify": "pnpm run gates && pnpm run size && pnpm run comments && pnpm run css-vars && pnpm run check:docs && pnpm run knip && pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run test",
+    "dead-classes": "node scripts/dead-classes.mjs",
+    "verify": "pnpm run gates && pnpm run size && pnpm run comments && pnpm run css-vars && pnpm run check:docs && pnpm run knip && pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run dead-classes && pnpm run test",
     "deploy:only": "pnpm --filter @wherever/worker run deploy"
   },
   "devDependencies": {

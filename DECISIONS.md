@@ -61,13 +61,11 @@ myself out" beside the host's "Run it back". When nobody agrees, the same person
 was also the one that offered them no way off it. Same words and the same button as the sibling
 branch, kept quieter than the host's so the default is still to wait rather than to split the group.
 
-**Two waits answered with a label instead of a sentence.** "No votes yet." was the only line on the
+**A wait answered with a label instead of a sentence.** "No votes yet." was the only line on the
 screen in the moment before anybody has voted, and the app has a module whose entire job is to talk
 during a wait -- it just had no moment for this one. There is a `quiet` moment now, rotating like the
-others, and the reachability test covers it the same way. The arrival panel's "Nobody has checked in
-yet." was hand-written next to hand-written neighbours ("A gentle nudge might save the reservation"),
-so it was rewritten in place rather than pushed through the module. The rest of the empty states were
-left alone: they already had a voice.
+others, and the reachability test covers it the same way. The rest of the empty states were left
+alone: they already had a voice.
 
 **The verdict arrives in the order it is read.** Everything on the decided screen used to land in
 the same frame, which is a lot to take in at the one moment the group looks up from their phones: the
@@ -85,9 +83,8 @@ earning its keep, because the mock behind it is what a real session gets when th
 budget is spent. 125 lines out.
 
 **The whole app was one 506kB chunk.** This is opened on a phone, outside, on cellular, so first
-paint is the part of the experience nobody thinks of as design. The decided screen is the largest
-thing in the app -- winner, plan, arrival pulse, receipt, backups, and a canvas that draws a share
-card -- and none of it is reachable until a round ends, so it is now its own chunk and is fetched
+paint is the part of the experience nobody thinks of as design. The decided screen was the heaviest
+thing in the app, and none of it is reachable until a round ends, so it is its own chunk, fetched
 while people are still swiping. It is in cache long before it is needed, and the reveal never waits
 on a network round trip. 506kB to 465kB, 154.6kB to 144.3kB gzipped.
 
@@ -115,11 +112,11 @@ inside a 24px modal, so its corner was rounder than the thing containing it, whi
 however briefly you look at it. It takes the app's panel radius now.
 
 **The decided screen was a 384px column at any window size.** It is the densest screen in the app --
-winner, tally, the reasons, a meetup plan, arrival status, the receipt, the backups, the history --
-and it had no `lg` treatment at all, so on a laptop it was a phone-width ribbon with a thousand
-pixels of dark either side. Two columns from `lg`: what happened on the left, what to do about it on
-the right. One cut rather than a rearrangement, so a phone reads it top to bottom in exactly the
-order it always did. 492px each, 695px and 862px tall, where it used to be one column of about 1550.
+winner, tally, the reasons, the receipt, the backups and the history -- and it had no `lg` treatment
+at all, so on a laptop it was a phone-width ribbon with a thousand pixels of dark either side. Two
+columns from `lg`: what happened on the left, what to do about it on the right. One cut rather than
+a rearrangement, so a phone reads it top to bottom in exactly the order it always did. 492px each,
+695px and 862px tall, where it used to be one column of about 1550.
 
 **Half the swiping screen was holding one line of text.** At 1440px the deck ran 416x662 and the
 column beside it held 128px: "no votes yet" and the reaction bar. Everything else about the round --
@@ -191,15 +188,6 @@ already returned null, the broken case was the only case it ran in. It returns n
 the separators around it are conditional so nothing is left dangling. Those five sites were the same
 two-call fallback copied out; that is one `distanceText` now.
 
-**The share card had the same long-name problem, on an image people post.** Its wrapper only broke
-between words, so a single word wider than the card was drawn straight off both edges; a name too
-long for two lines was cut mid-word with nothing to say so, which reads as the whole name of a
-different restaurant; and the meta row was drawn with no width limit at all. The wrapping is now a
-pure function in shared, measured through a callback instead of a canvas context so it can be tested
-without a browser, which is where the rest of this app's logic already lives. It breaks over-long
-words by character, marks a truncation with an ellipsis, and keeps the ellipsis inside the width. The
-card's distance also now matches the winner screen's estimate rather than disagreeing with it.
-
 **Both overlays claimed the page behind them was inert, and neither made it true.** The modal
 declared `aria-modal="true"`, which tells a screen reader everything else is unavailable, while focus
 stayed on the button that opened it: pressing Tab walked through the whole page underneath a
@@ -240,11 +228,10 @@ the vetoer down in a group of four; a test asserts the vetoed id appears nowhere
 **The server said no and nobody heard it.** Socket errors were stored in state and rendered as a
 line of text on the create/lobby screen only. The decided screen had no error rendering and no toast
 container at all, and the swiping screen had a container but never put errors in it, so a host
-picking a meetup time in the past, or hitting the round limit on "run it back", pressed a button and
-watched nothing happen with no reason given. Refusals now surface as a toast on both, keyed on a
-counter rather than on their own words: the same refusal twice in a row is two events, and deduping
-on the text would have shown "pick a time that hasn't happened yet" once and then stayed silent
-however many times the host tried it.
+hitting the round limit on "run it back" pressed a button and watched nothing happen, with no reason
+given. Refusals now surface as a toast on both, keyed on a counter rather than on their own words:
+the same refusal twice in a row is two events, and deduping on the text would have shown "you've been
+through a lot of rounds" once and then stayed silent however many times the host tried it.
 
 **Denver was being offered Williamsburg.** `isInNYC` exists, with a comment stating the rule it was
 written for -- the neighbourhood shortcuts only make sense inside the city, so the UI shows them only
@@ -385,9 +372,9 @@ instead, which fills the empty half and buys back the height, so the card can fi
 the thing the app is about. Below `lg` nothing changed: the phone layout still fits with the reaction
 bar above the fold, which is the constraint that shaped this screen in the first place.
 
-**A veto looks like a consequence, not a laughing face.** Both a veto and a super-like already fanned
+**A veto looks like a consequence, not a passing reaction.** Both a veto and a super-like already fanned
 out to the room, but they reused the floating-reaction channel, so the thing that removes a place for
-everybody drifted up the screen exactly like somebody tapping 😂. They now land in the middle at twice
+everybody drifted up the screen exactly like somebody tapping 🔥. They now land in the middle at twice
 the size behind a tint of their own colour, and they are announced, because that overlay is
 `aria-hidden` and both were silent for a screen reader. Neither names the place or the person: a veto
 is a vote, and votes here are anonymous.

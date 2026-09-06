@@ -28,6 +28,7 @@ import {
   reassignHostAway,
   rescheduleAlarm,
 } from "./hostHandover.js";
+import { sendVibes, setVibe, vibeCounts } from "./vibeTally.js";
 import { attachmentsOn, broadcastTo, participantsOn, resultMessage, sendTo } from "./roomSockets.js";
 import { fetchFreshDeck, getOrCreateDeck, readDemoMode, recordVisit, visitedFor } from "./deckSource.js";
 
@@ -50,7 +51,6 @@ type VoteMap = Record<string, Vote>;
  * Who picked which vibe. Never leaves this object - clients get tallies only, so "nobody finds out
  * who said fancy" is a property of the server rather than of every screen that renders it.
  */
-type VibeMap = Record<string, Vibe>;
 
 /**
  * One per session, addressed by session code. Owns every socket in the room and the live votes.
@@ -141,34 +141,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (!att) return;
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "lobby") return;
-
-    const vibes = (await this.ctx.storage.get<VibeMap>("vibes")) ?? {};
-    if (vibe) vibes[att.participantId] = vibe;
-    else delete vibes[att.participantId];
-    await this.ctx.storage.put("vibes", vibes);
-    await this.broadcastVibes(vibes);
-  }
-
-  /**
-   * Tallies to everyone, plus each person's own pick back to them. One message per socket rather than
-   * a broadcast, because `yours` is the only field that differs per recipient.
-   */
-  private async broadcastVibes(vibes?: VibeMap): Promise<void> {
-    const map = vibes ?? (await this.ctx.storage.get<VibeMap>("vibes")) ?? {};
-    const counts: Partial<Record<Vibe, number>> = {};
-    for (const picked of Object.values(map)) counts[picked] = (counts[picked] ?? 0) + 1;
-    for (const socket of this.ctx.getWebSockets()) {
-      const att = socket.deserializeAttachment() as SocketAttachment | null;
-      if (!att) continue;
-      this.send(socket, { type: "vibes", counts, yours: map[att.participantId] ?? null });
-    }
-  }
-
-  private async vibeCounts(): Promise<Partial<Record<Vibe, number>>> {
-    const map = (await this.ctx.storage.get<VibeMap>("vibes")) ?? {};
-    const counts: Partial<Record<Vibe, number>> = {};
-    for (const picked of Object.values(map)) counts[picked] = (counts[picked] ?? 0) + 1;
-    return counts;
+    await sendVibes(this.ctx, await setVibe(this.ctx.storage, att.participantId, vibe));
   }
 
   /** Host only, lobby only: one shared set of rules, and changing them mid-round would deal two
@@ -325,7 +298,7 @@ export class SessionRoom extends DurableObject<Env> {
 
     // Whoever just walked in needs the tallies and their own pick back, which a reconnect also relies on
     // to re-select the button they had already chosen.
-    if (meta.status === "lobby") await this.broadcastVibes();
+    if (meta.status === "lobby") await sendVibes(this.ctx);
 
     if (meta.status === "swiping") {
       const deck = await this.deckFor(meta);
@@ -623,7 +596,7 @@ export class SessionRoom extends DurableObject<Env> {
       try {
         deck = await fetchFreshDeck({
           ...this.deckRequest(meta, new Set(dealt.map((r) => r.id))),
-          vibeCounts: await this.vibeCounts(),
+          vibeCounts: await vibeCounts(this.ctx.storage),
         });
       } catch {
         const message = "couldn't load more spots right now. give it a moment and try again.";
@@ -701,7 +674,7 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   private async deckFor(meta: SessionMeta): Promise<Restaurant[]> {
-    return getOrCreateDeck({ ...this.deckRequest(meta), vibeCounts: await this.vibeCounts() });
+    return getOrCreateDeck({ ...this.deckRequest(meta), vibeCounts: await vibeCounts(this.ctx.storage) });
   }
 
   /** Unique connected participants (dedup across reconnect overlap). */

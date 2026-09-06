@@ -1,12 +1,14 @@
 import { DurableObject } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
 import { and, eq } from "drizzle-orm";
+import { visitedPlaces } from "./db/schema.js";
 import {
+  cardsBehind,
   clientMessageSchema,
+  decideWinner,
   finishedParticipantIds,
   promoteAlternative,
   tastePulse,
-  decideWinner,
   vetoedRestaurantIds,
   type DecisionResult,
   type Participant,
@@ -14,38 +16,16 @@ import {
   type Restaurant,
   type ServerMessage,
   type Session,
-  type SessionFilters,
-  type SessionStatus,
   type SwipeDirection,
-  type VisitedPlace,
-  type Vote,
-  type VoteMode,
-  applyVibe,
-  cardsBehind,
-  vibeEffectLine,
-  resolveVibe,
-  shuffleDeck,
+  type SessionFilters,
   type Vibe,
-  type DemoReason,
-  blockedIds,
+  type Vote,
 } from "@wherever/shared";
-import { createRestaurantSource, MockRestaurantSource, isDemoSource } from "./restaurantSource.js";
-import { visitedPlaces } from "./db/schema.js";
 import type { Env } from "./env.js";
+import type { SessionMeta, SocketAttachment } from "./roomState.js";
+import { fetchFreshDeck, getOrCreateDeck, readDemoMode, recordVisit, visitedFor } from "./deckSource.js";
 
 /** Attached to each WebSocket so presence survives DO hibernation. */
-interface SocketAttachment {
-  participantId: string;
-  displayName: string;
-  isHost: boolean;
-}
-
-interface SessionMeta {
-  code: string;
-  status: SessionStatus;
-  voteMode: VoteMode;
-  filters: SessionFilters;
-}
 
 // Each "again" round is a paid Places fetch; cap how many a single session can trigger.
 const MAX_AGAIN_ROUNDS = 20;
@@ -216,7 +196,7 @@ export class SessionRoom extends DurableObject<Env> {
       .update(visitedPlaces)
       .set({ neverAgain })
       .where(and(eq(visitedPlaces.sessionCode, meta.code), eq(visitedPlaces.restaurantId, restaurantId)));
-    this.broadcast({ type: "history", visited: await this.getVisited(meta.code) });
+    this.broadcast({ type: "history", visited: await visitedFor(this.env, meta.code) });
   }
 
   /* Sent only to the sockets it is about, so nobody learns who the slow one is from a broadcast. Rate
@@ -235,7 +215,7 @@ export class SessionRoom extends DurableObject<Env> {
     }
     await this.ctx.storage.put("lastNudge", Date.now());
 
-    const deck = await this.getOrCreateDeck(meta);
+    const deck = await this.deckFor(meta);
     const votes = await this.getVotes();
     const participants = this.connectedParticipants();
     const finished = new Set(
@@ -414,14 +394,14 @@ export class SessionRoom extends DurableObject<Env> {
     this.send(ws, { type: "identity", participantId: identity.participantId });
 
     await this.broadcastState();
-    this.send(ws, { type: "history", visited: await this.getVisited(meta.code) });
+    this.send(ws, { type: "history", visited: await visitedFor(this.env, meta.code) });
 
     // Whoever just walked in needs the tallies and their own pick back, which a reconnect also relies on
     // to re-select the button they had already chosen.
     if (meta.status === "lobby") await this.broadcastVibes();
 
     if (meta.status === "swiping") {
-      const deck = await this.getOrCreateDeck(meta);
+      const deck = await this.deckFor(meta);
       const votes = await this.getVotes();
       const mine = votes.filter((v) => v.participantId === identity.participantId);
       const alreadyVoted = mine.map((v) => v.restaurantId);
@@ -435,7 +415,7 @@ export class SessionRoom extends DurableObject<Env> {
         superUsed,
         vetoUsed,
         ...(behindBy > 0 ? { behindBy } : {}),
-        demo: await this.isDemoMode(),
+        demo: await readDemoMode(this.ctx.storage),
         roundEndsAt: (await this.ctx.storage.get<number>("roundEndsAt")) ?? undefined,
       });
       await this.evaluate(meta); // refresh progress for the new arrival
@@ -466,7 +446,7 @@ export class SessionRoom extends DurableObject<Env> {
     this.starting = true;
     let deck: Restaurant[];
     try {
-      deck = await this.getOrCreateDeck(meta);
+      deck = await this.deckFor(meta);
     } catch {
       return this.send(ws, {
         type: "error",
@@ -483,7 +463,7 @@ export class SessionRoom extends DurableObject<Env> {
     this.broadcast({
       type: "deck",
       restaurants: deck,
-      demo: await this.isDemoMode(),
+      demo: await readDemoMode(this.ctx.storage),
       roundEndsAt,
       ...(vibeEffect ? { vibeEffect } : {}),
     });
@@ -601,7 +581,7 @@ export class SessionRoom extends DurableObject<Env> {
     }
 
     await this.ctx.storage.put("winner", promoted);
-    await this.recordVisit(meta.code, promoted.restaurant.id, promoted.restaurant.name);
+    await recordVisit(this.env, meta.code, promoted.restaurant.id, promoted.restaurant.name);
     const votes = await this.getVotes();
     const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
     this.broadcastResult(
@@ -634,7 +614,7 @@ export class SessionRoom extends DurableObject<Env> {
 
   /** Recompute + broadcast progress, then decide if everyone connected is done. */
   private async evaluate(meta: SessionMeta, excludeWs?: WebSocket): Promise<void> {
-    const deck = await this.getOrCreateDeck(meta);
+    const deck = await this.deckFor(meta);
     const votes = await this.getVotes();
     const participants = this.connectedParticipants(excludeWs);
     const total = participants.length;
@@ -670,14 +650,14 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.delete("roundEndsAt");
     await this.rescheduleAlarm();
 
-    const deck = await this.getOrCreateDeck(meta);
+    const deck = await this.deckFor(meta);
     const votes = await this.getVotes();
     const result = decideWinner(deck, votes);
     await this.ctx.storage.put("winner", result);
 
     // The chosen place joins the group's history so it drops out of next time.
     if (result) {
-      await this.recordVisit(meta.code, result.restaurant.id, result.restaurant.name);
+      await recordVisit(this.env, meta.code, result.restaurant.id, result.restaurant.name);
     }
 
     const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
@@ -714,7 +694,10 @@ export class SessionRoom extends DurableObject<Env> {
       // on a null winner being told nobody liked anything. The whole deck just swiped is excluded,
       // not only the winner: "new places" that opens on the same six is the complaint being fixed.
       try {
-        deck = await this.fetchFreshDeck(meta, new Set(dealt.map((r) => r.id)));
+        deck = await fetchFreshDeck({
+          ...this.deckRequest(meta, new Set(dealt.map((r) => r.id))),
+          vibeCounts: await this.vibeCounts(),
+        });
       } catch {
         const message = "couldn't load more spots right now. give it a moment and try again.";
         return this.send(ws, { type: "error", message });
@@ -737,7 +720,7 @@ export class SessionRoom extends DurableObject<Env> {
     this.broadcast({
       type: "deck",
       restaurants: deck,
-      demo: await this.isDemoMode(),
+      demo: await readDemoMode(this.ctx.storage),
       roundEndsAt,
       ...(vibeEffect ? { vibeEffect } : {}),
     });
@@ -782,102 +765,16 @@ export class SessionRoom extends DurableObject<Env> {
     return Object.values(map);
   }
 
-  private async getOrCreateDeck(meta: SessionMeta): Promise<Restaurant[]> {
-    const cached = await this.ctx.storage.get<Restaurant[]>("deck");
-    return cached ?? this.fetchFreshDeck(meta);
+  /*
+   * The deck helpers live in deckSource.ts; these hand them the room's storage, env and vibe tally.
+   * Kept as one-liners rather than inlined at a dozen call sites, so the wiring exists once.
+   */
+  private deckRequest(meta: SessionMeta, exclude?: ReadonlySet<string>) {
+    return { storage: this.ctx.storage, env: this.env, meta, exclude };
   }
 
-  /** Fetch from the source, drop anything the group already picked, cache it. */
-  private async fetchFreshDeck(
-    meta: SessionMeta,
-    alsoExclude: ReadonlySet<string> = new Set(),
-  ): Promise<Restaurant[]> {
-    const kind = this.env.RESTAURANT_SOURCE ?? "mock";
-    const apiKey = kind === "google" ? this.env.GOOGLE_PLACES_API_KEY : undefined;
-
-    // A real Google search is about to happen → charge it against the monthly budget first. If the
-    // budget is spent, don't call Google: fall back to the sample deck so the app stays playable as
-    // a demo, and flag it so the client can explain why the data is stand-in.
-    let source;
-    let demo: DemoReason | undefined;
-    if (kind === "google" && apiKey) {
-      const meter = this.env.USAGE_METER.get(this.env.USAGE_METER.idFromName("global"));
-      if (await meter.tryConsume("search")) {
-        source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
-      } else {
-        source = new MockRestaurantSource();
-        demo = "budget";
-      }
-    } else {
-      source = createRestaurantSource(kind, apiKey, this.env.PUBLIC_API_BASE);
-      // Same flag the spent-budget path sets: whatever the reason, the room is being told these
-      // places are stand-ins rather than being left to assume they are real.
-      demo = isDemoSource(kind, apiKey) ? "sample" : undefined;
-    }
-
-    /*
-     * The vibe, folded into the filters the deck is actually fetched with, and saved onto the session so
-     * the summary everyone is reading describes the deck they were dealt. No vibe changes nothing, which
-     * is why it is opt-in.
-     */
-    const reading = resolveVibe(await this.vibeCounts());
-    if (reading.vibe) {
-      // Describe the change before making it: applyVibe overwrites the very filters it is measured
-      // against, and this is the only place both halves exist.
-      await this.ctx.storage.put("vibeEffect", vibeEffectLine(reading.vibe, meta.filters));
-      meta.filters = applyVibe(meta.filters, reading.vibe);
-      await this.ctx.storage.put("meta", meta);
-    } else {
-      await this.ctx.storage.delete("vibeEffect");
-    }
-
-    const all = await source.fetchDeck(meta.filters);
-    /* Everywhere the group has been, minus the ones whose cooldown expired. Excluding them forever meant
-       a group that actually used the app shrank its own deck one dinner at a time. See revisit.ts. */
-    const visited = await this.getVisited(meta.code);
-    const blocked = blockedIds(visited);
-    const filtered = all.filter((r) => !blocked.has(r.id) && !alsoExclude.has(r.id));
-    // Seeded on the code so the same session always deals the same chaos, which is debuggable.
-    const deck = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
-    await this.ctx.storage.put("deck", deck);
-    await this.ctx.storage.put("demoMode", demo ?? null);
-    return deck;
-  }
-
-  /** Whether the current deck is the sample fallback served because the live-data budget is spent. */
-  private async isDemoMode(): Promise<DemoReason | undefined> {
-    /* Stored as a reason since the deck was fetched. `null` for a real deck, and `true` for a room
-       whose deck predates this field, which was only ever set for the budget case. */
-    const held = await this.ctx.storage.get<DemoReason | boolean | null>("demoMode");
-    if (held === true) return "budget";
-    return held === null || held === false ? undefined : held;
-  }
-
-  private async getVisited(code: string): Promise<VisitedPlace[]> {
-    const db = drizzle(this.env.DB);
-    const rows = await db.select().from(visitedPlaces).where(eq(visitedPlaces.sessionCode, code));
-    return rows.map((r) => ({
-      restaurantId: r.restaurantId,
-      name: r.name,
-      visitedAt: r.visitedAt.toISOString(),
-      ...(r.neverAgain ? { neverAgain: true } : {}),
-    }));
-  }
-
-  private async recordVisit(code: string, restaurantId: string, name: string): Promise<void> {
-    const db = drizzle(this.env.DB);
-    const existing = await db
-      .select({ id: visitedPlaces.id })
-      .from(visitedPlaces)
-      .where(and(eq(visitedPlaces.sessionCode, code), eq(visitedPlaces.restaurantId, restaurantId)))
-      .get();
-    if (existing) return;
-    await db.insert(visitedPlaces).values({
-      id: crypto.randomUUID(),
-      sessionCode: code,
-      restaurantId,
-      name,
-    });
+  private async deckFor(meta: SessionMeta): Promise<Restaurant[]> {
+    return getOrCreateDeck({ ...this.deckRequest(meta), vibeCounts: await this.vibeCounts() });
   }
 
   /** Unique connected participants (dedup across reconnect overlap). */
@@ -917,7 +814,7 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   private async broadcastHistory(code: string): Promise<void> {
-    this.broadcast({ type: "history", visited: await this.getVisited(code) });
+    this.broadcast({ type: "history", visited: await visitedFor(this.env, code) });
   }
 
   private broadcastResult(

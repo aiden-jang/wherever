@@ -11,7 +11,9 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
 - **Majority wins.** A left swipe is a downvote, not a veto, so no amount of passing tanks a place
   on its own. The one exception is deliberate and rationed: each person gets a single veto per round
   that kills one place outright, anonymously, and the group is told when it took their top pick.
-- **Super-like.** One weighted pick per round that can tip a close race, with a gold flash to the whole room.
+- **Super-like.** One weighted pick per round that can tip a close race. The gold flash is yours
+  alone, because everyone is on a different card; the room finds out on the result screen, which
+  says when a super-like beat the headcount.
 - **Round timer (optional).** The host sets a countdown; when it's up, the votes so far decide — no more waiting on the slow one.
 - **Filter like you mean it.** Cuisines to include _or_ exclude, exact price levels, amenities (outdoor seating, veg-friendly, dog-friendly, takes-reservations…), rating/review floors, and one-tap presets ("Cheap & close", "Date night").
 - **Show who's voted, or don't.** The host chooses; anonymous is the default and enforced server-side.

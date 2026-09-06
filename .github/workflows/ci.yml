@@ -24,6 +24,10 @@ jobs:
       # A god-file is never added in one go; it accretes and no single diff looks wrong. Ratcheted,
       # so the eight already over the line can only shrink.
       - run: pnpm run size
+      # A cleanup pass is a moment and drift is permanent; and a `var(--x)` nothing declares fails
+      # silently, using the fallback or inheriting.
+      - run: pnpm run comments
+      - run: pnpm run css-vars
       - run: pnpm typecheck
       - run: pnpm lint
       # .prettierrc had no printWidth, so `pnpm format` reflowed the whole repo to prettier's 80

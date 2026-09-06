@@ -298,7 +298,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             filters={session?.filters}
             isHost={isHost}
             planned={planned}
-            onAgain={() => send({ type: "again" })}
+            onAgain={(deck) => send({ type: "again", deck })}
             onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
             onPlan={(nextPlan) => send({ type: "set_plan", planned: nextPlan })}
             onNeverAgain={(restaurantId, neverAgain) =>

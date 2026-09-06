@@ -18,6 +18,7 @@ import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { DirectionsDialog, mapsUrl } from "./DirectionsDialog.js";
 import { MeetupPlanner, downloadInvite } from "./MeetupPlanner.js";
+import { RoundAgain } from "./RoundAgain.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 import { renderShareCard } from "./shareCard.js";
@@ -189,7 +190,7 @@ export function MatchScreen({
   filters?: SessionFilters;
   isHost: boolean;
   planned: PlannedMeetup | null;
-  onAgain: () => void;
+  onAgain: (deck: "new" | "same") => void;
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
@@ -214,7 +215,7 @@ export function MatchScreen({
         </p>
         {isHost ? (
           <button
-            onClick={onAgain}
+            onClick={() => onAgain("new")}
             className="mt-8 rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
           >
             Run it back
@@ -252,7 +253,6 @@ export function MatchScreen({
       onChooseAlternative={onChooseAlternative}
       onPlan={onPlan}
       onNeverAgain={onNeverAgain}
-      navigate={navigate}
     />
   );
 }
@@ -267,18 +267,16 @@ function WinnerScreen({
   onChooseAlternative,
   onPlan,
   onNeverAgain,
-  navigate,
 }: {
   match: Extract<NonNullable<MatchState>, { kind: "match" }>;
   visited: VisitedPlace[];
   filters?: SessionFilters;
   isHost: boolean;
   planned: PlannedMeetup | null;
-  onAgain: () => void;
+  onAgain: (deck: "new" | "same") => void;
   onChooseAlternative: (restaurantId: string) => void;
   onPlan: (planned: PlannedMeetup | null) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
-  navigate: ReturnType<typeof useNavigate>;
 }) {
   const {
     restaurant,
@@ -891,21 +889,7 @@ function WinnerScreen({
                 </button>
               </div>
             )}
-            {isHost ? (
-              <button
-                onClick={onAgain}
-                className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
-              >
-                Run it back (this one&apos;s out)
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate("/")}
-                className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 transition"
-              >
-                Show myself out
-              </button>
-            )}
+            <RoundAgain isHost={isHost} onAgain={onAgain} />
           </div>
 
           <History visited={visited} onNeverAgain={onNeverAgain} />

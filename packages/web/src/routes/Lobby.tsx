@@ -58,7 +58,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     session,
     deck,
     demo,
-    vibeEffect,
+    deckNote,
     behindBy,
     nudges,
     superUsed,
@@ -160,14 +160,14 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   }, [nudges]);
 
   const hostToasts = useHostPromotionToasts(isHost, !!session, setAnnouncement);
-  const vibeToasts = useOneShotToast(vibeEffect, setAnnouncement);
+  const deckToasts = useOneShotToast(deckNote, setAnnouncement);
   const behindToasts = useOneShotToast(
     behindBy > 0
       ? `They started without you, ${behindBy} ${behindBy === 1 ? "card" : "cards"} in. Your votes still count.`
       : null,
     setAnnouncement,
   );
-  const allToasts = [...toasts, ...hostToasts, ...vibeToasts, ...behindToasts, ...nudgeToasts];
+  const allToasts = [...toasts, ...hostToasts, ...deckToasts, ...behindToasts, ...nudgeToasts];
   /*
    * The server's refusals, on the screens that had nowhere to put them.
    *

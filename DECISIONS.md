@@ -393,9 +393,15 @@ a reserve round does not spend one. Alongside it the session remembers every id 
 just the deck in hand, because otherwise the fetch after the reserve drains would offer round one's
 places back as new ones. "Picked clean" now means what it says.
 
-Not fixed by this: once the reserve is empty the next fetch is still the same twenty places, so a long
-night in a thin area ends the same way. Widening the radius each time you run it back is the answer to
-that, and it is a separate change.
+An empty reserve then means this radius has nothing left, so the search steps up the ladder the app
+already offers -- 1, 3, 5, 10 miles -- before it calls Google rather than after a wasted call, because
+the same radius provably cannot return anything new. Walking that ladder rather than multiplying keeps
+the widened search to a radius the group could have picked themselves, so the receipt chip reads "5 mi"
+instead of an invented number, and the top of it is a real end: past ten miles this is not the same
+night out. The room is told in the same breath the deck arrives: "Nothing new within 3 mi, so the
+search went out to 5 mi." The widened radius sticks even when the wider search also comes up empty, so
+the next attempt steps further instead of paying again for the radius that just failed, and the
+refusal names where it looked: "That is everywhere within 10 mi, picked clean."
 
 **A super-like is nobody else's business until the result.** It fanned out to the room like a veto,
 but the two are not alike. A veto takes a place off everybody's list, so "something just died" is a

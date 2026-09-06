@@ -20,7 +20,7 @@ const MAX_STATE = 12;
  */
 const ALREADY_OVER = {
   "packages/web/src/components/MatchScreen.tsx": { lines: 706 },
-  "packages/worker/src/sessionRoom.ts": { lines: 705 },
+  "packages/worker/src/sessionRoom.ts": { lines: 703 },
   "packages/web/src/routes/Lobby.tsx": { lines: 570 },
   "packages/web/src/components/SwipeDeck.tsx": { lines: 763 },
   "packages/web/src/components/FilterFields.tsx": { lines: 614 },

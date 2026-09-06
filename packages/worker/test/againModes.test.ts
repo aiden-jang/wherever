@@ -15,7 +15,8 @@ async function host() {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       displayName: "Alex",
-      filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
+      // Every price tier, so the sample deck is big enough to leave a reserve behind round one.
+      filters: { radiusMeters: 4800, maxPriceTier: 4, categories: [] },
     }),
   });
   const { code } = (await created.json()) as { code: string };
@@ -81,6 +82,34 @@ describe("running it back", () => {
     expect(second.restaurants.length).toBeGreaterThan(0);
     const firstIds = new Set(first.restaurants.map((r) => r.id));
     expect(second.restaurants.filter((r) => firstIds.has(r.id))).toEqual([]);
+    // Held-back cards, not a fresh search: a search would have had to widen to find anything new.
+    const state = await h.waitFor("session_state");
+    expect(state.session.filters.radiusMeters).toBe(4800);
+
+    h.close();
+  });
+
+  it("widens the search rather than asking the same radius twice", async () => {
+    const h = await host();
+    h.send({ type: "start_round" });
+    await decide(h, (await h.waitFor("deck")).restaurants);
+
+    // Round two comes from the reserve and changes nothing; round three is the one that must widen.
+    const afterFirst = h.seen.length;
+    h.send({ type: "again", deck: "new" });
+    await decide(h, (await h.waitFor("deck", afterFirst)).restaurants);
+
+    const before = h.seen.length;
+    h.send({ type: "again", deck: "new" });
+    let reply: ServerMessage | undefined;
+    for (let i = 0; i < 200 && !reply; i += 1) {
+      reply = h.seen.slice(before).find((m) => m.type === "deck" || m.type === "error");
+      if (!reply) await new Promise((r) => setTimeout(r, 10));
+    }
+    // The sample source ignores radius, so the widened search still finds nothing new. What is being
+    // asserted is that the app widened before giving up, not that a wider search rescued it.
+    const state = await h.waitFor("session_state");
+    expect(state.session.filters.radiusMeters).toBe(8000);
 
     h.close();
   });

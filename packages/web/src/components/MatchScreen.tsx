@@ -516,8 +516,8 @@ function WinnerScreen({
           <VerdictNotes vetoedCount={vetoedCount} superTipped={superTipped} round={round} />
 
           {filters && (
-            /* Open by default: the filters are the answer to "why these places?", and nobody clicks
-               a receipt to ask that. Collapsible because a heavily filtered round is a long list. */
+            /* Open: nobody clicks a receipt to ask "why these places?". Still collapsible because a
+               heavily filtered round is a long list. */
             <details
               open
               className="group mt-5 rounded-2xl border border-white/10 bg-white/[0.035] text-left"

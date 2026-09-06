@@ -103,8 +103,7 @@ export function useSessionSocket(code: string, displayName: string) {
   const [alreadyVoted, setAlreadyVoted] = useState<string[]>([]);
   // Whether this client already spent its super-like this round (seeded from the deck on reconnect).
   const [superUsed, setSuperUsed] = useState(false);
-  /* One line for everything that happened to the search before this deck was dealt. Two states would
-     be two toasts racing each other, and both facts belong to the same moment. */
+  // One state, not two: separate ones would be two toasts racing for the same moment.
   const [deckNote, setDeckNote] = useState<string | null>(null);
   const [behindBy, setBehindBy] = useState(0);
   // Counter, not a boolean: a second nudge has to be distinguishable from the first.

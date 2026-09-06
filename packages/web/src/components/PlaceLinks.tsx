@@ -1,6 +1,5 @@
 import type { Restaurant } from "@wherever/shared";
 
-/** Reaching the winner directly, for the two things a group still asks after the vote. */
 export function PlaceLinks({ restaurant }: { restaurant: Restaurant }) {
   if (!restaurant.phone && !restaurant.website) return null;
   return (

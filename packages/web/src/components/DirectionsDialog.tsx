@@ -29,7 +29,6 @@ function wazeDirectionsUrl(r: Restaurant): string {
   return `https://www.waze.com/ul?q=${encodeURIComponent(destination)}&navigate=yes`;
 }
 
-/** Which map app is opening, asked once at the moment people actually leave. */
 export function DirectionsDialog({
   restaurant,
   addressCopied,

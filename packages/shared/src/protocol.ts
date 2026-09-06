@@ -143,8 +143,6 @@ export interface DeckMessage {
   /** What the vibe did to the filters, in words. Worked out here because the vibe is folded into the
    *  filters before the deck is fetched, so by the time anyone looks the before-state is gone. */
   vibeEffect?: string;
-  /** Said when the app changed the search itself rather than the group changing it, so a deck of
-   *  further-out places is not a mystery. */
   searchNote?: string;
 }
 

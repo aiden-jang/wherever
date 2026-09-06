@@ -119,7 +119,6 @@ describe("running it back", () => {
     h.send({ type: "start_round" });
     await decide(h, (await h.waitFor("deck")).restaurants);
 
-    // Round after round until the held-back cards run out; the sample source is finite.
     for (let i = 0; i < 10; i += 1) {
       const before = h.seen.length;
       h.send({ type: "again", deck: "new" });

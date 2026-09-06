@@ -1,7 +1,3 @@
-/**
- * The lines under the tally that stop the headcount reading as wrong: a place removed before
- * ranking, a weighted vote the count cannot show, a round that was not the first.
- */
 export function VerdictNotes({
   vetoedCount,
   superTipped,

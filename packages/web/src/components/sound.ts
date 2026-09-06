@@ -13,11 +13,16 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = readMuted();
 
+/*
+ * Muted until somebody asks for it. This is a group app used in public: a bar, a kitchen, someone's
+ * living room. Opening it loud is the wrong first impression, and the person it embarrasses is the
+ * one who just installed it. The toggle is in the header, and unmuting confirms itself with a cue.
+ */
 function readMuted(): boolean {
   try {
-    return localStorage.getItem(MUTE_KEY) === "1";
+    return localStorage.getItem(MUTE_KEY) !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 

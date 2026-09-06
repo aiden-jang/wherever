@@ -372,16 +372,28 @@ instead, which fills the empty half and buys back the height, so the card can fi
 the thing the app is about. Below `lg` nothing changed: the phone layout still fits with the reaction
 bar above the fold, which is the constraint that shaped this screen in the first place.
 
-**A veto looks like a consequence, not a passing reaction.** Both a veto and a super-like already fanned
-out to the room, but they reused the floating-reaction channel, so the thing that removes a place for
-everybody drifted up the screen exactly like somebody tapping 🔥. They now land in the middle at twice
-the size behind a tint of their own colour, and they are announced, because that overlay is
-`aria-hidden` and both were silent for a screen reader. Neither names the place or the person: a veto
-is a vote, and votes here are anonymous.
+**A veto looks like a consequence, not a passing reaction.** A veto reused the floating-reaction
+channel, so the thing that removes a place for everybody drifted up the screen exactly like somebody
+tapping 🔥. It lands in the middle now at twice the size behind a tint of its own colour, and it is
+announced, because that overlay is `aria-hidden` and it was silent for a screen reader. It names
+neither the place nor the person: a veto is a vote, and votes here are anonymous.
 
 Closing that also closed a leak. The super-like broadcast carried the sender's display name while the
 veto deliberately carried none. A super-like is a weighted vote, so "the server never sends per-voter
 identities" has to hold on every channel, not just the progress payload. It sends no name now.
+
+**A super-like is nobody else's business until the result.** It fanned out to the room like a veto,
+but the two are not alike. A veto takes a place off everybody's list, so "something just died" is a
+true thing to tell the room. A super-like changes nothing anyone can see: it is a weight applied at
+the tally. And because everyone swipes the same deck at their own pace, the star landed on another
+screen over whatever card that person happened to be on, which is the one restaurant it was not
+about. It is sent back to the presser alone now.
+
+Removing it left a hole, because the tally on the winner screen is a deliberate headcount and a
+super-like leaves no mark on it. So the result says when one changed the outcome: `superTipped` is
+set when the weighted winner is not the one plain right-swipes would have picked, and the screen
+reads "⭐ A super-like tipped it past the headcount." That is the moment it means something, and the
+first moment there is anything to point at.
 
 **Ending the round early asks first.** "just decide now" was a bare underlined link that decided
 instantly. It is the one control that acts on everybody else's behalf, and it read like a shortcut

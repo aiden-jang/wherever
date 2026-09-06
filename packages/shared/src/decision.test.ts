@@ -150,6 +150,7 @@ describe("promoteAlternative", () => {
       rightSwipes: 3,
       tiedWith: 0,
       vetoedTop: false,
+      superTipped: false,
       alternatives: [
         { restaurant: deck[1]!, rightSwipes: 2 },
         { restaurant: deck[2]!, rightSwipes: 1 },
@@ -161,6 +162,7 @@ describe("promoteAlternative", () => {
       rightSwipes: 2,
       tiedWith: 0,
       vetoedTop: false,
+      superTipped: false,
       alternatives: [
         { restaurant: deck[0], rightSwipes: 3 },
         { restaurant: deck[2], rightSwipes: 1 },
@@ -171,7 +173,14 @@ describe("promoteAlternative", () => {
   it("refuses a restaurant that was not a ranked finalist", () => {
     expect(
       promoteAlternative(
-        { restaurant: deck[0]!, rightSwipes: 2, tiedWith: 0, vetoedTop: false, alternatives: [] },
+        {
+          restaurant: deck[0]!,
+          rightSwipes: 2,
+          tiedWith: 0,
+          vetoedTop: false,
+          superTipped: false,
+          alternatives: [],
+        },
         "ghost",
       ),
     ).toBeNull();
@@ -397,6 +406,7 @@ describe("veto", () => {
       alternatives: [],
       tiedWith: 0,
       vetoedTop: false,
+      superTipped: false,
     });
   });
 });
@@ -449,5 +459,30 @@ describe("when a veto took the group's favourite", () => {
     // The flag exists so the veto can stay anonymous; leaking the place undoes that.
     const result = decideWinner(deck, [like("p1", "a"), like("p2", "a"), veto("p3", "a"), like("p1", "b")]);
     expect(JSON.stringify(result)).not.toContain('"a"');
+  });
+});
+
+describe("when a super-like decided it", () => {
+  it("is flagged, because the headcount on screen cannot show it", () => {
+    // b takes two plain likes, a takes one super-like: a wins on weight and loses on headcount.
+    const result = decideWinner(deck, [
+      superVote("p1", "a"),
+      vote("p2", "b", "right"),
+      vote("p3", "b", "right"),
+    ]);
+    expect(result?.restaurant.id).toBe("a");
+    expect(result?.rightSwipes).toBe(1);
+    expect(result?.superTipped).toBe(true);
+  });
+
+  it("is not flagged when the super-like backed the place that was winning anyway", () => {
+    const result = decideWinner(deck, [superVote("p1", "a"), vote("p2", "a", "right")]);
+    expect(result?.restaurant.id).toBe("a");
+    expect(result?.superTipped).toBe(false);
+  });
+
+  it("is not flagged when nobody spent one", () => {
+    const result = decideWinner(deck, [vote("p1", "b", "right"), vote("p2", "b", "right")]);
+    expect(result?.superTipped).toBe(false);
   });
 });

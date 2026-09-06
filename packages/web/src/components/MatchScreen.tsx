@@ -17,6 +17,7 @@ import { RestaurantDetail } from "./RestaurantDetail.js";
 import { Confetti } from "./Confetti.js";
 import { DirectionsDialog, mapsUrl } from "./DirectionsDialog.js";
 import { PlaceLinks } from "./PlaceLinks.js";
+import { VerdictNotes } from "./VerdictNotes.js";
 import { RoundAgain } from "./RoundAgain.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
@@ -265,6 +266,7 @@ function WinnerScreen({
     round,
     tiedWith = 0,
     vetoedTop = false,
+    superTipped = false,
   } = match;
   const unavailable =
     restaurant.openNow === false ||
@@ -511,23 +513,7 @@ function WinnerScreen({
               }}
             />
           </div>
-          {/* Without this a vetoed favourite just silently isn't here, which reads as the tally being
-            wrong rather than as somebody having used their one no. Count only — who spent it stays
-            private, the same as every other vote in a round. */}
-          {vetoedCount > 0 && (
-            <p className="mt-1 text-sm text-muted">
-              🚫 {vetoedCount} {vetoedCount === 1 ? "place was" : "places were"} vetoed out of the running.
-            </p>
-          )}
-          {/* Only once the group has genuinely laboured. Round 1 is just dinner; saying "round 1" about
-            it would be noise, and the joke below only earns itself if the number is real. */}
-          {round >= 2 && (
-            <p className="mt-1 text-sm italic text-muted">
-              {round >= 4
-                ? `${round} rounds to pick one place. The group chat would have been faster.`
-                : `Round ${round}. Worth the wait, presumably.`}
-            </p>
-          )}
+          <VerdictNotes vetoedCount={vetoedCount} superTipped={superTipped} round={round} />
 
           {filters && (
             /* Open by default: the filters are the answer to "why these places?", and nobody clicks

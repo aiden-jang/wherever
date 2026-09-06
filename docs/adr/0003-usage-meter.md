@@ -26,7 +26,7 @@ that counts paid Google calls per calendar month and acts as a circuit breaker.
 - Two counters, `search` and `photo`, keyed to the current UTC month; they reset
   automatically when the month rolls over.
 - Every paid path calls `tryConsume(kind)` **before** hitting Google:
-  - Nearby Search — in `SessionRoom.fetchFreshDeck`, before the live search.
+  - Nearby Search — in `fetchFreshDeck` (`deckSource.ts`), before the live search.
   - Place Photos — in the `/api/photo` route, only on a cache miss (cached
     photos are free and don't count).
 - Caps default to **950/month** each (just under the 1,000 free tier, with

@@ -18,6 +18,8 @@ export default defineWorkersConfig(async () => {
               TEST_MIGRATIONS: migrations,
               // Keep tests hermetic and offline: use the mock deck, no live restaurant API calls.
               RESTAURANT_SOURCE: "mock",
+              // The host-reassign grace, shrunk so the handover test runs in milliseconds.
+              HOST_GRACE_MS: "50",
               GOOGLE_PLACES_API_KEY: "",
               FOURSQUARE_API_KEY: "",
             },

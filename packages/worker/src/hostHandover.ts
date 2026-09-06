@@ -1,4 +1,5 @@
 import type { ClientMap, SocketAttachment } from "./roomState.js";
+import type { Env } from "./env.js";
 
 /*
  * Who runs the room when the person running it closes their laptop.
@@ -9,8 +10,13 @@ import type { ClientMap, SocketAttachment } from "./roomState.js";
  * of this file. None of it needs the env or the database, only the object's own state.
  */
 
-/** Long enough to cover a refresh or a tunnel, short enough that a real departure is not a wait. */
-export const HOST_GRACE_MS = 15_000;
+/*
+ * Long enough to cover a refresh or a tunnel, short enough that a real departure is not a wait.
+ * Read from env like the usage caps are, so a test can shrink it rather than sit out fifteen
+ * seconds; wrangler.toml sets nothing, so production gets the default.
+ */
+const DEFAULT_HOST_GRACE_MS = 15_000;
+export const hostGraceMs = (env: Env): number => Number(env.HOST_GRACE_MS) || DEFAULT_HOST_GRACE_MS;
 
 export function hasLiveSocketFor(
   ctx: DurableObjectState,
@@ -46,14 +52,18 @@ export async function rescheduleAlarm(ctx: DurableObjectState): Promise<void> {
  * Don't hand off host the moment their last socket drops: a refresh or a blip would demote them.
  * Start a grace window instead, and only reassign in `alarm()` if they are still gone.
  */
-export async function beginHostGraceIfNeeded(ctx: DurableObjectState, closing: WebSocket): Promise<void> {
+export async function beginHostGraceIfNeeded(
+  ctx: DurableObjectState,
+  env: Env,
+  closing: WebSocket,
+): Promise<void> {
   const att = closing.deserializeAttachment() as SocketAttachment | null;
   if (!att?.isHost) return;
   const hostId = await ctx.storage.get<string>("hostId");
   if (hostId !== att.participantId) return;
   // Still present on another socket (second tab)? They're not gone at all.
   if (hasLiveSocketFor(ctx, att.participantId, closing)) return;
-  await ctx.storage.put("hostGraceUntil", Date.now() + HOST_GRACE_MS);
+  await ctx.storage.put("hostGraceUntil", Date.now() + hostGraceMs(env));
   await rescheduleAlarm(ctx);
 }
 

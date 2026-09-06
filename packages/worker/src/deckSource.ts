@@ -3,9 +3,11 @@ import { drizzle } from "drizzle-orm/d1";
 import {
   applyVibe,
   blockedIds,
+  radiusLabel,
   resolveVibe,
   shuffleDeck,
   vibeEffectLine,
+  widerRadius,
   type DemoReason,
   type Restaurant,
   type Vibe,
@@ -142,6 +144,9 @@ async function rememberDealt(storage: DurableObjectStorage, deck: Restaurant[]):
   await storage.put("seenIds", [...seen]);
 }
 
+const spentLine = (meters: number) =>
+  `That's everywhere within ${radiusLabel(meters)}, picked clean. Start a fresh session somewhere else.`;
+
 /**
  * Where a re-run's cards come from: the reserve if it holds a round, otherwise a paid fetch.
  *
@@ -151,19 +156,36 @@ async function rememberDealt(storage: DurableObjectStorage, deck: Restaurant[]):
 export async function nextRoundDeck(
   request: DeckRequest,
   canPay: boolean,
-): Promise<{ deck: Restaurant[]; paid: boolean } | { error: "capped" | "unavailable" | "empty" }> {
+): Promise<{ deck: Restaurant[]; paid: boolean; note?: string } | { error: string }> {
   const held = await dealFromReserve(request.storage);
   if (held) return { deck: held, paid: false };
-  if (!canPay) return { error: "capped" };
+  if (!canPay) return { error: "you've been through a lot of rounds. start a fresh session to keep going." };
+
+  /*
+   * An empty reserve means this radius has nothing left: Nearby Search has no pagination, so asking
+   * the same question returns the same places and the session has now been dealt all of them.
+   * Widening is not a fallback after a disappointing call, it is the only thing that can return
+   * anything new -- so it happens first, and the group is not charged for the call that could not.
+   */
+  const from = request.meta.filters.radiusMeters;
+  const wider = widerRadius(from);
+  if (wider === null) return { error: spentLine(from) };
+  /* Kept even when the wider search also comes up empty, so the next attempt steps further out
+     instead of paying again for the radius that just failed. The caller broadcasts either way. */
+  request.meta.filters = { ...request.meta.filters, radiusMeters: wider };
+  await request.storage.put("meta", request.meta);
+
   let deck: Restaurant[];
   // Fetch BEFORE the caller tears down the current result, or a picked-clean area leaves a late
   // joiner on a null winner being told nobody liked anything.
   try {
     deck = await fetchFreshDeck(request);
   } catch {
-    return { error: "unavailable" };
+    return { error: "couldn't load more spots right now. give it a moment and try again." };
   }
-  return deck.length === 0 ? { error: "empty" } : { deck, paid: true };
+  if (deck.length === 0) return { error: spentLine(wider) };
+  const note = `Nothing new within ${radiusLabel(from)}, so the search went out to ${radiusLabel(wider)}.`;
+  return { deck, paid: true, note };
 }
 
 /**

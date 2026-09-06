@@ -35,11 +35,6 @@ import { getOrCreateDeck, nextRoundDeck, readDemoMode, recordVisit, visitedFor }
 
 // Each "again" round is a paid Places fetch; cap how many a single session can trigger.
 const MAX_AGAIN_ROUNDS = 20;
-const AGAIN_REFUSALS = {
-  capped: "you've been through a lot of rounds. start a fresh session to keep going.",
-  unavailable: "couldn't load more spots right now. give it a moment and try again.",
-  empty: "That's everywhere nearby, picked clean. Start a fresh session with a wider radius to keep eating.",
-} as const;
 
 // Grace window after the host's last socket drops before host is handed to someone else. Long enough
 // that a refresh or a brief network blip keeps the host as host; short enough that a group isn't
@@ -558,25 +553,27 @@ export class SessionRoom extends DurableObject<Env> {
 
     const rounds = (await this.ctx.storage.get<number>("againRounds")) ?? 0;
     const dealt = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
-    let deck: Restaurant[];
-    let paid = false;
+    let next: { deck: Restaurant[]; paid: boolean; note?: string };
     if (mode === "same") {
       if (dealt.length === 0) {
         return this.send(ws, { type: "error", message: "nothing to vote on again. deal a new list." });
       }
-      deck = dealt;
+      next = { deck: dealt, paid: false };
     } else {
-      const next = await nextRoundDeck(
+      const fetched = await nextRoundDeck(
         {
           ...this.deckRequest(meta, new Set(dealt.map((r) => r.id))),
           vibeCounts: await vibeCounts(this.ctx.storage),
         },
         rounds < MAX_AGAIN_ROUNDS,
       );
-      if ("error" in next) return this.send(ws, { type: "error", message: AGAIN_REFUSALS[next.error] });
-      deck = next.deck;
-      paid = next.paid;
+      if ("error" in fetched) {
+        await this.broadcastState(); // the radius may have moved even though the round did not
+        return this.send(ws, { type: "error", message: fetched.error });
+      }
+      next = fetched;
     }
+    const { deck, paid, note: searchNote } = next;
 
     await this.ctx.storage.delete("votes");
     await this.ctx.storage.delete("winner");
@@ -591,6 +588,7 @@ export class SessionRoom extends DurableObject<Env> {
       demo: await readDemoMode(this.ctx.storage),
       roundEndsAt,
       ...(vibeEffect ? { vibeEffect } : {}),
+      ...(searchNote ? { searchNote } : {}),
     });
     await this.broadcastState();
     await this.evaluate(meta);

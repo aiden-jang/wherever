@@ -6,16 +6,10 @@ import {
   cuisineLabel,
   neighborhoodLabel,
   PRICE_OPTIONS,
-  RADIUS_OPTIONS,
+  radiusLabel,
   ROUND_TIMER_OPTIONS,
   SORT_OPTIONS,
 } from "@wherever/shared";
-
-function radiusLabel(meters: number): string {
-  return (
-    RADIUS_OPTIONS.find((option) => option.meters === meters)?.label ?? `${Math.round(meters / 1000)} km`
-  );
-}
 
 /** Human-sized evidence of the rules a restaurant survived. */
 export function filterSummaryChips(filters: SessionFilters): string[] {

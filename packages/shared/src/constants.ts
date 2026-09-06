@@ -158,6 +158,23 @@ export const RADIUS_OPTIONS: RadiusOption[] = [
   { meters: 16000, label: "10 mi" },
 ];
 
+export function radiusLabel(meters: number): string {
+  return (
+    RADIUS_OPTIONS.find((option) => option.meters === meters)?.label ?? `${Math.round(meters / 1000)} km`
+  );
+}
+
+/**
+ * The next radius up, or null at the top of the ladder.
+ *
+ * Walked rather than multiplied, so a widened search is still one of the four the group could have
+ * picked themselves and the receipt chip reads "10 mi" instead of an invented number. The top of the
+ * ladder is a real end: past ten miles this is not the same night out.
+ */
+export function widerRadius(meters: number): number | null {
+  return RADIUS_OPTIONS.find((option) => option.meters > meters)?.meters ?? null;
+}
+
 export interface RatingOption {
   value: number;
   label: string;

@@ -103,7 +103,9 @@ export function useSessionSocket(code: string, displayName: string) {
   const [alreadyVoted, setAlreadyVoted] = useState<string[]>([]);
   // Whether this client already spent its super-like this round (seeded from the deck on reconnect).
   const [superUsed, setSuperUsed] = useState(false);
-  const [vibeEffect, setVibeEffect] = useState<string | null>(null);
+  /* One line for everything that happened to the search before this deck was dealt. Two states would
+     be two toasts racing each other, and both facts belong to the same moment. */
+  const [deckNote, setDeckNote] = useState<string | null>(null);
   const [behindBy, setBehindBy] = useState(0);
   // Counter, not a boolean: a second nudge has to be distinguishable from the first.
   const [nudges, setNudges] = useState(0);
@@ -150,7 +152,7 @@ export function useSessionSocket(code: string, displayName: string) {
           setProgress(null);
           setDeck(msg.restaurants);
           setDemo(msg.demo ?? null);
-          setVibeEffect(msg.vibeEffect ?? null);
+          setDeckNote([msg.vibeEffect, msg.searchNote].filter(Boolean).join(" ") || null);
           setBehindBy(msg.behindBy ?? 0);
           setSuperUsed(msg.superUsed ?? false);
           setVetoUsed(msg.vetoUsed ?? false);
@@ -307,7 +309,7 @@ export function useSessionSocket(code: string, displayName: string) {
     session,
     deck,
     demo,
-    vibeEffect,
+    deckNote,
     behindBy,
     nudges,
     superUsed,

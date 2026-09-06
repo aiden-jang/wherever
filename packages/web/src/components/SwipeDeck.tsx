@@ -560,15 +560,6 @@ export function SwipeDeck({
               </div>
             </details>
           )}
-          {canUndo && (
-            <button
-              type="button"
-              onClick={undoLast}
-              className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-muted transition hover:border-white/30 hover:text-cream active:scale-95"
-            >
-              Undo last vote
-            </button>
-          )}
         </div>
         {/* Waiting on other people is exactly when their progress is worth looking at. */}
         {aside && <div className={RAIL}>{aside}</div>}
@@ -644,18 +635,25 @@ export function SwipeDeck({
           </div>
         </div>
 
-        {/* Every width, not `lg:` only. The keyboard legend that teaches a desktop first-timer sits
-            in the other column and names the keys, not the rule: that the two small buttons are one
-            each. Said once, before you hit it, rather than only after. */}
-        {showHint && !spentNote && (
-          <p className="mt-4 text-center text-xs text-muted animate-pulse">
-            Tap the card for details. Drag it, or use the buttons. 🚫 and ⭐ are one each, per round.
-          </p>
-        )}
-
-        {/* Every width, unlike the first-run hint above: the keyboard legend that carries this on a
-            wide screen is `lg:` only, so a phone has nowhere else to learn why nothing happened. */}
-        {spentNote && <p className="mt-4 text-center text-xs text-flare">{spentNote}</p>}
+        {/*
+         * One slot for both, at a height it always occupies.
+         *
+         * They used to be two conditional paragraphs, so the buttons jumped down the moment either
+         * appeared and back up when it went. A control that moves as you are reaching for it is
+         * worse than the message is useful. Both live at every width: the keyboard legend that
+         * would otherwise carry this is `lg:` only, so a phone has nowhere else to read it.
+         */}
+        <p
+          className={`mt-4 flex h-8 items-center justify-center px-4 text-center text-xs ${
+            spentNote ? "text-flare" : showHint ? "animate-pulse text-muted" : "text-muted"
+          }`}
+          aria-live="polite"
+        >
+          {spentNote ??
+            (showHint
+              ? "Tap the card for details. Drag it, or use the buttons. 🚫 and ⭐ are one each, per round."
+              : "")}
+        </p>
 
         {/* mt-4, not mt-8: the whole swiping column has to clear a 720px laptop, and the buttons stay
           at 64px because they are the primary target on a phone. See the main in Lobby. */}

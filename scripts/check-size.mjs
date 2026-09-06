@@ -22,7 +22,7 @@ const ALREADY_OVER = {
   "packages/web/src/components/MatchScreen.tsx": { lines: 936 },
   "packages/worker/src/sessionRoom.ts": { lines: 1000 },
   "packages/web/src/routes/Lobby.tsx": { lines: 573 },
-  "packages/web/src/components/SwipeDeck.tsx": { lines: 765 },
+  "packages/web/src/components/SwipeDeck.tsx": { lines: 763 },
   "packages/web/src/components/FilterFields.tsx": { lines: 614 },
   "packages/worker/src/restaurantSource.ts": { lines: 512 },
   "packages/web/src/routes/Landing.tsx": { lines: 448, state: 13 },

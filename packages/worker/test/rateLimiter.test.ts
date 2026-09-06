@@ -28,16 +28,18 @@ describe("RateLimiter", () => {
 
   it("lets the next window through", async () => {
     const l = limiter(`window-${crypto.randomUUID()}`);
-    expect(await l.hit(1, 5)).toBe(true);
-    expect(await l.hit(1, 5)).toBe(false);
-
     /*
-     * A real window, actually waited out. `windowMs: 0` looks like the cheap way to reach the expiry
-     * path and is not: the reset needs `now - start > windowMs`, so two calls inside the same
-     * millisecond do not reset, and the test passes or fails on how fast the machine is. It did both.
+     * The window is per call, so the refusal is read under one nothing can cross and the expiry
+     * under one anything can. Both halves used to share a 5ms window: two calls that straddled it
+     * reset instead of refusing, so the second returned true and the test failed on how busy the
+     * machine was. Widening it would have made that rarer; asserting the refusal under a window no
+     * pair of round trips can span removes it.
      */
-    await new Promise((resolve) => setTimeout(resolve, 12));
-    expect(await l.hit(1, 5), "a fresh window").toBe(true);
+    expect(await l.hit(1, 60_000)).toBe(true);
+    expect(await l.hit(1, 60_000)).toBe(false);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await l.hit(1, 20), "a fresh window").toBe(true);
   });
 
   it("counts each key on its own", async () => {

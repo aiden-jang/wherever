@@ -115,6 +115,41 @@ describe("the vibe vote", () => {
     sam.close();
   });
 
+  /*
+   * Two people on the same vibe. Every other case here has one voter per option, so a tally that
+   * assigned 1 instead of adding 1 passed all of them: the count that decides which deck is fetched
+   * was only ever checked at one.
+   */
+  it("adds up when two people want the same thing", async () => {
+    const code = await createSession();
+    const alex = await join(code, "Alex");
+    const sam = await join(code, "Sam");
+
+    alex.send({ type: "set_vibe", vibe: "cozy" });
+    sam.send({ type: "set_vibe", vibe: "cozy" });
+
+    const settled = await sam.until("vibes", (msg) => msg.counts.cozy === 2);
+    expect(settled.counts).toEqual({ cozy: 2 });
+
+    alex.close();
+    sam.close();
+  });
+
+  it("takes your vote back out when you clear it", async () => {
+    const code = await createSession();
+    const alex = await join(code, "Alex");
+
+    alex.send({ type: "set_vibe", vibe: "fancy" });
+    await alex.until("vibes", (msg) => msg.counts.fancy === 1);
+
+    alex.send({ type: "set_vibe", vibe: null });
+    const cleared = await alex.until("vibes", (msg) => Object.keys(msg.counts).length === 0);
+    expect(cleared.counts).toEqual({});
+    expect(cleared.yours).toBeNull();
+
+    alex.close();
+  });
+
   it("lets somebody change their mind without double-counting them", async () => {
     const code = await createSession();
     const alex = await join(code, "Alex");

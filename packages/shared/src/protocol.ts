@@ -178,6 +178,8 @@ export interface MatchMessage {
   tiedWith?: number;
   /** A vetoed place outscored the winner. A flag, never a name: the veto stays anonymous. */
   vetoedTop?: boolean;
+  /** A super-like beat the headcount. The tally is unweighted, so this is the only place it shows. */
+  superTipped?: boolean;
   /** Which round decided it, 1-based. Worth saying out loud: how many tries it took is the thing this
    *  app exists to shorten. */
   round?: number;

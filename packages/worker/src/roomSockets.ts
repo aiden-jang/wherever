@@ -63,6 +63,7 @@ export function resultMessage(
     vetoedCount,
     tiedWith: result.tiedWith,
     vetoedTop: result.vetoedTop,
+    superTipped: result.superTipped,
     round,
   };
 }

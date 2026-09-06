@@ -19,7 +19,7 @@ const MAX_STATE = 12;
  * entry as the file shrinks; delete it once the file is under the ceiling.
  */
 const ALREADY_OVER = {
-  "packages/web/src/components/MatchScreen.tsx": { lines: 720 },
+  "packages/web/src/components/MatchScreen.tsx": { lines: 706 },
   "packages/worker/src/sessionRoom.ts": { lines: 712 },
   "packages/web/src/routes/Lobby.tsx": { lines: 570 },
   "packages/web/src/components/SwipeDeck.tsx": { lines: 763 },

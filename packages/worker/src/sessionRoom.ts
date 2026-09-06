@@ -414,12 +414,12 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.put("votes", votes);
 
     /*
-     * Both land on the whole room and neither carries a name: naming a veto turns "I can't eat
-     * there" into the argument this app exists to avoid. The veto also needs a crowd to hide in --
-     * with two people, anonymity is arithmetic: if they did not press it, they know who did. Below
-     * three it lands silently and still counts.
+     * The star goes back to the presser alone: everyone swipes at their own pace, so on another
+     * screen it lands over a card it is not about. The veto fans out because it takes a place off
+     * everybody's list, and it needs a crowd to hide in -- with two people, anonymity is arithmetic.
+     * Below three it lands silently and still counts.
      */
-    if (superLike) this.broadcast({ type: "reaction", emoji: "⭐", from: "", kind: "super" });
+    if (superLike) this.send(ws, { type: "reaction", emoji: "⭐", from: "", kind: "super" });
     if (vetoing && this.connectedParticipants().length >= 3) {
       this.broadcast({ type: "reaction", emoji: "🚫", from: "", kind: "veto" });
     }

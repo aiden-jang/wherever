@@ -34,6 +34,7 @@ export type MatchState =
       vetoedCount: number;
       tiedWith: number;
       vetoedTop: boolean;
+      superTipped: boolean;
       round: number;
     }
   | { kind: "none"; vetoedCount: number }
@@ -182,6 +183,7 @@ export function useSessionSocket(code: string, displayName: string) {
               vetoedCount: msg.vetoedCount ?? 0,
               tiedWith: msg.tiedWith ?? 0,
               vetoedTop: msg.vetoedTop ?? false,
+              superTipped: msg.superTipped ?? false,
               round: msg.round ?? 1,
             }),
           );

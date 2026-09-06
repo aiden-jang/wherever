@@ -75,6 +75,13 @@ export interface DecisionResult {
    * vetoer down to one person in a group of four.
    */
   vetoedTop: boolean;
+  /**
+   * The weighted winner is not the one a plain headcount would have picked.
+   *
+   * A super-like otherwise leaves no trace anywhere: the tally on screen is a headcount by design,
+   * so without this the weight quietly decides dinner and nobody is ever told it did.
+   */
+  superTipped: boolean;
 }
 
 export interface DecisionAlternative {
@@ -90,9 +97,10 @@ export function promoteAlternative(result: DecisionResult, restaurantId: string)
 
   return {
     // A promoted backup was chosen by hand, so whatever the original vote tied on no longer applies,
-    // and neither does what a veto did to it: the host has overridden the vote either way.
+    // and neither does what a veto or a super-like did: the host has overridden the vote either way.
     tiedWith: 0,
     vetoedTop: false,
+    superTipped: false,
     restaurant: promoted.restaurant,
     rightSwipes: promoted.rightSwipes,
     alternatives: [
@@ -165,12 +173,19 @@ export function decideWinner(deck: Restaurant[], votes: Vote[]): DecisionResult 
   // Strictly ahead, not level: a vetoed place tied with the winner was not the group's favourite,
   // it was joint favourite, and "your top pick was vetoed" would be overstating it.
   const bestVetoed = Math.max(0, ...deck.filter((r) => vetoed.has(r.id)).map(scoreOf));
+  // Ranked from the deck rather than by re-sorting `ranked`, so ties fall back to deck order here
+  // too instead of to the score order that is the very thing being compared against.
+  const plainWinner = deck
+    .map((restaurant) => ({ id: restaurant.id, rightSwipes: counts.get(restaurant.id) ?? 0 }))
+    .filter((candidate) => candidate.rightSwipes > 0 && !vetoed.has(candidate.id))
+    .sort((a, b) => b.rightSwipes - a.rightSwipes)[0];
   return {
     restaurant: winner.restaurant,
     rightSwipes: winner.rightSwipes,
     alternatives: rest.slice(0, 2).map(({ restaurant, rightSwipes }) => ({ restaurant, rightSwipes })),
     tiedWith: rest.filter((candidate) => candidate.score === winner.score).length,
     vetoedTop: bestVetoed > winner.score,
+    superTipped: plainWinner !== undefined && plainWinner.id !== winner.restaurant.id,
   };
 }
 

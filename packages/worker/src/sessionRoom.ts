@@ -11,7 +11,6 @@ import {
   tastePulse,
   vetoedRestaurantIds,
   type DecisionResult,
-  type Participant,
   type PlannedMeetup,
   type Restaurant,
   type ServerMessage,
@@ -23,6 +22,7 @@ import {
 } from "@wherever/shared";
 import type { Env } from "./env.js";
 import type { SessionMeta, SocketAttachment } from "./roomState.js";
+import { attachmentsOn, broadcastTo, participantsOn, resultMessage, sendTo } from "./roomSockets.js";
 import { fetchFreshDeck, getOrCreateDeck, readDemoMode, recordVisit, visitedFor } from "./deckSource.js";
 
 /** Attached to each WebSocket so presence survives DO hibernation. */
@@ -778,39 +778,34 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   /** Unique connected participants (dedup across reconnect overlap). */
+  /* Thin, so a hundred call sites stay short; the substance is in roomSockets.ts. */
   private connectedParticipants(exclude?: WebSocket): SocketAttachment[] {
-    const seen = new Map<string, SocketAttachment>();
-    for (const s of this.ctx.getWebSockets()) {
-      // During webSocketClose the closing socket is still returned here, so callers can exclude it.
-      if (s === exclude) continue;
-      const att = s.deserializeAttachment() as SocketAttachment | null;
-      if (att) seen.set(att.participantId, att);
-    }
-    return [...seen.values()];
+    return attachmentsOn(this.ctx, exclude);
+  }
+
+  private send(ws: WebSocket, message: ServerMessage): void {
+    sendTo(ws, message);
+  }
+
+  private broadcast(message: ServerMessage): void {
+    broadcastTo(this.ctx, message);
+  }
+
+  /** Everything the verdict needs that lives in storage rather than in the decision itself. */
+  private async resultContext(): Promise<{ total: number; vetoedCount: number; round: number }> {
+    const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
+    return {
+      total: this.connectedParticipants().length,
+      vetoedCount: vetoedRestaurantIds(Object.values(votes)).size,
+      // againRounds counts the re-deals, so the round that decided it is one more than that.
+      round: ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1,
+    };
   }
 
   private async sendResult(ws: WebSocket): Promise<void> {
-    const result = await this.ctx.storage.get<DecisionResult | null>("winner");
-    const total = this.connectedParticipants().length;
-    const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
-    const vetoedCount = vetoedRestaurantIds(Object.values(votes)).size;
-    // againRounds counts the re-deals, so the round that decided it is one more than that.
-    const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
-    if (result) {
-      this.send(ws, {
-        type: "match",
-        restaurant: result.restaurant,
-        rightSwipes: result.rightSwipes,
-        alternatives: result.alternatives ?? [],
-        totalParticipants: total,
-        vetoedCount,
-        tiedWith: result.tiedWith,
-        vetoedTop: result.vetoedTop,
-        round,
-      });
-    } else {
-      this.send(ws, { type: "no_match", vetoedCount });
-    }
+    const result = (await this.ctx.storage.get<DecisionResult | null>("winner")) ?? null;
+    const { total, vetoedCount, round } = await this.resultContext();
+    sendTo(ws, resultMessage(result, total, vetoedCount, round));
   }
 
   private async broadcastHistory(code: string): Promise<void> {
@@ -823,75 +818,20 @@ export class SessionRoom extends DurableObject<Env> {
     vetoedCount: number,
     round: number,
   ): void {
-    if (result) {
-      this.broadcast({
-        type: "match",
-        restaurant: result.restaurant,
-        rightSwipes: result.rightSwipes,
-        alternatives: result.alternatives ?? [],
-        totalParticipants: total,
-        vetoedCount,
-        tiedWith: result.tiedWith,
-        vetoedTop: result.vetoedTop,
-        round,
-      });
-    } else {
-      this.broadcast({ type: "no_match", vetoedCount });
-    }
+    broadcastTo(this.ctx, resultMessage(result, total, vetoedCount, round));
   }
 
   private async broadcastState(closing?: WebSocket): Promise<void> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta) return;
-
-    const seen = new Map<string, Participant>();
-    for (const s of this.ctx.getWebSockets()) {
-      if (s === closing) continue;
-      const att = s.deserializeAttachment() as SocketAttachment | null;
-      if (!att) continue;
-      seen.set(att.participantId, {
-        id: att.participantId,
-        displayName: att.displayName,
-        isHost: att.isHost,
-        connected: true,
-      });
-    }
-
     const session: Session = {
       id: meta.code,
       code: meta.code,
       status: meta.status,
       voteMode: meta.voteMode,
       filters: meta.filters,
-      participants: [...seen.values()],
+      participants: participantsOn(this.ctx, closing),
     };
-
-    const payload = JSON.stringify({
-      type: "session_state",
-      session,
-    } satisfies ServerMessage);
-    for (const s of this.ctx.getWebSockets()) {
-      if (s === closing) continue;
-      try {
-        s.send(payload);
-      } catch {
-        // gone; next broadcast omits it.
-      }
-    }
-  }
-
-  private send(ws: WebSocket, message: ServerMessage): void {
-    ws.send(JSON.stringify(message));
-  }
-
-  private broadcast(message: ServerMessage): void {
-    const payload = JSON.stringify(message);
-    for (const s of this.ctx.getWebSockets()) {
-      try {
-        s.send(payload);
-      } catch {
-        // gone; next broadcast omits it.
-      }
-    }
+    broadcastTo(this.ctx, { type: "session_state", session }, closing);
   }
 }

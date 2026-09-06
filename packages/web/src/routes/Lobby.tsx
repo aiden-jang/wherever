@@ -17,6 +17,7 @@ const MatchScreen = lazy(() =>
 );
 import { ReactionBar, FloatingReactions } from "../components/Reactions.js";
 import { LiveRegion } from "../components/LiveRegion.js";
+import { RoomChrome } from "../components/RoomChrome.js";
 import { buzz } from "../components/haptics.js";
 import { play } from "../components/sound.js";
 import { FilterSummary } from "../components/FilterSummary.js";
@@ -177,6 +178,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
    */
   const errorToasts = useOneShotToast(error, setAnnouncement, error ? `error-${errorSeq}` : null);
   const screenToasts = [...allToasts, ...errorToasts];
+  const chrome = { announcement, toasts: screenToasts, reactions, roster: session?.participants ?? [], demo };
   const count = session?.participants.length ?? 0;
 
   const [confirmDecide, setConfirmDecide] = useState(false);
@@ -286,9 +288,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   if (match) {
     return (
       <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
-        <LiveRegion message={announcement} />
-        <Toasts toasts={screenToasts} />
-        <FloatingReactions reactions={reactions} roster={(session?.participants ?? []).map((p) => p.id)} />
+        <RoomChrome {...chrome} />
         <Suspense fallback={<p className="text-muted">Counting…</p>}>
           <MatchScreen
             key={match.kind === "match" ? match.restaurant.id : "no-match"}
@@ -334,10 +334,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         */}
         <h1 className="sr-only">Swiping. Vote on tonight&apos;s places.</h1>
         {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
-        <LiveRegion message={announcement} />
-        <Toasts toasts={screenToasts} />
-        <FloatingReactions reactions={reactions} roster={(session?.participants ?? []).map((p) => p.id)} />
-        {demo && <DemoBanner reason={demo} />}
+        <RoomChrome {...chrome} />
         {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}
         {deck && deck.length > 0 ? (
           <>

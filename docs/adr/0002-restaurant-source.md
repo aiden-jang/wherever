@@ -52,9 +52,9 @@ Good:
 
 - Better coverage and place-type granularity than Foursquare; cuisine filters
   map to Google primary types and run server-side.
-- The `RestaurantSource` seam means mock/Foursquare/Google are interchangeable
-  and each mapping (`mapGooglePlace`, `mapFoursquarePlace`) is pure and
-  unit-tested.
+- The `RestaurantSource` seam means mock and Google are interchangeable, and
+  `mapGooglePlace` is pure and unit-tested. (The Foursquare implementation named
+  above was later deleted; see the supersession note under Decision.)
 - Fail-soft: a non-OK response yields an empty deck ("nothing nearby") rather
   than crashing a round.
 

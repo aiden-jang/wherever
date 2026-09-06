@@ -21,7 +21,13 @@ import {
   type Vote,
 } from "@wherever/shared";
 import type { Env } from "./env.js";
-import type { SessionMeta, SocketAttachment } from "./roomState.js";
+import type { ClientMap, SessionMeta, SocketAttachment } from "./roomState.js";
+import {
+  beginHostGraceIfNeeded,
+  hasLiveSocketFor,
+  reassignHostAway,
+  rescheduleAlarm,
+} from "./hostHandover.js";
 import { attachmentsOn, broadcastTo, participantsOn, resultMessage, sendTo } from "./roomSockets.js";
 import { fetchFreshDeck, getOrCreateDeck, readDemoMode, recordVisit, visitedFor } from "./deckSource.js";
 
@@ -33,13 +39,11 @@ const MAX_AGAIN_ROUNDS = 20;
 // Grace window after the host's last socket drops before host is handed to someone else. Long enough
 // that a refresh or a brief network blip keeps the host as host; short enough that a group isn't
 // stranded for long if the host genuinely leaves. Reassignment happens in alarm().
-const HOST_GRACE_MS = 15_000;
 
 /** Long enough that nudging is a decision, not a drum roll. */
 const NUDGE_COOLDOWN_MS = 20_000;
 
 /** clientId -> stable identity, so a reconnecting client keeps its votes. */
-type ClientMap = Record<string, { participantId: string; isHost: boolean }>;
 /** Votes keyed by `${participantId}:${restaurantId}` for idempotency. */
 type VoteMap = Record<string, Vote>;
 /**
@@ -240,7 +244,7 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {
-    await this.scheduleHostReassignIfNeeded(ws);
+    await beginHostGraceIfNeeded(this.ctx, ws);
     await this.broadcastState(ws);
     // A departure drops the participant count — re-check completion (excluding the closing socket,
     // which getWebSockets still returns here) so a finished group decides instead of stalling on
@@ -249,59 +253,17 @@ export class SessionRoom extends DurableObject<Env> {
     if (meta?.status === "swiping") await this.evaluate(meta, ws);
   }
 
-  /** Any live socket for this participant (optionally excluding one, e.g. the closing socket). */
-  private hasLiveSocketFor(participantId: string, exclude?: WebSocket): boolean {
-    return this.ctx.getWebSockets().some((s) => {
-      if (s === exclude) return false;
-      const a = s.deserializeAttachment() as SocketAttachment | null;
-      return a?.participantId === participantId;
-    });
-  }
-
-  /**
-   * One alarm per Durable Object, and two timers need it: the host-reassign grace window and the round
-   * countdown. Set it to whichever deadline is nearer, or clear it when neither is pending. Callers set
-   * `hostGraceUntil` / `roundEndsAt` and then call this.
-   */
-  private async rescheduleAlarm(): Promise<void> {
-    const times: number[] = [];
-    const grace = await this.ctx.storage.get<number>("hostGraceUntil");
-    const roundEnd = await this.ctx.storage.get<number>("roundEndsAt");
-    if (grace) times.push(grace);
-    if (roundEnd) times.push(roundEnd);
-    if (times.length === 0) {
-      await this.ctx.storage.deleteAlarm();
-      return;
-    }
-    await this.ctx.storage.setAlarm(Math.min(...times));
-  }
-
-  /**
-   * Don't hand off host the moment their last socket drops: a refresh or a blip would demote them.
-   * Start a grace window instead, and only reassign in `alarm()` if they are still gone.
-   */
-  private async scheduleHostReassignIfNeeded(closing: WebSocket): Promise<void> {
-    const att = closing.deserializeAttachment() as SocketAttachment | null;
-    if (!att?.isHost) return;
-    const hostId = await this.ctx.storage.get<string>("hostId");
-    if (hostId !== att.participantId) return;
-    // Still present on another socket (second tab)? They're not gone at all.
-    if (this.hasLiveSocketFor(att.participantId, closing)) return;
-    await this.ctx.storage.put("hostGraceUntil", Date.now() + HOST_GRACE_MS);
-    await this.rescheduleAlarm();
-  }
-
   /** Set (or clear) the round countdown from the session's roundSeconds; returns the deadline. */
   private async setRoundDeadline(meta: SessionMeta): Promise<number | undefined> {
     const secs = meta.filters.roundSeconds ?? 0;
     if (secs > 0) {
       const deadline = Date.now() + secs * 1000;
       await this.ctx.storage.put("roundEndsAt", deadline);
-      await this.rescheduleAlarm();
+      await rescheduleAlarm(this.ctx);
       return deadline;
     }
     await this.ctx.storage.delete("roundEndsAt");
-    await this.rescheduleAlarm();
+    await rescheduleAlarm(this.ctx);
     return undefined;
   }
 
@@ -315,8 +277,8 @@ export class SessionRoom extends DurableObject<Env> {
     if (grace && now >= grace) {
       await this.ctx.storage.delete("hostGraceUntil");
       const hostId = await this.ctx.storage.get<string>("hostId");
-      if (hostId && !this.hasLiveSocketFor(hostId)) {
-        await this.reassignHostAway(hostId);
+      if (hostId && !hasLiveSocketFor(this.ctx, hostId)) {
+        await reassignHostAway(this.ctx, hostId);
         hostChanged = true;
       }
     }
@@ -328,43 +290,8 @@ export class SessionRoom extends DurableObject<Env> {
       if (meta?.status === "swiping") await this.decide(meta); // time's up → tally decides
     }
 
-    await this.rescheduleAlarm();
+    await rescheduleAlarm(this.ctx);
     if (hostChanged) await this.broadcastState();
-  }
-
-  /**
-   * Move host to another connected person, or clear it if the room emptied. Host is cached in three
-   * places - the `hostId` record, the `clientMap`, and each live socket attachment - so all three move
-   * together or a reconnect picks up the old answer.
-   */
-  private async reassignHostAway(oldHostId: string): Promise<void> {
-    let newHostId: string | undefined;
-    for (const s of this.ctx.getWebSockets()) {
-      const a = s.deserializeAttachment() as SocketAttachment | null;
-      if (a && a.participantId !== oldHostId) {
-        newHostId = a.participantId;
-        break;
-      }
-    }
-
-    const map = (await this.ctx.storage.get<ClientMap>("clientMap")) ?? {};
-    for (const [key, entry] of Object.entries(map)) {
-      if (entry.participantId === oldHostId) map[key] = { ...entry, isHost: false };
-      else if (newHostId && entry.participantId === newHostId) map[key] = { ...entry, isHost: true };
-    }
-
-    if (!newHostId) {
-      await this.ctx.storage.delete("hostId");
-      await this.ctx.storage.put("clientMap", map);
-      return;
-    }
-
-    await this.ctx.storage.put("hostId", newHostId);
-    await this.ctx.storage.put("clientMap", map);
-    for (const s of this.ctx.getWebSockets()) {
-      const a = s.deserializeAttachment() as SocketAttachment | null;
-      if (a?.participantId === newHostId && !a.isHost) s.serializeAttachment({ ...a, isHost: true });
-    }
   }
 
   // ---- handlers ----
@@ -384,9 +311,9 @@ export class SessionRoom extends DurableObject<Env> {
     // If the host is (back) online — this socket may be their reconnect — cancel the host-grace
     // deadline so a refresh never hands off host. Keep any round timer running (rescheduleAlarm).
     const hostId = await this.ctx.storage.get<string>("hostId");
-    if (hostId && this.hasLiveSocketFor(hostId)) {
+    if (hostId && hasLiveSocketFor(this.ctx, hostId)) {
       await this.ctx.storage.delete("hostGraceUntil");
-      await this.rescheduleAlarm();
+      await rescheduleAlarm(this.ctx);
     }
 
     // Tell the client its own participantId so it identifies itself by a stable id, not by display
@@ -648,7 +575,7 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.put("meta", meta);
     // Round's over — drop any pending countdown so its alarm can't fire on a decided round.
     await this.ctx.storage.delete("roundEndsAt");
-    await this.rescheduleAlarm();
+    await rescheduleAlarm(this.ctx);
 
     const deck = await this.deckFor(meta);
     const votes = await this.getVotes();

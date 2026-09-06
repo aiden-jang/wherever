@@ -18,6 +18,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # First, because it is the check that keeps the rest honest: a gate that quietly leaves either
+      # this file or `verify` stops gating, and nothing else would say so.
+      - run: pnpm run gates
       # A god-file is never added in one go; it accretes and no single diff looks wrong. Ratcheted,
       # so the eight already over the line can only shrink.
       - run: pnpm run size

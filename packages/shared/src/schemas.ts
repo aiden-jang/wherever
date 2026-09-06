@@ -3,7 +3,7 @@
 // Worker / Durable Object trusts it.
 
 import { z } from "zod";
-import { ACCEPTED_REACTION_EMOJIS } from "./constants.js";
+import { REACTION_EMOJIS } from "./constants.js";
 import { VIBE_IDS } from "./vibes.js";
 
 export const priceTierSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
@@ -97,13 +97,6 @@ const setPlanSchema = z.object({
     .nullable(),
 });
 
-/* Accepted and then ignored: see SetArrivalMessage in protocol.ts for when to delete this. */
-const setArrivalSchema = z.object({
-  type: z.literal("set_arrival"),
-  status: z.enum(["planning", "heading_out", "here"]).nullable(),
-  travelMinutes: z.number().int().min(1).max(180).optional(),
-});
-
 const setVibeSchema = z.object({
   type: z.literal("set_vibe"),
   // Derived from VIBES so a new vibe cannot be added to the app and rejected at the door.
@@ -123,7 +116,7 @@ const setNeverAgainSchema = z.object({
 
 const reactSchema = z.object({
   type: z.literal("react"),
-  emoji: z.enum(ACCEPTED_REACTION_EMOJIS),
+  emoji: z.enum(REACTION_EMOJIS),
 });
 
 const nudgeThemSchema = z.object({ type: z.literal("nudge_them") });
@@ -138,7 +131,6 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   againSchema,
   chooseAlternativeSchema,
   setPlanSchema,
-  setArrivalSchema,
   setVibeSchema,
   setFiltersSchema,
   setNeverAgainSchema,

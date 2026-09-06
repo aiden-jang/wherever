@@ -32,21 +32,6 @@ export const DEFAULT_FILTERS: SessionFilters = {
 
 export const REACTION_EMOJIS = ["🔥", "😩", "🤌", "💀", "👀", "🙃"] as const;
 
-/*
- * The set before the refresh, still accepted on the wire for one release.
- *
- * `REACTION_EMOJIS` is what the bar renders; the react message validates against ACCEPTED, which is
- * both. Without the overlap, anyone mid-round on the previous bundle taps a reaction the new Worker
- * rejects and gets "Unrecognized message." for their trouble — the deploy is the moment people are
- * most likely to be swiping.
- *
- * Delete this and point the schema back at REACTION_EMOJIS on the next deploy after the one that
- * ships the new set. `schemas.test.ts` fails when you do, which is the reminder to read this.
- */
-const RETIRED_REACTION_EMOJIS = ["😍", "🤤", "😂", "🙅"] as const;
-
-export const ACCEPTED_REACTION_EMOJIS = [...REACTION_EMOJIS, ...RETIRED_REACTION_EMOJIS] as const;
-
 export interface CuisineOption {
   value: string;
   label: string;

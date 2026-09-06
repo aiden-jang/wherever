@@ -29,11 +29,11 @@
     "deploy:only": "pnpm --filter @wherever/worker run deploy"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "@typescript-eslint/parser": "^8.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
     "eslint": "^8.57.1",
     "knip": "^6.34.0",
-    "prettier": "^3.4.2",
+    "prettier": "^3.9.6",
     "typescript": "^5.7.2"
   }
 }

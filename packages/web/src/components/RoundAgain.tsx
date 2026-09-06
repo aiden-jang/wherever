@@ -35,7 +35,7 @@ export function RoundAgain({
       </button>
       <button
         onClick={() => onAgain("same")}
-        className="rounded-full px-8 py-2 text-sm font-semibold text-muted transition hover:text-cream"
+        className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold transition hover:bg-white/5"
       >
         Same places, vote again
       </button>

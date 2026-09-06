@@ -164,13 +164,8 @@ export function radiusLabel(meters: number): string {
   );
 }
 
-/**
- * The next radius up, or null at the top of the ladder.
- *
- * Walked rather than multiplied, so a widened search is still one of the four the group could have
- * picked themselves and the receipt chip reads "10 mi" instead of an invented number. The top of the
- * ladder is a real end: past ten miles this is not the same night out.
- */
+/* Walked, not multiplied: a widened search stays one of the four radii the group could have picked,
+   so the receipt chip reads "10 mi" rather than an invented number. Null at the top. */
 export function widerRadius(meters: number): number | null {
   return RADIUS_OPTIONS.find((option) => option.meters > meters)?.meters ?? null;
 }

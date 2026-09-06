@@ -19,7 +19,7 @@
  */
 import { globSync, readFileSync } from "node:fs";
 
-const SRC_CEILING = 0.194;
+const SRC_CEILING = 0.192;
 const SCRIPTS_CEILING = 0.25;
 /* Long enough that two files saying `// eslint-disable-next-line` are not called duplication. */
 const DUP_MIN_CHARS = 45;

@@ -2,12 +2,6 @@ import { SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 
-/*
- * A super-like burst belongs to the person who spent it. Everyone swipes the same deck at their own
- * pace, so on anybody else's screen the star lands over whatever card they are on -- the one place
- * it is certainly not about. The room hears about it on the result screen instead.
- */
-
 const BASE = "https://wherever.test";
 
 async function connect(code: string, displayName: string) {

@@ -147,12 +147,8 @@ async function rememberDealt(storage: DurableObjectStorage, deck: Restaurant[]):
 const spentLine = (meters: number) =>
   `That's everywhere within ${radiusLabel(meters)}, picked clean. Start a fresh session somewhere else.`;
 
-/**
- * Where a re-run's cards come from: the reserve if it holds a round, otherwise a paid fetch.
- *
- * `canPay` is the caller's round cap, asked only once the free option is gone, because the cap
- * counts paid fetches and a reserve round is not one.
- */
+/* `canPay` is asked only once the reserve is gone: the cap counts paid fetches, and a reserve round
+   is not one. */
 export async function nextRoundDeck(
   request: DeckRequest,
   canPay: boolean,
@@ -161,12 +157,8 @@ export async function nextRoundDeck(
   if (held) return { deck: held, paid: false };
   if (!canPay) return { error: "you've been through a lot of rounds. start a fresh session to keep going." };
 
-  /*
-   * An empty reserve means this radius has nothing left: Nearby Search has no pagination, so asking
-   * the same question returns the same places and the session has now been dealt all of them.
-   * Widening is not a fallback after a disappointing call, it is the only thing that can return
-   * anything new -- so it happens first, and the group is not charged for the call that could not.
-   */
+  /* Widen before the call, not after a disappointing one. An empty reserve means every place this
+     radius returns has been dealt, so the same query provably cannot find anything new. */
   const from = request.meta.filters.radiusMeters;
   const wider = widerRadius(from);
   if (wider === null) return { error: spentLine(from) };
@@ -188,13 +180,7 @@ export async function nextRoundDeck(
   return { deck, paid: true, note };
 }
 
-/**
- * The next round's cards, if the last fetch brought back more than one round's worth.
- *
- * Nearby Search has no pagination, so asking again with the same filters returns the same places and
- * excluding the ones just swiped empties it. Holding the overflow is what makes "new places" mean
- * anything, and it costs nothing: the group is being dealt places already paid for.
- */
+/** The overflow from the last fetch: a free round, already paid for. */
 export async function dealFromReserve(storage: DurableObjectStorage): Promise<Restaurant[] | null> {
   const reserve = (await storage.get<Restaurant[]>("reserve")) ?? [];
   // A round of one or two is worse than saying the area is spent, so a thin reserve is not dealt.

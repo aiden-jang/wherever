@@ -541,15 +541,15 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.put("votes", votes);
 
     /*
-     * Both land on the whole room, and both are anonymous: it learns one happened, never who spent it or
-     * on what. Naming a veto turns "I can't eat there" into an argument, which is the conversation this
-     * app exists to avoid.
-     *
-     * The super-like carries no name for the same reason. It is a weighted vote, and "the server never
-     * sends per-voter identities" has to hold on every channel, not just the progress payload.
+     * Both land on the whole room and neither carries a name: naming a veto turns "I can't eat
+     * there" into the argument this app exists to avoid. The veto also needs a crowd to hide in --
+     * with two people, anonymity is arithmetic: if they did not press it, they know who did. Below
+     * three it lands silently and still counts.
      */
     if (superLike) this.broadcast({ type: "reaction", emoji: "⭐", from: "", kind: "super" });
-    if (vetoing) this.broadcast({ type: "reaction", emoji: "🚫", from: "", kind: "veto" });
+    if (vetoing && this.connectedParticipants().length >= 3) {
+      this.broadcast({ type: "reaction", emoji: "🚫", from: "", kind: "veto" });
+    }
 
     await this.evaluate(meta);
   }

@@ -351,7 +351,7 @@ alongside the tie line, which is its own. Counted in right-swipes, the headcount
 against each other, rather than the weighted score a super-like inflates.
 
 **A reaction comes from a person.** Reactions already floated, but from a lane derived from the
-reaction's own random id, and the sender's name was on the wire and never used — so the same person's
+reaction's own random id, and the sender's name was on the wire and never used, so the same person's
 emoji appeared somewhere new every time and the whole thing read as weather. Each person now keeps one
 lane for the round and their reactions carry their name. Lanes are spread across the roster rather
 than hashed, because hashing put two people at 24% and 26% in a real session and they overlapped.
@@ -476,7 +476,7 @@ does not do is pretend to flip a coin, because the tie-break is not random and s
 lie.
 
 **Privacy is enforced on the wire, not in the UI.** "Show who's voted" is off by default, and when
-it's off the server never sends per-voter identities at all — the field is omitted from the progress
+it's off the server never sends per-voter identities at all: the field is omitted from the progress
 payload, so it can't be recovered from devtools. Revealing is an explicit host opt-in. The only
 thing that leaves the server is what the current mode permits.
 
@@ -490,7 +490,7 @@ feels solid or broken:
 
 - **Reconnect.** A dropped client reconnects and the Worker replays full session state, so a flaky
   phone connection never desyncs the deck or loses your votes.
-- **Host hand-off, with a grace window.** A refresh or a brief blip does _not_ demote the host — a
+- **Host hand-off, with a grace window.** A refresh or a brief blip does _not_ demote the host, because a
   short grace timer means host only passes to another player if they're really gone, so the session
   never gets stuck with no one able to start or decide.
 - **No leaks.** Stale sessions are pruned on a daily cron and bounded by a TTL, so abandoned rooms

@@ -25,7 +25,7 @@ A group picks a restaurant by swiping, instead of sending 60 messages and eating
   a badge on the icon counting the cards the room is waiting on you for, and the screen stays awake
   while a round is running, because a table of dark phones is how a round stalls.
 
-> Part of a [platform of apps](https://github.com/aiden-jang/platform/blob/main/PLATFORM.md) that share one sign-in. Like the others, one Worker serves both the
+> Part of a [platform of apps](https://github.com/aiden-jang/auth/blob/main/PLATFORM.md) that share one sign-in. Like the others, one Worker serves both the
 > SPA and the API from a single origin. It used to be two deploys, a Pages site calling an
 > `api.` subdomain, which meant CORS, a build-time API base, and a dev setup whose origin
 > topology did not match production.

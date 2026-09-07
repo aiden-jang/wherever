@@ -36,7 +36,10 @@ past change is different, and fine.
 
 ## Comments
 
-- No comment block over four lines. If one seems necessary, ask.
+- Keep an inline comment to a line or two. A longer block has to earn it by recording something a
+  reader would otherwise rediscover the hard way: a trap that has bitten, a constraint that fails
+  silently, a reason not to try the obvious thing. Well over a hundred blocks here run longer than
+  that and they are mostly the good ones, so length is not the test. "Why, not what" is.
 - Never explain a refactor, or what the code used to do. A reader never saw that version.
 - A comment that logs successive changes is a changelog. Git has it, and the log drifts out of step
   with the value it describes.

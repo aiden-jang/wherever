@@ -20,7 +20,9 @@ import {
   type Vote,
 } from "@wherever/shared";
 import type { Env } from "./env.js";
-import type { ClientMap, SessionMeta, SocketAttachment } from "./roomState.js";
+import { writeEvent } from "./events.js";
+import { readVotes } from "./roomState.js";
+import type { ClientMap, SessionMeta, SocketAttachment, VoteMap } from "./roomState.js";
 import {
   beginHostGraceIfNeeded,
   hasLiveSocketFor,
@@ -45,7 +47,6 @@ const NUDGE_COOLDOWN_MS = 20_000;
 
 /** clientId -> stable identity, so a reconnecting client keeps its votes. */
 /** Votes keyed by `${participantId}:${restaurantId}` for idempotency. */
-type VoteMap = Record<string, Vote>;
 /**
  * Who picked which vibe. Never leaves this object - clients get tallies only, so "nobody finds out
  * who said fancy" is a property of the server rather than of every screen that renders it.
@@ -190,7 +191,7 @@ export class SessionRoom extends DurableObject<Env> {
     await this.ctx.storage.put("lastNudge", Date.now());
 
     const deck = await this.deckFor(meta);
-    const votes = await this.getVotes();
+    const votes = await readVotes(this.ctx.storage);
     const participants = this.connectedParticipants();
     const finished = new Set(
       finishedParticipantIds(
@@ -299,7 +300,7 @@ export class SessionRoom extends DurableObject<Env> {
 
     if (meta.status === "swiping") {
       const deck = await this.deckFor(meta);
-      const votes = await this.getVotes();
+      const votes = await readVotes(this.ctx.storage);
       const mine = votes.filter((v) => v.participantId === identity.participantId);
       const alreadyVoted = mine.map((v) => v.restaurantId);
       const superUsed = mine.some((v) => v.super);
@@ -394,6 +395,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (superLike) {
       const spent = Object.values(votes).some((v) => v.participantId === att.participantId && v.super);
       if (spent) superLike = false;
+      else writeEvent(this.env, "super_like_used");
     }
     // One veto per participant per round, enforced here for the same reason as the super-like: the
     // client hides a spent button, and a hidden button is not a rule. A veto removes a place from
@@ -475,7 +477,7 @@ export class SessionRoom extends DurableObject<Env> {
 
     await this.ctx.storage.put("winner", promoted);
     await recordVisit(this.env, meta.code, promoted.restaurant.id, promoted.restaurant.name);
-    const votes = await this.getVotes();
+    const votes = await readVotes(this.ctx.storage);
     const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
     this.broadcastResult(
       promoted,
@@ -491,7 +493,7 @@ export class SessionRoom extends DurableObject<Env> {
   /** Recompute + broadcast progress, then decide if everyone connected is done. */
   private async evaluate(meta: SessionMeta, excludeWs?: WebSocket): Promise<void> {
     const deck = await this.deckFor(meta);
-    const votes = await this.getVotes();
+    const votes = await readVotes(this.ctx.storage);
     const participants = this.connectedParticipants(excludeWs);
     const total = participants.length;
     const finishedIds = finishedParticipantIds(
@@ -521,13 +523,14 @@ export class SessionRoom extends DurableObject<Env> {
   private async decide(meta: SessionMeta): Promise<void> {
     if (meta.status !== "swiping") return; // already decided; do nothing
     meta.status = "decided";
+    writeEvent(this.env, "session_decided", "", "", this.connectedParticipants().length);
     await this.ctx.storage.put("meta", meta);
     // Round's over — drop any pending countdown so its alarm can't fire on a decided round.
     await this.ctx.storage.delete("roundEndsAt");
     await rescheduleAlarm(this.ctx);
 
     const deck = await this.deckFor(meta);
-    const votes = await this.getVotes();
+    const votes = await readVotes(this.ctx.storage);
     const result = decideWinner(deck, votes);
     await this.ctx.storage.put("winner", result);
 
@@ -624,11 +627,6 @@ export class SessionRoom extends DurableObject<Env> {
       await this.ctx.storage.put("clientMap", map);
     }
     return identity;
-  }
-
-  private async getVotes(): Promise<Vote[]> {
-    const map = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
-    return Object.values(map);
   }
 
   /*

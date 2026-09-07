@@ -1,4 +1,4 @@
-import type { SessionFilters, SessionStatus, VoteMode } from "@wherever/shared";
+import type { SessionFilters, SessionStatus, Vote, VoteMode } from "@wherever/shared";
 
 /*
  * The two shapes a room keeps: what it persists about the session, and what it hangs on each
@@ -20,4 +20,11 @@ export interface SocketAttachment {
   participantId: string;
   displayName: string;
   isHost: boolean;
+}
+
+export type VoteMap = Record<string, Vote>;
+
+export async function readVotes(storage: DurableObjectStorage): Promise<Vote[]> {
+  const map = (await storage.get<VoteMap>("votes")) ?? {};
+  return Object.values(map);
 }

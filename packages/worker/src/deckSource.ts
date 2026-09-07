@@ -1,3 +1,4 @@
+import { writeEvent } from "./events.js";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
@@ -161,7 +162,11 @@ export async function nextRoundDeck(
      radius returns has been dealt, so the same query provably cannot find anything new. */
   const from = request.meta.filters.radiusMeters;
   const wider = widerRadius(from);
-  if (wider === null) return { error: spentLine(from) };
+  if (wider === null) {
+    writeEvent(request.env, "run_it_back_spent");
+    return { error: spentLine(from) };
+  }
+  writeEvent(request.env, "run_it_back", String(wider));
   /* Kept even when the wider search also comes up empty, so the next attempt steps further out
      instead of paying again for the radius that just failed. The caller broadcasts either way. */
   request.meta.filters = { ...request.meta.filters, radiusMeters: wider };

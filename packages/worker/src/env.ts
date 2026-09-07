@@ -26,4 +26,6 @@ export interface Env {
   PUBLIC_API_BASE?: string;
   /** The built SPA (packages/web/dist), served from this same Worker. */
   ASSETS: Fetcher;
+  /** Optional so local dev and the test worker run without it: an absent binding drops events. */
+  EVENTS?: AnalyticsEngineDataset;
 }

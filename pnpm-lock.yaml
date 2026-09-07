@@ -30,8 +30,8 @@ importers:
   packages/shared:
     dependencies:
       zod:
-        specifier: ^3.24.1
-        version: 3.25.76
+        specifier: ^4.5.4
+        version: 4.5.4
     devDependencies:
       typescript:
         specifier: ^5.7.2

@@ -1,9 +1,9 @@
 /*
  * Which vertical lane a floating reaction rises in.
  *
- * The position used to come from the reaction's own random id, so the same person's reactions
- * appeared somewhere new every time and the emoji read as weather rather than as somebody in the
- * room with you. Seeded from the sender instead, everyone keeps their own lane for the whole round.
+ * Seeded from the sender, not the reaction's own id, so everyone keeps one lane for the whole
+ * round. Keying off the reaction puts the same person somewhere new every time, and the emoji
+ * reads as weather rather than as somebody in the room with you.
  *
  * Falls back to the id for anything with no sender, which is how the anonymous system events (a veto,
  * a super-like) stay anonymous. They are rendered differently anyway.

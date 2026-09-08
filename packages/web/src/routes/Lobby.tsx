@@ -303,8 +303,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             }
           />
         </Suspense>
-        {/* The one moment everyone is looking at the same thing, and the reaction bar used to
-            disappear exactly then. */}
+        {/* Keep the reaction bar mounted here: this is the one moment everyone is looking at the
+            same thing. */}
         <div className="mt-4">
           <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
         </div>

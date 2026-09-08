@@ -369,9 +369,9 @@ export function SwipeDeck({
   /*
    * First-run gesture hint: shown once ever, then remembered.
    *
-   * The first swipe dismisses it and nothing else does. It used to also time out after five
-   * seconds, which is about how long the line takes to read and less time than a first-timer spends
-   * looking at the restaurant rather than the hint. A swipe is the signal that it landed.
+   * The first swipe dismisses it and nothing else does. Don't add a timeout: five seconds is about
+   * how long the line takes to read, and less than a first-timer spends looking at the restaurant
+   * rather than the hint. A swipe is the signal that it landed.
    */
   const [showHint, setShowHint] = useState(() => {
     try {
@@ -383,9 +383,9 @@ export function SwipeDeck({
   /*
    * Why a spent button did nothing, said at the moment it does nothing.
    *
-   * The veto and the super-like used to be `disabled`, which swallows the click, so the only
-   * feedback for tapping one twice was silence and the button looked broken. `aria-disabled` keeps
-   * it focusable and clickable so it can answer for itself.
+   * Don't mark the veto or the super-like `disabled`: it swallows the click, so tapping a spent
+   * one twice gives only silence and the button reads as broken. `aria-disabled` keeps it
+   * focusable and clickable so it can answer for itself.
    */
   const [spentNote, setSpentNote] = useState<string | null>(null);
   const saySpent = useCallback(
@@ -638,9 +638,8 @@ export function SwipeDeck({
         {/*
          * One slot for both, at a height it always occupies.
          *
-         * They used to be two conditional paragraphs, so the buttons jumped down the moment either
-         * appeared and back up when it went. A control that moves as you are reaching for it is
-         * worse than the message is useful. Both live at every width: the keyboard legend that
+         * Two conditional paragraphs would jump the buttons down as either appeared and back up when it
+         * went, and a control that moves as you reach for it is worse than the message is useful.
          * would otherwise carry this is `lg:` only, so a phone has nowhere else to read it.
          */}
         <p
@@ -726,12 +725,12 @@ export function SwipeDeck({
       </div>
 
       {/* The second column, and the reason it is not mostly empty: on a wide screen the deck's own
-          status used to stack under a card that already runs to the bottom of the viewport, leaving
-          this half holding one line of text. Under the deck on a phone, in the same order. */}
+          status stacked under a card runs to the bottom of the viewport and leaves this half
+          holding one line of text. Under the deck on a phone, in the same order. */}
       <div className={RAIL}>
         <p className="mt-3 text-center text-sm text-muted tabular-nums lg:mt-0 lg:text-left">
           {index + 1} / {restaurants.length}
-          {/* The buttons now name themselves; what a label cannot fit is that the veto is absolute. */}
+          {/* The buttons name themselves; what a label cannot fit is that the veto is absolute. */}
           {!vetoUsed && <span className="ml-2 text-flare">· 🚫 kills it outright</span>}
         </p>
         {/* Every one of these already worked; nothing said so, and a key nobody knows about is a

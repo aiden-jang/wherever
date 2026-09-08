@@ -36,9 +36,9 @@ export function travelLabel(distanceMeters: number): string | null {
 /*
  * The raw distance, in one unit system.
  *
- * This used to switch systems at a kilometre -- "750m" under, "0.6 mi" over -- in an app whose
- * audience reads miles, so two cards a block apart could be measured in different units. Feet below a
- * tenth of a mile, miles above it.
+ * One system throughout: feet below a tenth of a mile, miles above it. Switching at a kilometre --
+ * "750m" under, "0.6 mi" over -- measures two cards a block apart in different units, for an
+ * audience that reads miles.
  */
 export function distanceLabel(distanceMeters: number): string | null {
   if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return null;

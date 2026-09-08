@@ -265,8 +265,8 @@ export function useSessionSocket(code: string, displayName: string) {
     /*
      * Come back when the phone does.
      *
-     * Six attempts on a five-second cap is about twenty-two seconds, and then this used to give up for
-     * good - which is a pocket, a lift, or most of what a restaurant's wifi does to a phone.
+     * Six attempts on a five-second cap is about twenty-two seconds, which is a pocket, a lift, or
+     * most of what a restaurant's wifi does to a phone. Giving up there is far too early.
      *
      * Both signals, because neither is enough alone: `online` never fires if the network was not
      * technically lost, and a backgrounded tab is often throttled out of its own retries. Attempts reset,

@@ -38,9 +38,9 @@ function seedFrom(id: string): number {
  * One person is not a tie, however many places finished level.
  *
  * Alone, every place you liked scores exactly one, so a tie is guaranteed the moment you like two.
- * The round used to answer that with "Dead tie. Of course it is." and "6 places finished level" —
- * jokes about a committee that was never in the room, and the first thing most people see, because
- * opening it alone to find out what it is is how everybody starts.
+ * Keep the tie copy out of this case. "Dead tie. Of course it is." and "6 places finished level"
+ * are jokes about a committee that was never in the room, and this is the first thing most
+ * people see, because opening it alone to find out what it is is how everybody starts.
  */
 function consensusLine(rightSwipes: number, totalParticipants: number, seed: number): string {
   if (totalParticipants <= 1) return line("solo", seed);

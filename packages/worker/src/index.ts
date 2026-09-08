@@ -29,6 +29,13 @@ const app = new Hono<{ Bindings: Env }>();
  */
 app.use("*", async (c, next) => {
   await next();
+  // Vite's hashed bundles cannot change under a given name, so a year and `immutable`. Workers
+  // Assets serves them `max-age=0, must-revalidate`, which spends a round trip per chunk on every
+  // repeat visit. index.html keeps its name across deploys and must still revalidate.
+  if (/^\/assets\//.test(c.req.path)) {
+    c.header("Cache-Control", "public, max-age=31536000, immutable");
+    return;
+  }
   if (!c.res.headers.get("cache-control")) {
     c.header("Cache-Control", "no-store, max-age=0");
     c.header("Pragma", "no-cache");

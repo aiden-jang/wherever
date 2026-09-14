@@ -11,3 +11,7 @@ coverage/
 .wrangler/
 packages/worker/.wrangler/
 *.tsbuildinfo
+
+# Claude Code: launch.json is committed so the repo says how to run itself; local settings are
+# per-machine permission grants with absolute paths in them.
+.claude/settings.local.json

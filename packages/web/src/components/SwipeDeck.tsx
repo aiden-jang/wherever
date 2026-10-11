@@ -2,8 +2,9 @@ import type { CSSProperties } from "react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import { line, type Restaurant, type SwipeDirection, type VisitedPlace } from "@wherever/shared";
-import { categoryLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
-import { RestaurantPhoto } from "./RestaurantPhoto.js";
+import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { CardFace } from "./CardFace.js";
+import { VoteControls } from "./VoteControls.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
@@ -19,112 +20,6 @@ import {
 import { useLine } from "../useLine.js";
 
 const HINT_KEY = "wherever:swipe-hint-seen";
-
-const DECK_LABEL = "text-2xs uppercase tracking-wide text-muted";
-
-function CardFace({
-  restaurant,
-  photoUrl,
-  photoCount,
-  photoIdx,
-  revisit,
-}: {
-  restaurant: Restaurant;
-  photoUrl: string | null | undefined;
-  photoCount: number;
-  photoIdx: number;
-  /** "you came here about 5 months ago", or null for anywhere new. */
-  revisit?: string | null;
-}) {
-  // The app knows roughly forty cuisines by emoji and colour, and until now only showed you when the
-  // photo failed. A pizza card and a sushi card looked identical the rest of the time.
-  const cuisine = styleFor(restaurant.category);
-  return (
-    <>
-      {/* data-card-photo marks the photo zone: TopCard's tap handler cycles photos here and opens
-          details everywhere else. */}
-      <div data-card-photo className="relative">
-        <RestaurantPhoto
-          imageUrl={photoUrl ?? null}
-          category={restaurant.category}
-          className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,340px)]"
-        />
-        {photoCount > 1 && (
-          <div className="pointer-events-none absolute inset-x-3 top-2 flex gap-1">
-            {Array.from({ length: photoCount }).map((_, i) => (
-              <span
-                key={i}
-                className={`h-1 flex-1 rounded-full ${i === photoIdx ? "bg-white" : "bg-white/35"}`}
-              />
-            ))}
-          </div>
-        )}
-        {revisit && (
-          <div className="pointer-events-none absolute inset-x-3 bottom-2 flex">
-            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-ink/75 px-2.5 py-1 text-2xs font-semibold text-flame backdrop-blur-sm">
-              <span aria-hidden>↺</span> {revisit}
-            </span>
-          </div>
-        )}
-      </div>
-      <div className="h-[3px] w-full shrink-0" style={{ background: cuisine.gradient }} aria-hidden />
-      <div className="p-5">
-        <div className="font-display text-2xl font-bold leading-tight line-clamp-2">{restaurant.name}</div>
-        {/* Category on its own line (it's the long one), then the short stats — each atomic value
-            kept on one line so "3.6 mi" can never split across a wrap. */}
-        <div className="mt-2 truncate text-sm text-muted">
-          <span aria-hidden>{cuisine.emoji}</span> {categoryLabel(restaurant.category)}
-        </div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted tabular-nums">
-          <span className="whitespace-nowrap text-acid">
-            {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
-            {restaurant.rating && restaurant.reviewCount
-              ? ` (${reviewCountLabel(restaurant.reviewCount)})`
-              : ""}
-          </span>
-          <span className="text-white/20">·</span>
-          <span className="whitespace-nowrap" title={priceLabel(restaurant.priceTier)}>
-            {restaurant.priceRange ?? priceLabel(restaurant.priceTier)}
-          </span>
-          {/*
-            Carries the weight of the row, because it is the number the vote turns on: the rating is
-            whether it is any good and the price is a detail, but "24 min drive" is what somebody is
-            actually agreeing to. It read at exactly the same weight as the price tier before.
-
-            Null when the source gave no distance, and the separator goes with it.
-          */}
-          {distanceText(restaurant.distanceMeters) && (
-            <>
-              <span className="text-white/20">·</span>
-              <span className="whitespace-nowrap font-semibold text-cream tabular-nums">
-                {distanceText(restaurant.distanceMeters)}
-              </span>
-            </>
-          )}
-        </div>
-        {/* One line of why, from the source's own summary. Desktop only: the card is a fixed height
-            and on a phone this would push the stats out of it. */}
-        {restaurant.editorialSummary && (
-          <p className="mt-2 hidden text-sm leading-snug text-white/55 line-clamp-2 lg:block">
-            {restaurant.editorialSummary}
-          </p>
-        )}
-        {/* Shut is the one fact worth knowing before you swipe yes, not after the group has picked
-            it. Null means the source had no hours, which is not the same as closed. */}
-        {restaurant.openNow === false && (
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-flare/10 px-2.5 py-1 text-xs font-semibold text-flare">
-            <span aria-hidden>●</span> Closed right now
-          </div>
-        )}
-        {restaurant.openNow === true && (
-          <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-acid">
-            <span aria-hidden>●</span> Open now
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
 
 /**
  * One key cap in the desktop legend. Dimmed rather than hidden when spent, so the row does not
@@ -206,7 +101,7 @@ function TopCard({
 
   return (
     <motion.div
-      className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-grab active:cursor-grabbing"
+      className="absolute inset-0 meal-card rounded-card shadow-raised overflow-hidden cursor-grab active:cursor-grabbing"
       role="group"
       aria-roledescription="restaurant card"
       aria-label={cardDescription(restaurant, revisit)}
@@ -295,12 +190,12 @@ export function DeckSkeleton() {
   const dealingLine = useLine("dealing");
   return (
     <div className="w-full max-w-sm mx-auto lg:max-w-none">
-      <div className="relative h-[clamp(288px,48dvh,360px)] lg:h-[clamp(360px,64dvh,520px)]">
+      <div className="relative h-[clamp(340px,52dvh,410px)] lg:h-[clamp(360px,64dvh,520px)]">
         <div
-          className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 overflow-hidden animate-pulse"
+          className="absolute inset-0 meal-card rounded-card overflow-hidden animate-pulse"
           style={{ transform: "scale(0.95) translateY(14px)" }}
         />
-        <div className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 overflow-hidden animate-pulse">
+        <div className="absolute inset-0 meal-card rounded-card overflow-hidden animate-pulse">
           <div className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,340px)] bg-white/5" />
           <div className="p-5 space-y-3">
             <div className="h-6 w-2/3 rounded bg-white/10" />
@@ -573,7 +468,7 @@ export function SwipeDeck({
   return (
     <div className={SPLIT}>
       <div className="mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none">
-        <div className="relative h-[clamp(288px,48dvh,360px)] lg:h-[clamp(360px,64dvh,520px)]">
+        <div className="relative h-[clamp(340px,52dvh,410px)] lg:h-[clamp(360px,64dvh,520px)]">
           {/* Background cards, peeking behind the top one. */}
           {upcoming
             .map((r, i) => (
@@ -586,7 +481,7 @@ export function SwipeDeck({
                 style={dealing ? { animationDelay: `${(i + 1) * 90}ms` } : undefined}
               >
                 <div
-                  className="absolute inset-0 rounded-card bg-ink-soft border border-white/10 overflow-hidden transition-transform duration-200"
+                  className="absolute inset-0 meal-card rounded-card overflow-hidden transition-transform duration-200"
                   style={{
                     transform: `scale(${1 - (i + 1) * 0.05}) translateY(${(i + 1) * 14}px)`,
                     zIndex: -i - 1,
@@ -648,80 +543,10 @@ export function SwipeDeck({
           }`}
           aria-live="polite"
         >
-          {spentNote ??
-            (showHint
-              ? "Tap the card for details. Drag it, or use the buttons. 🚫 and ⭐ are one each, per round."
-              : "")}
+          {spentNote ?? (showHint ? "Swipe or tap a vote. Tap the card for details." : "")}
         </p>
 
-        {/* mt-4, not mt-8: the whole swiping column has to clear a 720px laptop, and the buttons stay
-          at 64px because they are the primary target on a phone. See the main in Lobby. */}
-        {/* Named, not just drawn. ✕ and 🚫 are both "no" to look at, and the one that is absolute is
-            the smaller of the two; on a phone the keyboard legend that would have told you is not
-            rendered at all. The label also carries the spent state, so a group does not have to tap
-            a dead button to find out it is dead. */}
-        <div className="mt-4 flex items-end justify-center gap-5">
-          <span className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              aria-label="Pass"
-              onClick={() => commit("left")}
-              className="grid place-items-center h-16 w-16 rounded-full border border-white/15 text-2xl hover:border-flare hover:text-flare hover:scale-105 active:scale-95 transition"
-            >
-              ✕
-            </button>
-            <span className={DECK_LABEL}>pass</span>
-          </span>
-          <span className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              aria-label={
-                vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"
-              }
-              aria-disabled={vetoUsed}
-              onClick={() => (vetoUsed ? saySpent("vetoSpent") : commit("left", false, true))}
-              className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
-                vetoUsed
-                  ? "border-white/10 text-white/25"
-                  : "border-flare text-flare hover:scale-105 active:scale-95 hover:bg-flare/10"
-              }`}
-            >
-              🚫
-            </button>
-            <span className={`${DECK_LABEL} ${vetoUsed ? "text-white/25" : "text-flare"}`}>
-              {vetoUsed ? "spent" : "veto"}
-            </span>
-          </span>
-          <span className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}
-              aria-disabled={superUsed}
-              onClick={() => (superUsed ? saySpent("superSpent") : commit("right", true))}
-              className={`grid place-items-center h-12 w-12 rounded-full border text-xl transition ${
-                superUsed
-                  ? "border-white/10 text-white/25"
-                  : "border-grape text-grape hover:scale-105 active:scale-95 hover:bg-grape/10"
-              }`}
-            >
-              ⭐
-            </button>
-            <span className={`${DECK_LABEL} ${superUsed ? "text-white/25" : "text-grape"}`}>
-              {superUsed ? "spent" : "super"}
-            </span>
-          </span>
-          <span className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              aria-label="Let's eat"
-              onClick={() => commit("right")}
-              className="grid place-items-center h-16 w-16 rounded-full bg-acid text-ink text-2xl font-bold hover:scale-105 active:scale-95 transition"
-            >
-              ♥
-            </button>
-            <span className={`${DECK_LABEL} text-acid`}>eat</span>
-          </span>
-        </div>
+        <VoteControls vetoUsed={vetoUsed} superUsed={superUsed} onVote={commit} onSpent={saySpent} />
       </div>
 
       {/* The second column, and the reason it is not mostly empty: on a wide screen the deck's own

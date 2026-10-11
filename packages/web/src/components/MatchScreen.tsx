@@ -10,7 +10,8 @@ import {
   type VisitedPlace,
 } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
-import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+import { priceLabel } from "./cardStyle.js";
+import { DinnerTicket } from "./DinnerTicket.js";
 import { distanceText } from "@wherever/shared";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
@@ -357,86 +358,15 @@ function WinnerScreen({
       <div className="mx-auto w-full max-w-sm text-center lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-start lg:gap-10">
         <div className="min-w-0">
           <h1 className="reveal font-display text-lg font-bold tracking-widest text-acid uppercase">
-            It&apos;s decided<span className="sr-only">: {restaurant.name}</span>
+            Dinner is handled<span className="sr-only">: {restaurant.name}</span>
           </h1>
-          <button
-            type="button"
-            onClick={() => setDetailOpen(true)}
-            aria-label={`See details for ${restaurant.name}`}
-            className="reveal relative mt-5 block w-full text-left rounded-card bg-ink-soft border border-white/10 shadow-raised overflow-hidden cursor-pointer hover:border-white/25 transition-colors"
-            /* The other half of the deck's `chosen-card`: same name, so the card the room picked grows
-             into this one instead of the screen cutting. */
-            style={{ "--reveal-at": "90ms", viewTransitionName: "chosen-card" } as CSSProperties}
-          >
-            <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
-            <span className="pointer-events-none absolute top-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm">
-              i
-            </span>
-            <div className="p-5">
-              <div className="font-display text-3xl font-extrabold leading-tight line-clamp-2">
-                {restaurant.name}
-              </div>
-              {/* Category on its own line, stats below with each value kept whole — same treatment as
-                the deck card so the winner never wraps mid-value on a phone. */}
-              <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
-              <div className="mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted">
-                <span className="whitespace-nowrap text-acid">
-                  {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
-                  {restaurant.rating && restaurant.reviewCount
-                    ? ` (${reviewCountLabel(restaurant.reviewCount)})`
-                    : ""}
-                </span>
-                <span className="text-white/20">·</span>
-                <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
-                {/* Same weight as on the card: getting there is the live question on this screen. */}
-                {distanceText(restaurant.distanceMeters) && (
-                  <>
-                    <span className="text-white/20">·</span>
-                    <span className="whitespace-nowrap font-semibold text-cream tabular-nums">
-                      {distanceText(restaurant.distanceMeters)}
-                    </span>
-                  </>
-                )}
-              </div>
-              {/*
-              Whether it is open, on the winner itself.
-              The detail sheet has said this all along, but only after a tap, and this is the one fact
-              that can undo the decision the group just made: a closed door after everyone has agreed
-              and started walking is the failure this screen exists to prevent. Permanent closure
-              outranks today's hours, same order the detail sheet uses.
-            */}
-              {(() => {
-                const shut =
-                  restaurant.businessStatus === "CLOSED_PERMANENTLY"
-                    ? "Permanently closed"
-                    : restaurant.businessStatus === "CLOSED_TEMPORARILY"
-                      ? "Temporarily closed"
-                      : null;
-                if (shut) return <p className="mt-2 text-sm font-semibold text-flare">{shut}</p>;
-                if (restaurant.openNow == null) return null;
-                return (
-                  <p
-                    className={`mt-2 text-sm font-semibold ${restaurant.openNow ? "text-acid" : "text-flare"}`}
-                  >
-                    {restaurant.openNow ? "Open now" : "Closed right now"}
-                  </p>
-                );
-              })()}
-              {restaurant.address && (
-                <p className="mt-3 truncate text-sm text-muted" title={restaurant.address}>
-                  {restaurant.address}
-                </p>
-              )}
-              <p className="mt-3 text-xs text-muted">Tap for hours, contact details &amp; directions</p>
-            </div>
-          </button>
+          <DinnerTicket
+            restaurant={restaurant}
+            rightSwipes={rightSwipes}
+            totalParticipants={totalParticipants}
+            onOpen={() => setDetailOpen(true)}
+          />
 
-          <p
-            className="reveal mt-4 text-muted tabular-nums"
-            style={{ "--reveal-at": "190ms" } as CSSProperties}
-          >
-            {rightSwipes} of {totalParticipants} picked it.
-          </p>
           <p
             className="reveal mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid"
             style={{ "--reveal-at": "190ms" } as CSSProperties}

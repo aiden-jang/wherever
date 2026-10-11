@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./landing.css";
+@import "./dinner.css";
 
 /* Design tokens (Tailwind v4 @theme -> utility classes like bg-ink, text-ember). */
 @theme {

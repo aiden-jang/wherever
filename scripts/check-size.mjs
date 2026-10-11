@@ -19,10 +19,10 @@ const MAX_STATE = 12;
  * entry as the file shrinks; delete it once the file is under the ceiling.
  */
 const ALREADY_OVER = {
-  "packages/web/src/components/MatchScreen.tsx": { lines: 706 },
+  "packages/web/src/components/MatchScreen.tsx": { lines: 636 },
   "packages/worker/src/sessionRoom.ts": { lines: 701 },
   "packages/web/src/routes/Lobby.tsx": { lines: 567 },
-  "packages/web/src/components/SwipeDeck.tsx": { lines: 762 },
+  "packages/web/src/components/SwipeDeck.tsx": { lines: 587 },
   "packages/web/src/components/FilterFields.tsx": { lines: 614 },
   "packages/worker/src/restaurantSource.ts": { lines: 430 },
   // A hook, not a component, and the one place the state count says more than the line count: it is

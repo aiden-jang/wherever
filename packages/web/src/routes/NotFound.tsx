@@ -1,3 +1,4 @@
+import { PlateState } from "../components/PlateState.js";
 import { Link } from "react-router-dom";
 
 /** Catch-all for unknown URLs. Kept on-brand: a page nobody could agree existed. */
@@ -5,10 +6,10 @@ export default function NotFound() {
   return (
     <main className="flex-1 flex items-center justify-center px-6 text-center">
       <div className="max-w-sm">
-        <div className="text-glyph">🍽️</div>
+        <PlateState />
         <h1 className="mt-4 font-display text-state font-bold">Nothing's here.</h1>
         <p className="mt-3 text-muted">
-          This page is like the restaurant everyone swears they've been to. Doesn't exist. Never did.
+          We couldn’t find this page. It may have moved. A very ambitious dinner plan.
         </p>
         <Link
           to="/"

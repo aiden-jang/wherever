@@ -72,10 +72,10 @@ export function FilterSummary({
     </div>
   );
 
-  if (!editable || !onChange) return <div className="mt-6">{chips}</div>;
+  if (!editable || !onChange) return <div className="filter-summary mt-6">{chips}</div>;
 
   return (
-    <div className="mt-6">
+    <div className="filter-summary mt-6">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -83,10 +83,12 @@ export function FilterSummary({
         className="w-full rounded-2xl border border-transparent px-2 py-2 transition hover:border-white/10"
       >
         {chips}
-        <span className="mt-2 block text-xs font-semibold text-muted">{open ? "done" : "change these"}</span>
+        <span className="mt-2 block text-xs font-semibold text-muted">
+          {open ? "Done editing" : "Edit dinner filters"}
+        </span>
       </button>
       {open && (
-        <div className="mt-3 rounded-2xl border border-white/10 p-4 text-left">
+        <div className="filter-editor mt-3 rounded-2xl border border-white/10 p-4 text-left">
           <FilterFields filters={filters} onChange={onChange} />
         </div>
       )}

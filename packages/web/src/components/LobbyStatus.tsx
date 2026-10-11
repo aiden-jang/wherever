@@ -76,21 +76,6 @@ export function HowItWorks() {
   );
 }
 
-/** Three softly pulsing dots — a small sign of life so "waiting on the host" doesn't read as frozen. */
-export function WaitingDots() {
-  return (
-    <span className="inline-flex items-center gap-1" aria-hidden>
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="h-1.5 w-1.5 rounded-full bg-muted animate-pulse"
-          style={{ animationDelay: `${i * 200}ms` }}
-        />
-      ))}
-    </span>
-  );
-}
-
 /** Live round countdown from an absolute deadline; goes red in the final stretch, then "Deciding…". */
 export function RoundCountdown({ endsAt }: { endsAt: number }) {
   const [remaining, setRemaining] = useState(() => Math.max(0, endsAt - Date.now()));

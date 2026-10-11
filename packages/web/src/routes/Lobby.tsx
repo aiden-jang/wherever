@@ -1,3 +1,4 @@
+import { PlateState } from "../components/PlateState.js";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { decideNowWarning, line } from "@wherever/shared";
@@ -23,13 +24,7 @@ import { play } from "../components/sound.js";
 import { FilterSummary } from "../components/FilterSummary.js";
 import { JoinQr } from "../components/JoinQr.js";
 import { NamePrompt } from "../components/NamePrompt.js";
-import {
-  DemoBanner,
-  DisconnectBanner,
-  HowItWorks,
-  RoundCountdown,
-  WaitingDots,
-} from "../components/LobbyStatus.js";
+import { DemoBanner, DisconnectBanner, HowItWorks, RoundCountdown } from "../components/LobbyStatus.js";
 import { GroupTasteMap, LiveVotes, ParticipantChip, VoterAvatars } from "../components/LobbyPeople.js";
 
 export default function Lobby() {
@@ -270,7 +265,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     return (
       <main className="flex-1 flex items-center justify-center px-6 text-center">
         <div className="max-w-sm">
-          <div className="text-glyph">🫥</div>
+          <PlateState />
           <h1 className="mt-4 font-display text-state font-bold">This code leads nowhere.</h1>
           <p className="mt-3 text-muted">{error}</p>
           <Link
@@ -313,18 +308,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   }
 
   if (session?.status === "swiping") {
-    /*
-     * Tighter vertical rhythm here than on the other screens, because this one has to fit.
-     *
-     * The swiping column ran 68px to 768px, and a 1280x720 laptop cut it off at 720 — so the
-     * reaction bar, the only signal during a round that anyone else is in the session at all, was
-     * below the fold and effectively did not exist. On a phone the 80px of overflow lands exactly
-     * where the browser chrome does, so the space came out of the gaps.
-     *
-     * From `lg` up the group half moves beside the deck instead of under it. That fills a screen
-     * that was a 384px card adrift in 1280px of gradient, and it buys back the vertical room, which
-     * is what lets the card finally be the size of the thing the whole app is about.
-     */
+    // Compact gaps keep the reaction bar visible on short screens.
     return (
       <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-4">
         {/*
@@ -424,7 +408,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           </>
         ) : deck ? (
           <div className="text-center max-w-sm">
-            <div className="text-glyph">🍽️</div>
+            <PlateState />
             <h1 className="mt-4 font-display text-state font-bold">Nothing survived the filters.</h1>
             <p className="mt-2 text-muted">
               Your standards met this neighborhood and won. Try again with a wider radius or fewer filters.
@@ -520,9 +504,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
       <div className="w-full mt-10">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display text-xl font-bold">The committee</h2>
+          <h2 className="font-display text-xl font-bold">At the table</h2>
           <span className="text-sm text-muted">
-            {count} {count === 1 ? "opinion" : "opinions"}
+            {count} {count === 1 ? "person" : "people"}
           </span>
         </div>
         <div className="flex flex-col gap-2">
@@ -539,6 +523,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       </div>
 
       <div className="w-full mt-10">
+        {isHost && (
+          <p className="mb-3 text-center text-sm text-muted">Everyone here? Start when you’re ready.</p>
+        )}
         {isHost ? (
           <button
             onClick={() => {
@@ -551,10 +538,10 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             {starting ? "Finding places..." : "Start swiping"}
           </button>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-center text-muted">
+          <div className="lobby-wait flex flex-col items-center gap-2 text-center text-muted">
             <div className="flex items-center gap-2">
-              <WaitingDots />
-              <span className="font-medium">Waiting on the host.</span>
+              <PlateState small />
+              <span className="font-medium">You’re in. Waiting on the host.</span>
             </div>
             <p className="text-sm">Gentle peer pressure is an option.</p>
           </div>

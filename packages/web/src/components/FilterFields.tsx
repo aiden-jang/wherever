@@ -20,7 +20,7 @@ import { geocode } from "../api";
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
 
-const segBase = "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors border";
+const segBase = "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors border min-h-11";
 const segOn = "bg-ember text-ink border-ember";
 const segOff = "bg-black/40 text-cream border-white/10 hover:border-white/30";
 
@@ -291,7 +291,7 @@ export function FilterFields({
   const rulesCount = (filters.revealVoters ? 1 : 0) + (filters.roundSeconds ? 1 : 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="filter-fields flex flex-col gap-4">
       <LocationPicker filters={filters} onChange={onChange} />
 
       <div className="flex flex-col gap-2">

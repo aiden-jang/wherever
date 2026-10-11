@@ -3,13 +3,12 @@ import type { Restaurant } from "@wherever/shared";
 import { AMENITY_OPTIONS } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { distanceText } from "@wherever/shared";
-import { RestaurantPhoto } from "./RestaurantPhoto.js";
+import { RestaurantGallery } from "./RestaurantGallery.js";
 import { useScrollLock } from "../useScrollLock.js";
 import { useDialogFocus } from "../useDialogFocus.js";
 import { useSwipeToDismiss } from "../useSwipeToDismiss.js";
 
-const chipClass =
-  "inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs text-muted";
+const chipClass = "inline-flex items-center gap-1.5 detail-chip rounded-full px-3 py-1 text-xs text-muted";
 
 /** Google Maps deep link: the place's own URI when we have it, else a name+address search. */
 function mapsUrlFor(r: Restaurant): string {
@@ -19,7 +18,7 @@ function mapsUrlFor(r: Restaurant): string {
 }
 
 const actionClass =
-  "flex items-center justify-center gap-2 rounded-2xl border border-white/15 px-4 py-3 text-sm font-semibold hover:bg-white/5 active:scale-[0.98] transition";
+  "flex items-center justify-center gap-2 detail-secondary rounded-2xl px-4 py-3 text-sm font-semibold hover:bg-white/5 active:scale-[0.98] transition";
 
 /**
  * A tap-to-open sheet with everything the Places response gave us about one restaurant: photo,
@@ -44,15 +43,6 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Tinder-style gallery: one photo at a time, tap left/right to move. Only the current photo is
-  // rendered, so a photo's bytes (the billable fetch) load on demand as you tap to it — not all up
-  // front.
-  const gallery = restaurant.photos ?? [];
-  const [photoIdx, setPhotoIdx] = useState(0);
-  useEffect(() => {
-    setPhotoIdx(0);
-  }, [restaurant.id]);
-
   const hasLinks = restaurant.website || restaurant.phone;
   // A permanent/temporary closure is more important than open-now, so it takes the status slot.
   const closedLabel =
@@ -75,7 +65,7 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
         tabIndex={-1}
         /* A bottom sheet on a phone, so its own last row sits over the home indicator. `pad-safe-bottom`
            keeps whatever padding it already had on everything else. */
-        className="relative w-full max-w-sm max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 bg-ink-soft shadow-raised pad-safe-bottom sm:rounded-3xl sm:pb-0"
+        className="restaurant-detail relative w-full max-w-lg max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border border-white/10 shadow-raised pad-safe-bottom sm:rounded-3xl sm:pb-0"
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragY ? "none" : "transform 0.2s ease",
@@ -91,49 +81,14 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/45 text-lg text-white/90 backdrop-blur-sm hover:bg-black/65 transition-colors"
+          className="absolute right-3 top-3 z-10 grid h-11 w-11 place-items-center rounded-full bg-black/45 text-lg text-white/90 backdrop-blur-sm hover:bg-black/65 transition-colors"
         >
           ✕
         </button>
-        {gallery.length > 1 ? (
-          <div className="relative h-44 select-none bg-ink-soft">
-            <img
-              src={gallery[photoIdx]}
-              alt=""
-              onError={(e) => {
-                e.currentTarget.style.visibility = "hidden";
-              }}
-              className="h-full w-full object-cover"
-            />
-            {/* Progress segments (Instagram/Tinder style) showing which photo you're on. */}
-            <div className="pointer-events-none absolute inset-x-3 top-2 flex gap-1">
-              {gallery.map((_, i) => (
-                <span
-                  key={i}
-                  className={`h-1 flex-1 rounded-full ${i === photoIdx ? "bg-white" : "bg-white/35"}`}
-                />
-              ))}
-            </div>
-            {/* Tap the left/right half to step through photos; clamped at the ends. */}
-            <button
-              type="button"
-              aria-label="Previous photo"
-              onClick={() => setPhotoIdx((i) => Math.max(0, i - 1))}
-              className="absolute inset-y-0 left-0 w-1/2 cursor-pointer"
-            />
-            <button
-              type="button"
-              aria-label="Next photo"
-              onClick={() => setPhotoIdx((i) => Math.min(gallery.length - 1, i + 1))}
-              className="absolute inset-y-0 right-0 w-1/2 cursor-pointer"
-            />
-          </div>
-        ) : (
-          <RestaurantPhoto imageUrl={restaurant.imageUrl} category={restaurant.category} className="h-44" />
-        )}
+        <RestaurantGallery key={restaurant.id} restaurant={restaurant} />
 
         <div className="p-5">
-          <div className="font-display text-2xl font-bold leading-tight">{restaurant.name}</div>
+          <h2 className="font-display text-3xl font-bold leading-tight">{restaurant.name}</h2>
           <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted tabular-nums">
@@ -202,7 +157,7 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
               const hours = restaurant.hours!;
               const hasToday = hours.some((l) => l.startsWith(today));
               return (
-                <div className="mt-4">
+                <div className="detail-hours mt-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Hours</h3>
                   <ul className="mt-1 space-y-0.5 text-sm text-muted">
                     {hours.map((line) => {
@@ -210,7 +165,10 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
                       // desktop (sm:list-item). If we can't spot today's line, don't hide anything.
                       const hideOnMobile = hasToday && !hoursExpanded && !line.startsWith(today);
                       return (
-                        <li key={line} className={hideOnMobile ? "hidden sm:list-item" : ""}>
+                        <li
+                          key={line}
+                          className={`${hideOnMobile ? "hidden sm:list-item" : ""} ${line.startsWith(today) ? "hours-today" : ""}`}
+                        >
                           {line}
                         </li>
                       );
@@ -229,7 +187,7 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
               );
             })()}
 
-          <div className="mt-5 flex flex-col gap-2">
+          <div className="detail-actions mt-5 flex flex-col gap-2">
             <a
               href={mapsUrlFor(restaurant)}
               target="_blank"

@@ -30,8 +30,8 @@ export function LiveVotes({ count }: { count: number }) {
 
 export function ParticipantChip({ p }: { p: Participant }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
-      <span className="relative grid place-items-center h-10 w-10 rounded-full bg-gradient-to-br from-ember to-flare text-ink font-bold">
+    <div className="participant-tile flex items-center gap-3 rounded-2xl border border-white/10 px-4 py-3">
+      <span className="relative grid place-items-center h-10 w-10 rounded-2xl bg-ember text-ink font-bold">
         {initialsFor(p.displayName)}
         {/* Live presence: solid green pulse when connected, hollow grey when they've dropped. */}
         <span
@@ -48,6 +48,7 @@ export function ParticipantChip({ p }: { p: Participant }) {
           phone — the row looked fine, and the whole page scrolled sideways. */}
       <span className={`min-w-0 break-words font-medium ${p.connected ? "" : "text-muted"}`}>
         {p.displayName}
+        <span className="member-status">{p.connected ? "At the table" : "Disconnected"}</span>
       </span>
       {p.isHost && (
         <span className="ml-auto shrink-0 rounded-full bg-acid/15 text-acid text-xs font-semibold px-2 py-0.5">

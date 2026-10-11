@@ -11,6 +11,7 @@ import {
 } from "@wherever/shared";
 import type { MatchState } from "../useSessionSocket.js";
 import { priceLabel } from "./cardStyle.js";
+import { PlanDirections } from "./PlanDirections.js";
 import { DinnerTicket } from "./DinnerTicket.js";
 import { distanceText } from "@wherever/shared";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
@@ -273,7 +274,6 @@ function WinnerScreen({
     restaurant.openNow === false ||
     restaurant.businessStatus === "CLOSED_PERMANENTLY" ||
     restaurant.businessStatus === "CLOSED_TEMPORARILY";
-  const mapsAction = unavailable ? "See it in Google Maps ↗" : "Get directions";
   const [detailOpen, setDetailOpen] = useState(false);
   const [shareResult, setShareResult] = useState<"sharing" | "copied" | "shared" | null>(null);
   const [directionsOpen, setDirectionsOpen] = useState(false);
@@ -348,13 +348,7 @@ function WinnerScreen({
         section ("1 still off the radar"). The winner's name is carried here for a screen reader
         because on screen it is the card below, which is a button and no place for a heading.
       */}
-      {/*
-        Two columns from lg: what happened on the left, what to do about it on the right.
-        This screen carries a winner, a tally, the reasons, the
-        receipt, the backups and the history, and all of it was a 384px column no matter how
-        wide the window -- a phone screen with a thousand pixels of dark either side. One cut,
-        so a phone still reads it top to bottom in exactly the order it always did.
-      */}
+      {/* Keep the mobile directions beside the pick; desktop actions occupy the second column. */}
       <div className="mx-auto w-full max-w-sm text-center lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-start lg:gap-10">
         <div className="min-w-0">
           <h1 className="reveal font-display text-lg font-bold tracking-widest text-acid uppercase">
@@ -365,6 +359,12 @@ function WinnerScreen({
             rightSwipes={rightSwipes}
             totalParticipants={totalParticipants}
             onOpen={() => setDetailOpen(true)}
+          />
+          <PlanDirections
+            restaurant={restaurant}
+            unavailable={unavailable}
+            onOpen={() => setDirectionsOpen(true)}
+            className="mobile-directions"
           />
 
           <p
@@ -553,24 +553,12 @@ function WinnerScreen({
           )}
 
           <div className="mt-8 flex flex-col gap-3">
-            {unavailable ? (
-              <a
-                href={mapsUrl(restaurant)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
-              >
-                {mapsAction}
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setDirectionsOpen(true)}
-                className="rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
-              >
-                {mapsAction}
-              </button>
-            )}
+            <PlanDirections
+              restaurant={restaurant}
+              unavailable={unavailable}
+              onOpen={() => setDirectionsOpen(true)}
+              className="desktop-directions"
+            />
             <button
               type="button"
               onClick={() => void sharePlan()}

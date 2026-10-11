@@ -32,7 +32,7 @@ export default function App() {
           <header className="site-header">
             <Link to="/" className="site-wordmark">
               <span className="brand-plate" aria-hidden>
-                ✳
+                <img src="/icon.svg" alt="" width="34" height="34" />
               </span>{" "}
               <span>
                 Wherever<span className="text-ember">,</span> Honestly

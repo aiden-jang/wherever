@@ -18,7 +18,7 @@
   width: 34px;
   height: 34px;
   margin-right: 10px;
-  border-radius: 50%;
+  border-radius: 10px;
   background: var(--color-ember);
   color: var(--color-ink);
   font-size: 28px;

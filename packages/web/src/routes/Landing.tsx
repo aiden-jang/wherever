@@ -1,215 +1,13 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTransitionNavigate } from "../useViewTransition.js";
-import { buzz } from "../components/haptics.js";
 import { LocationPicker } from "../components/FilterFields";
-import { play } from "../components/sound.js";
-import { useLine } from "../useLine.js";
 import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
 import type { SessionFilters } from "@wherever/shared";
-import {} from "@wherever/shared";
+import { TeaserStack } from "../components/TeaserStack.js";
 import { Modal } from "../components/Modal.js";
 import { ScanQr } from "../components/ScanQr.js";
 import { qrScanSupported } from "../qrScan.js";
 import { createSession, getLocation, rememberName, recallName, DEFAULT_FILTERS } from "../api.js";
-
-interface TeaserCard {
-  name: string;
-  category: string;
-  emoji: string;
-  image: string;
-  price: string;
-  rating: string;
-  distance: string;
-  gradient: string;
-  rotation: string;
-  offset: string;
-}
-
-const CARDS: TeaserCard[] = [
-  {
-    name: "Late Night Pizza Decisions",
-    category: "Pizza",
-    emoji: "🍕",
-    image: "/teaser-pizza.jpg",
-    price: "$",
-    rating: "4.4",
-    distance: "0.9 mi",
-    gradient: "linear-gradient(135deg, var(--color-ember), var(--color-flare))",
-    rotation: "-8deg",
-    offset: "translate(-38px, 26px)",
-  },
-  {
-    name: "Noodle Situation",
-    category: "Ramen",
-    emoji: "🍜",
-    image: "/teaser-ramen.jpg",
-    price: "$$",
-    rating: "4.1",
-    distance: "1.1 mi",
-    gradient: "linear-gradient(135deg, var(--color-grape), var(--color-flare))",
-    rotation: "5deg",
-    offset: "translate(30px, 12px)",
-  },
-  {
-    name: "Probably Fine Tacos",
-    category: "Tacos",
-    emoji: "🌮",
-    image: "/teaser-tacos.jpg",
-    price: "$",
-    rating: "4.6",
-    distance: "0.5 mi",
-    gradient: "linear-gradient(135deg, var(--color-flame), var(--color-ember))",
-    rotation: "-1deg",
-    offset: "translate(0, 0)",
-  },
-];
-
-function StatusLine() {
-  return <p className="mt-8 text-sm text-muted">{useLine("landing", 2800)}</p>;
-}
-
-/** The visual body of a teaser card. The front card also shows the working Nope/Yes controls. */
-function TeaserCardFace({
-  card,
-  front = false,
-  onVote,
-}: {
-  card: TeaserCard;
-  front?: boolean;
-  onVote?: (dir: "left" | "right") => void;
-}) {
-  return (
-    <div className="rounded-card bg-ink-soft border border-white/10 shadow-raised overflow-hidden">
-      {/* Real (CC0) food photo over the gradient. If the image fails to load, it hides itself and
-          the gradient + emoji underneath show through. */}
-      <div className="relative h-36" style={{ background: card.gradient }}>
-        <span className="absolute inset-0 flex items-center justify-center text-glyph">
-          <span className="drop-shadow-lg">{card.emoji}</span>
-        </span>
-        <img
-          src={card.image}
-          alt=""
-          loading="lazy"
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
-          }}
-          className="relative h-full w-full object-cover"
-        />
-      </div>
-      <div className="p-4">
-        <div className="font-display text-lg font-semibold leading-tight">{card.name}</div>
-        <div className="mt-2 flex items-center gap-3 text-sm text-muted">
-          <span>{card.category}</span>
-          <span className="text-white/20">·</span>
-          <span className="text-acid">★ {card.rating}</span>
-          <span className="text-white/20">·</span>
-          <span>{card.price}</span>
-          <span className="text-white/20">·</span>
-          <span>{card.distance}</span>
-        </div>
-      </div>
-      {front && (
-        <>
-          {/* Backed, not bare. Acid green on a bright pizza photo at 12px reads as a scribble across
-              the crust rather than as a stamp — the one bit of the hero card that says what the app
-              does. The swipe stamps get the same treatment for the same reason. */}
-          <span className="absolute top-4 left-4 rotate-[-12deg] rounded-lg border-2 border-acid bg-ink/70 px-3 py-1 text-xs font-bold tracking-widest text-acid backdrop-blur-[2px]">
-            LET&apos;S EAT
-          </span>
-          <div className="flex gap-3 px-4 pb-4">
-            <button
-              type="button"
-              aria-label="Nope"
-              onClick={() => onVote?.("left")}
-              className="flex-1 rounded-2xl border border-white/10 py-2 text-lg hover:border-flare hover:text-flare active:scale-95 transition duration-300 ease-spring"
-            >
-              ✕
-            </button>
-            <button
-              type="button"
-              aria-label="Yes"
-              onClick={() => onVote?.("right")}
-              className="flex-1 rounded-2xl bg-acid py-2 text-lg text-ink font-bold hover:brightness-110 active:scale-95 transition duration-300 ease-spring"
-            >
-              ♥
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// Fixed slots the three cards sit in (front → back), so cycling swaps content, not positions.
-const TEASER_SLOTS = [
-  "translate(0px, 0px) rotate(-1deg)",
-  "translate(30px, 12px) rotate(5deg) scale(0.95)",
-  "translate(-38px, 26px) rotate(-8deg) scale(0.9)",
-];
-
-/**
- * A tiny, working swipe demo on the landing page: tap ♥/✕ on the front card and it flies off, the
- * next slides up. Shows the actual mechanic instead of faking it with dead buttons.
- */
-function TeaserStack() {
-  const [idx, setIdx] = useState(0);
-  const [exitDir, setExitDir] = useState<"left" | "right">("right");
-  const reduce = useReducedMotion();
-
-  // The teaser is the only thing on this page you can actually swipe, so it's also where the app
-  // gets to show that swiping makes a noise. Same cues as the real deck.
-  const vote = (dir: "left" | "right") => {
-    buzz(dir === "right" ? 12 : [8, 20]);
-    play(dir === "right" ? "like" : "pass");
-    setExitDir(dir);
-    setIdx((i) => (i + 1) % CARDS.length);
-  };
-
-  const front = CARDS[idx]!;
-
-  return (
-    <div className="relative h-full w-full flex items-center justify-center">
-      {/* Background cards, peeking behind the front one. */}
-      {[2, 1].map((depth) => {
-        const card = CARDS[(idx + depth) % CARDS.length]!;
-        return (
-          <div
-            key={`slot-${depth}`}
-            className="absolute w-64 sm:w-72"
-            style={{ transform: TEASER_SLOTS[depth], zIndex: 3 - depth }}
-            aria-hidden
-          >
-            <TeaserCardFace card={card} />
-          </div>
-        );
-      })}
-
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={front.name}
-          className="absolute w-64 sm:w-72"
-          style={{ zIndex: 3 }}
-          initial={reduce ? { opacity: 0 } : { scale: 0.92, y: 24, opacity: 0 }}
-          animate={{ x: 0, y: 0, scale: 1, rotate: -1, opacity: 1 }}
-          exit={
-            reduce
-              ? { opacity: 0, transition: { duration: 0.12 } }
-              : {
-                  x: exitDir === "right" ? 380 : -380,
-                  rotate: exitDir === "right" ? 16 : -16,
-                  opacity: 0,
-                  transition: { duration: 0.32 },
-                }
-          }
-          transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        >
-          <TeaserCardFace card={front} front onVote={vote} />
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  );
-}
 
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
@@ -257,6 +55,7 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
     <form onSubmit={submit} className="flex flex-col gap-4">
       <input
         className={inputClass}
+        aria-label="Your name"
         placeholder="Your name"
         value={name}
         maxLength={24}
@@ -275,7 +74,7 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
         {busy ? "Shuffling the deck..." : "Deal the cards"}
       </button>
       {locOff && (
-        <p className="text-center text-sm text-ink/60">
+        <p className="text-center text-sm text-muted">
           location's off. search a zip or town above, or you'll get a default area.
         </p>
       )}
@@ -321,6 +120,7 @@ function JoinForm() {
     <form onSubmit={submit} className="flex flex-col gap-3">
       <input
         className={inputClass}
+        aria-label="Your name"
         placeholder="Your name"
         value={name}
         maxLength={24}
@@ -331,6 +131,7 @@ function JoinForm() {
       {/* No maxLength: a pasted invite link has to arrive whole for the parser to find the code in it. */}
       <input
         className={`${inputClass} tracking-[0.4em] uppercase`}
+        aria-label="Session code"
         placeholder="CODE"
         // Not a field any password manager or address book has a value for.
         autoComplete="off"
@@ -381,50 +182,89 @@ export default function Landing() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <main className="flex-1 grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto w-full px-6 pb-16">
-      <section className="text-center lg:text-left">
-        <span className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-4 py-1.5 text-xs text-muted">
-          <span className="h-2 w-2 rounded-full bg-acid animate-pulse" />
-          you're not fine with whatever
-        </span>
-
-        <h1 className="mt-6 font-display font-extrabold tracking-tight text-6xl sm:text-7xl leading-[0.95]">
-          Wherever<span className="text-ember">,</span>
-          <span className="block bg-gradient-to-r from-ember via-flare to-grape bg-clip-text text-transparent">
-            Honestly
-          </span>
-        </h1>
-
-        <p className="mt-5 text-lg text-muted max-w-md mx-auto lg:mx-0">
-          Nobody's actually "fine with whatever." Swipe on it. Majority wins, the group chat loses.
-        </p>
-
-        <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-          <button
-            type="button"
-            onClick={() => setModal("create")}
-            className="rounded-full bg-ember px-8 py-4 text-lg font-semibold text-ink shadow-lg shadow-ember/30 hover:scale-[1.03] hover:shadow-ember/50 transition-transform"
-          >
-            Start a session
-          </button>
-          <button
-            type="button"
-            onClick={() => setModal("join")}
-            className="rounded-full border border-white/15 px-8 py-4 text-lg font-semibold hover:border-white/40 hover:bg-white/5 transition-colors"
-          >
-            Join with a code
-          </button>
+    <main className="landing">
+      <div className="landing-hero">
+        <section className="landing-intro">
+          <p className="landing-eyebrow">
+            <span aria-hidden>↗</span> Dinner plans. Finally.
+          </p>
+          <h1>
+            Big appetites.
+            <br />
+            Tiny{" "}
+            <span className="hero-opinions">
+              opinions.
+              <svg viewBox="0 0 380 18" aria-hidden>
+                <path d="M4 12 Q180 -2 376 10 M30 16 Q205 6 343 15" />
+              </svg>
+            </span>
+          </h1>
+          <p className="landing-description">
+            Pick somewhere to eat. Together. Swipe on nearby restaurants and let the group decide.
+          </p>
+          <p className="landing-aside">“Anything is fine” has entered the chat. Again.</p>
+          <div className="landing-actions">
+            <button type="button" onClick={() => setModal("create")} className="landing-start">
+              Start a session <span aria-hidden>↗</span>
+            </button>
+            <button type="button" onClick={() => setModal("join")} className="landing-join">
+              Join with a code <span aria-hidden>→</span>
+            </button>
+          </div>
+          <p className="landing-footnote">No accounts. Just names and questionable taste.</p>
+        </section>
+        <section className="dinner-board" aria-label="Interactive example of restaurant voting">
+          <div className="board-heading">
+            <span>THE DINNER DILEMMA</span>
+            <span className="example-label">EXAMPLE</span>
+          </div>
+          <div className="board-doodle" aria-hidden>
+            <svg viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="30" />
+              <circle cx="40" cy="40" r="23" />
+              <path d="M30 37v3m20-3v3m-18 8q8 9 16 0M8 10v16m-5-16v10q5 10 10 0V10M8 28v38m64-55v55m0-55q-10 12 0 25" />
+            </svg>
+          </div>
+          <div className="board-note">
+            Everyone has an opinion.
+            <br />
+            <span>Some of them are useful.</span>
+          </div>
+          <div className="board-deck">
+            <TeaserStack />
+          </div>
+          <p className="board-caption">
+            <span aria-hidden>↑</span> Try a vote. Very low stakes.
+          </p>
+          <div className="board-bottom">
+            <span>ONE GROUP. ONE PLACE.</span>
+            <span aria-hidden>✳</span>
+          </div>
+        </section>
+      </div>
+      <section className="landing-how" aria-label="How it works">
+        <div className="how-intro">
+          <span className="landing-eyebrow">THE PLAN</span>
+          <p>
+            Less debating.
+            <br />
+            More eating.
+          </p>
         </div>
-
-        <StatusLine />
-      </section>
-
-      <section className="relative h-[420px] flex items-center justify-center">
-        <div
-          className="float relative h-full w-full flex items-center justify-center"
-          style={{ animation: "float-soft 6s ease-in-out infinite" }}
-        >
-          <TeaserStack />
+        <div className="how-step">
+          <span className="step-number">01</span>
+          <h2>Gather the hungry.</h2>
+          <p>Start a session and share the code. Everyone gets the same deck.</p>
+        </div>
+        <div className="how-step">
+          <span className="step-number">02</span>
+          <h2>Have a tiny opinion.</h2>
+          <p>Swipe yes or nope. One veto each, for your personal food nemesis.</p>
+        </div>
+        <div className="how-step">
+          <span className="step-number">03</span>
+          <h2>Go eat something.</h2>
+          <p>The most-liked place wins. The group chat can take the night off.</p>
         </div>
       </section>
 

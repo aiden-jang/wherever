@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0c0a09",
-  "theme_color": "#0c0a09",
+  "background_color": "#181b17",
+  "theme_color": "#181b17",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -75,14 +75,14 @@
       "sizes": "824x1830",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Swipe on nearby places until the group agrees."
+      "label": "Start a dinner session. Invite the group."
     },
     {
       "src": "/screenshot-wide.png",
       "sizes": "1280x800",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Everyone votes on the same deck at once."
+      "label": "Let the group choose where to eat."
     }
   ]
 }

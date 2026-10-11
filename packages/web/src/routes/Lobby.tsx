@@ -444,18 +444,18 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   }
 
   return (
-    <main className="flex-1 flex flex-col items-center px-6 pb-16 w-full max-w-md mx-auto">
+    <main className="lobby-screen flex-1 flex flex-col items-center px-6 pb-16 w-full max-w-md mx-auto">
       {/* Same reason as the swiping screen: the code is the loudest thing here, but it is a button. */}
       <h1 className="sr-only">Session {code}. Waiting to start.</h1>
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <LiveRegion message={announcement} />
       <Toasts toasts={allToasts} />
-      <div className="w-full text-center mt-4">
+      <div className="lobby-invite w-full text-center mt-4">
         <p className="text-sm text-muted">Share this code. Or the link. Whatever is less effort.</p>
         <button
           onClick={copyCode}
           aria-label="Copy the session code"
-          className="mt-3 block w-full font-display text-5xl font-extrabold tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-ember via-flare to-grape active:scale-95 transition"
+          className="mt-3 block w-full font-display text-5xl font-extrabold tracking-[0.3em] text-ember active:scale-95 transition"
         >
           {code}
         </button>
@@ -546,7 +546,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               send({ type: "start_round" });
             }}
             disabled={starting}
-            className="w-full rounded-full bg-ember px-8 py-4 text-lg font-semibold text-ink shadow-lg shadow-ember/30 transition-transform disabled:opacity-60 enabled:hover:scale-[1.02]"
+            className="w-full rounded-full bg-ember px-8 py-4 text-lg font-semibold text-ink transition-transform disabled:opacity-60 enabled:hover:scale-[1.02]"
           >
             {starting ? "Finding places..." : "Start swiping"}
           </button>

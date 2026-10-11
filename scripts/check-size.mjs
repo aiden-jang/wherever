@@ -25,7 +25,6 @@ const ALREADY_OVER = {
   "packages/web/src/components/SwipeDeck.tsx": { lines: 762 },
   "packages/web/src/components/FilterFields.tsx": { lines: 614 },
   "packages/worker/src/restaurantSource.ts": { lines: 430 },
-  "packages/web/src/routes/Landing.tsx": { lines: 448, state: 13 },
   // A hook, not a component, and the one place the state count says more than the line count: it is
   // the single subscription every screen reads, so every new server field lands here.
   "packages/web/src/useSessionSocket.ts": { state: 21 },

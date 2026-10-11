@@ -5,12 +5,12 @@ import type { Restaurant } from "@wherever/shared";
 // keywords (substring, case-insensitive) rather than exact names — otherwise everything real drops
 // to the generic plate. A small gradient palette keeps neighbouring cards from all looking alike.
 const GRADIENTS = {
-  ember: "linear-gradient(135deg, #ff5e2c, #ff2d78)",
-  warm: "linear-gradient(135deg, #ff8a3d, #ff2d78)",
-  grape: "linear-gradient(135deg, #8b5cf6, #ff2d78)",
-  ocean: "linear-gradient(135deg, #2c9cff, #7c3aed)",
-  forest: "linear-gradient(135deg, #12b886, #7c3aed)",
-  gold: "linear-gradient(135deg, #ffd43b, #ff8a3d)",
+  ember: "linear-gradient(135deg, #e4a58c, #c78173)",
+  warm: "linear-gradient(135deg, #dfbd87, #c78173)",
+  grape: "linear-gradient(135deg, #c5b9d1, #c78173)",
+  ocean: "linear-gradient(135deg, #a9bec3, #8e9ba1)",
+  forest: "linear-gradient(135deg, #bccb99, #8e9ba1)",
+  gold: "linear-gradient(135deg, #ead79c, #dfbd87)",
 } as const;
 
 // Ordered: more specific keywords first (e.g. "wine" before "bar", "ice cream" before generic).

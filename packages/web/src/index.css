@@ -1,19 +1,16 @@
 @import "tailwindcss";
+@import "./landing.css";
 
 /* Design tokens (Tailwind v4 @theme -> utility classes like bg-ink, text-ember). */
 @theme {
-  --color-ink: #0c0a09;
-  --color-ink-soft: #16120f;
-  --color-cream: #f6f1e7;
-  /* 7.56:1 on the ink, which is the whole point of it. Do not dim it further with an opacity
-     modifier: /70 measured 4.05 and /60 measured 3.38, both under AA. Size carries the hierarchy. */
-  --color-muted: #a8a097;
-  --color-ember: #ff5e2c;
-  --color-flare: #ff2d78;
-  /* Lifted from #7c3aed, which measured 3.47:1 on the ink behind it -- under AA for the 14px
-     "· ⭐ super" hint and the veto/super button labels. 4.68:1, and the same purple to look at. */
-  --color-grape: #8b5cf6;
-  --color-acid: #d7ff3e;
+  --color-ink: #181b17;
+  --color-ink-soft: #22261f;
+  --color-cream: #f4f1e7;
+  --color-muted: #b0b4a5;
+  --color-ember: #ff9876;
+  --color-flare: #ff97a9;
+  --color-grape: #bba6eb;
+  --color-acid: #d5e8a0;
 
   /* One light source. The aurora is warm, so a raised surface casts a warm near-black rather than
      the neutral grey Tailwind's default gives you, which reads as a second lamp in the room. */
@@ -251,7 +248,7 @@ body {
     radial-gradient(40% 40% at 25% 30%, var(--aurora-from, var(--color-ember)) 0%, transparent 60%),
     radial-gradient(38% 38% at 75% 35%, var(--aurora-via, var(--color-flare)) 0%, transparent 60%),
     radial-gradient(120% 80% at 50% 100%, var(--aurora-to, var(--color-grape)) 0%, transparent 90%);
-  opacity: var(--aurora-opacity, 0.55);
+  opacity: calc(var(--aurora-opacity, 0.55) * 0.18);
   transition:
     background 2.4s ease,
     opacity 2.4s ease;
@@ -416,15 +413,7 @@ body {
   animation: vote-tick 0.42s var(--ease-spring, ease-out);
 }
 
-/*
- * Two accessibility modes this app never answered, which is odd for one whose colour tokens carry
- * their measured contrast ratios in the comment beside them.
- *
- * `prefers-contrast: more` is somebody telling the browser that the middle of the range is not
- * working for them. `--color-muted` is the entire secondary-text tier - it is 7.56:1 and the token
- * warns against dimming it further - so lifting that one variable raises every caption, hint and
- * disclaimer in the app at once, without touching a component.
- */
+/* Raise secondary text contrast when the user requests stronger contrast. */
 @media (prefers-contrast: more) {
   :root {
     --color-muted: var(--color-cream);

@@ -1,23 +1,10 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
-  <!-- Social share card. Content is CENTERED so consumers that crop the 1.91:1 card toward a
-       square (iOS/Safari share-sheet thumbnail) still show the mark + wordmark, not empty space. -->
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff5e2c" />
-      <stop offset="0.5" stop-color="#ff2d78" />
-      <stop offset="1" stop-color="#7c3aed" />
-    </linearGradient>
-  </defs>
-  <rect width="1200" height="630" fill="#0c0a09" />
-
-  <!-- mark + wordmark only (no tagline — it turns to specks in a share-sheet thumbnail), centered -->
-  <g transform="translate(507, 150)">
-    <rect width="186" height="186" rx="50" fill="url(#g)" />
-    <g transform="translate(18.6, 18.6) scale(0.327)">
-      <path d="M150 176 L200 336 L256 214 L312 336 L362 176" fill="none" stroke="#f6f1e7" stroke-width="36" stroke-linejoin="round" stroke-linecap="round" />
-      <circle cx="388" cy="330" r="22" fill="#f6f1e7" />
-    </g>
+  <rect width="1200" height="630" fill="#181b17" />
+  <g transform="translate(507 115) scale(.363)">
+    <rect width="512" height="512" rx="112" fill="#ff9876" />
+    <circle cx="256" cy="256" r="154" fill="none" stroke="#181b17" stroke-width="14" />
+    <path d="M256 140v232M140 256h232M174 174l164 164M174 338l164-164" fill="none" stroke="#181b17" stroke-width="22" stroke-linecap="round" />
   </g>
-
-  <text x="600" y="485" text-anchor="middle" font-family="'Bricolage Grotesque', Inter, system-ui, sans-serif" font-size="104" font-weight="800" fill="#f6f1e7" letter-spacing="-4">Wherever, Honestly</text>
+  <text x="600" y="417" text-anchor="middle" font-family="sans-serif" font-size="86" font-weight="700" fill="#f4f1e7" letter-spacing="-4">Wherever, Honestly</text>
+  <text x="600" y="478" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#b0b4a5">Less debating. More eating.</text>
 </svg>

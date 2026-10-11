@@ -17,7 +17,7 @@ export function SoundToggle() {
       aria-pressed={muted}
       aria-label={muted ? "Turn sound on" : "Turn sound off"}
       title={muted ? "Sound off" : "Sound on"}
-      className="rounded-full border border-white/15 p-2 text-muted hover:text-cream hover:border-white/30 transition-colors"
+      className="grid h-11 w-11 place-items-center rounded-full border border-white/15 text-muted hover:text-cream hover:border-white/30 transition-colors"
     >
       <svg
         width="16"

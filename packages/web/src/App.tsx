@@ -29,9 +29,14 @@ export default function App() {
             }
           />
 
-          <header className="flex items-center justify-between px-6 py-5 max-w-6xl mx-auto w-full">
-            <Link to="/" className="font-display text-lg font-extrabold tracking-tight">
-              Wherever<span className="text-ember">,</span> Honestly
+          <header className="site-header">
+            <Link to="/" className="site-wordmark">
+              <span className="brand-plate" aria-hidden>
+                ✳
+              </span>{" "}
+              <span>
+                Wherever<span className="text-ember">,</span> Honestly
+              </span>
             </Link>
             <div className="flex items-center gap-2">
               <SoundToggle />
@@ -48,7 +53,7 @@ export default function App() {
             </Routes>
           </ErrorBoundary>
 
-          <footer className="mt-auto px-6 py-6 max-w-6xl mx-auto w-full text-center text-xs text-muted">
+          <footer className="site-footer">
             <p>Place data powered by Google</p>
             <p className="mt-1">
               Made by{" "}

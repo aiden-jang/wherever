@@ -22,6 +22,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run gates
+      - run: pnpm run security:check
+      - run: pnpm run check:migrations
       - run: pnpm run size
       - run: pnpm run comments
       - run: pnpm run css-vars

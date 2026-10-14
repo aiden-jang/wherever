@@ -12,8 +12,8 @@
     },
     "packages/worker": {
       // The Worker entry comes from wrangler.toml's `main`, which knip reads for itself.
-      "entry": ["test/**/*.test.ts", "src/**/*.test.ts"],
-      "project": ["src/**/*.ts", "test/**/*.ts"],
+      "entry": ["scripts/*.mjs", "test/**/*.test.ts", "src/**/*.test.ts"],
+      "project": ["scripts/*.mjs", "src/**/*.ts", "test/**/*.ts"],
     },
     "packages/web": {
       // The SPA entry comes from index.html, which knip reads for itself.

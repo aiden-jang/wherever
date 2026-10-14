@@ -1,4 +1,4 @@
-import { SELF, env } from "cloudflare:test";
+import { exports as workers, env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it } from "vitest";
@@ -15,7 +15,7 @@ const validBody = () => ({
 });
 
 async function createSession(body: unknown = validBody()): Promise<Response> {
-  return SELF.fetch(`${BASE}/api/sessions`, {
+  return workers.default.fetch(`${BASE}/api/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -55,7 +55,7 @@ describe("POST /api/sessions", () => {
 
 describe("GET /api/health", () => {
   it("reports ok and the configured source", async () => {
-    const res = await SELF.fetch(`${BASE}/api/health`);
+    const res = await workers.default.fetch(`${BASE}/api/health`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; source: string };
     expect(body.ok).toBe(true);

@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { exports as workers } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 
@@ -10,7 +10,7 @@ import type { ClientMessage, ServerMessage } from "@wherever/shared";
 const BASE = "https://wherever.test";
 
 async function connect(code: string) {
-  const res = await SELF.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
+  const res = await workers.default.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
   const socket = res.webSocket;
   if (!socket) throw new Error(`no socket (status ${res.status})`);
   socket.accept();
@@ -32,7 +32,7 @@ async function connect(code: string) {
 
 describe("votes for cards that were never dealt", () => {
   it("does not let a client finish the deck without seeing it", async () => {
-    const res = await SELF.fetch(`${BASE}/api/sessions`, {
+    const res = await workers.default.fetch(`${BASE}/api/sessions`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -61,7 +61,7 @@ describe("votes for cards that were never dealt", () => {
   });
 
   it("still counts a vote for a card that was dealt", async () => {
-    const res = await SELF.fetch(`${BASE}/api/sessions`, {
+    const res = await workers.default.fetch(`${BASE}/api/sessions`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { exports as workers } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 
@@ -15,7 +15,7 @@ import type { ClientMessage, ServerMessage } from "@wherever/shared";
 const BASE = "https://wherever.test";
 
 async function join(code: string, displayName: string, clientId?: string) {
-  const res = await SELF.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
+  const res = await workers.default.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
   const socket = res.webSocket!;
   socket.accept();
   const seen: ServerMessage[] = [];
@@ -40,7 +40,7 @@ async function join(code: string, displayName: string, clientId?: string) {
 }
 
 async function session() {
-  const res = await SELF.fetch(`${BASE}/api/sessions`, {
+  const res = await workers.default.fetch(`${BASE}/api/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({

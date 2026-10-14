@@ -14,7 +14,7 @@
     "deploy": "pnpm run verify && pnpm run deploy:only",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
+    "test": "node --test scripts/*.test.mjs && pnpm -r test",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

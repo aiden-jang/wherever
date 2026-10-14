@@ -33,6 +33,10 @@ Explain the user-visible change, relevant architecture choices, and validation.
 Use the pull-request template. Keep README and docs aligned with current behavior;
 comments explain constraints rather than recounting the refactor.
 
+Main requires an up-to-date pull request with passing CI and resolved conversations.
+No external reviewer approval is required for this personal repository.
+Use [private security reporting](.github/SECURITY.md) for suspected vulnerabilities.
+
 ## Database changes
 
 Generate and inspect migrations through the Worker scripts. Apply them locally and

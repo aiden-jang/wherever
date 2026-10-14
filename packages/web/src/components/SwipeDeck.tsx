@@ -1,23 +1,17 @@
 import type { CSSProperties } from "react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
+
 import { line, type Restaurant, type SwipeDirection, type VisitedPlace } from "@wherever/shared";
-import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
+
 import { CardFace } from "./CardFace.js";
 import { VoteControls } from "./VoteControls.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
-import {
-  swipeAnnouncement,
-  throwDistance,
-  throwDuration,
-  throwVerdict,
-  distanceText,
-  undoAnnouncement,
-  revisitNote,
-} from "@wherever/shared";
+import { swipeAnnouncement, undoAnnouncement, revisitNote } from "@wherever/shared";
 import { useLine } from "../useLine.js";
+
+import { SwipeCard } from "./SwipeCard.js";
 
 const HINT_KEY = "wherever:swipe-hint-seen";
 
@@ -37,176 +31,11 @@ function Key({ children, dim = false }: { children: ReactNode; dim?: boolean }) 
   );
 }
 
-/** A screen-reader summary of the card, so deciding isn't a guess without sight. */
-function cardDescription(r: Restaurant, revisit?: string | null): string {
-  const parts: (string | null)[] = [r.name, categoryLabel(r.category)];
-  if (r.rating) {
-    parts.push(
-      r.reviewCount ? `${r.rating} stars, ${reviewCountLabel(r.reviewCount)} reviews` : `${r.rating} stars`,
-    );
-  }
-  parts.push(priceLabel(r.priceTier), distanceText(r.distanceMeters));
-  // Closed is worth hearing before you vote, same as seeing it.
-  if (r.openNow === false) parts.push("closed right now");
-  if (revisit) parts.push(revisit);
-  return parts.filter(Boolean).join(", ");
-}
-
 /* Deck left, everything else right, one column on a phone. The left column is capped at the card's
    own width so it does not stretch on a wide screen. */
 const SPLIT =
   "w-full lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-center lg:gap-12";
 const RAIL = "mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none lg:text-left";
-
-// A press that moves less than this many pixels counts as a tap (open details) rather than a drag.
-const TAP_MOVE_TOLERANCE = 8;
-
-function TopCard({
-  revisit,
-  restaurant,
-  exitDir,
-  onCommit,
-  onOpenDetail,
-}: {
-  restaurant: Restaurant;
-  exitDir: SwipeDirection;
-  revisit: string | null;
-  onCommit: (dir: SwipeDirection) => void;
-  onOpenDetail: (r: Restaurant) => void;
-}) {
-  const reduce = useReducedMotion();
-  const x = useMotionValue(0);
-  // No tilt for motion-sensitive users; the card still tracks the drag horizontally.
-  const rotate = useTransform(x, [-220, 220], reduce ? [0, 0] : [-16, 16]);
-  const yes = useTransform(x, [30, 130], [0, 1]);
-  const nope = useTransform(x, [-130, -30], [1, 0]);
-  // Distinguish a tap from a drag (a vote) by how far the pointer travelled between down and up,
-  // so tapping never fights the swipe gesture.
-  const pressStart = useRef<{ x: number; y: number } | null>(null);
-  // Last throw's speed, read by the exit. Zero for a button or key press, which is not a throw.
-  const thrownAt = useRef(0);
-
-  // Photos: tapping the photo cycles through them; tapping the "i" badge or the text area opens
-  // details. Fall back to the single imageUrl when there's no gallery.
-  const photos =
-    restaurant.photos && restaurant.photos.length > 0
-      ? restaurant.photos
-      : restaurant.imageUrl
-        ? [restaurant.imageUrl]
-        : [];
-  const [photoIdx, setPhotoIdx] = useState(0);
-  useEffect(() => {
-    setPhotoIdx(0);
-  }, [restaurant.id]);
-
-  return (
-    <motion.div
-      className="absolute inset-0 meal-card rounded-card shadow-raised overflow-hidden cursor-grab active:cursor-grabbing"
-      role="group"
-      aria-roledescription="restaurant card"
-      aria-label={cardDescription(restaurant, revisit)}
-      style={{ x, rotate, touchAction: "pan-y" }}
-      drag="x"
-      dragSnapToOrigin
-      dragElastic={0.5}
-      onPointerDown={(e) => {
-        pressStart.current = { x: e.clientX, y: e.clientY };
-      }}
-      onPointerUp={(e) => {
-        const start = pressStart.current;
-        pressStart.current = null;
-        if (!start || Math.hypot(e.clientX - start.x, e.clientY - start.y) >= TAP_MOVE_TOLERANCE) {
-          return;
-        }
-        const target = e.target as HTMLElement;
-        // Tapping the photo (but not the "i" badge sitting on it) cycles photos; everywhere else
-        // — the badge and the text area below — opens details.
-        if (
-          photos.length > 1 &&
-          target.closest?.("[data-card-photo]") &&
-          !target.closest?.("[data-card-info]")
-        ) {
-          setPhotoIdx((i) => (i + 1) % photos.length);
-        } else {
-          onOpenDetail(restaurant);
-        }
-      }}
-      onDragEnd={(_, info) => {
-        const verdict = throwVerdict(info.offset.x, info.velocity.x);
-        if (!verdict) return;
-        // Remember how hard it went so the exit matches the gesture rather than a fixed 0.28s.
-        thrownAt.current = info.velocity.x;
-        onCommit(verdict);
-      }}
-      /*
-       * Inert right now: framer only reads `exit` under an `AnimatePresence`, and this deck no longer has
-       * one (see the note at the render site). This is the throw the card should make when it leaves, and
-       * the machinery for it - exitDir, thrownAt, throwDistance, throwDuration - is still here for whoever
-       * puts it back.
-       */
-      exit={
-        reduce
-          ? { opacity: 0, transition: { duration: 0.12 } }
-          : {
-              x: exitDir === "right" ? throwDistance(thrownAt.current) : -throwDistance(thrownAt.current),
-              opacity: 0,
-              transition: { duration: throwDuration(thrownAt.current), ease: "easeOut" },
-            }
-      }
-    >
-      <CardFace
-        revisit={revisit}
-        restaurant={restaurant}
-        photoUrl={photos[photoIdx] ?? restaurant.imageUrl}
-        photoCount={photos.length}
-        photoIdx={photoIdx}
-      />
-      {/* The details affordance: a real hit target (data-card-info) so the tap handler opens details
-          when it's tapped, even though the surrounding photo cycles. */}
-      <span
-        data-card-info
-        className="absolute bottom-3 right-3 grid h-7 w-7 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm"
-      >
-        i
-      </span>
-      <motion.span
-        className="absolute top-6 left-6 rotate-[-14deg] rounded-xl border-2 border-acid bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-acid backdrop-blur-[2px]"
-        style={{ opacity: yes }}
-      >
-        LET&apos;S EAT
-      </motion.span>
-      <motion.span
-        className="absolute top-6 right-6 rotate-[14deg] rounded-xl border-2 border-flare bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-flare backdrop-blur-[2px]"
-        style={{ opacity: nope }}
-      >
-        NOPE
-      </motion.span>
-    </motion.div>
-  );
-}
-
-/** Card-shaped placeholder shown while the first deck is being fetched. */
-export function DeckSkeleton() {
-  const dealingLine = useLine("dealing");
-  return (
-    <div className="w-full max-w-sm mx-auto lg:max-w-none">
-      <div className="relative h-[clamp(340px,52dvh,410px)] lg:h-[clamp(360px,64dvh,520px)]">
-        <div
-          className="absolute inset-0 meal-card rounded-card overflow-hidden animate-pulse"
-          style={{ transform: "scale(0.95) translateY(14px)" }}
-        />
-        <div className="absolute inset-0 meal-card rounded-card overflow-hidden animate-pulse">
-          <div className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,340px)] bg-white/5" />
-          <div className="p-5 space-y-3">
-            <div className="h-6 w-2/3 rounded bg-white/10" />
-            <div className="h-4 w-1/2 rounded bg-white/5" />
-          </div>
-        </div>
-      </div>
-      <p className="mt-8 text-center text-sm text-muted">{dealingLine}</p>
-    </div>
-  );
-}
 
 export function SwipeDeck({
   restaurants,
@@ -244,7 +73,6 @@ export function SwipeDeck({
     const first = restaurants.findIndex((r) => !voted.has(r.id));
     return first === -1 ? restaurants.length : first;
   });
-  const [exitDir, setExitDir] = useState<SwipeDirection>("right");
   // One super-like per round; seeded from the server (survives reconnect) then set locally on use.
   const [superUsed, setSuperUsed] = useState(superSpent);
   const [vetoUsed, setVetoUsed] = useState(vetoSpent);
@@ -334,7 +162,6 @@ export function SwipeDeck({
       ]);
       setCanUndo(true);
       dismissHint();
-      setExitDir(dir);
       onSwipe(current.id, dir, isSuper, isVeto);
       // The card changes under a sighted user's eyes and silently for everyone else, so say it.
       onAnnounce?.(
@@ -499,19 +326,7 @@ export function SwipeDeck({
             ))
             .reverse()}
 
-          {/*
-          No AnimatePresence here, deliberately.
-          
-          It was wrapping this card so the outgoing one could fly off, and the exit animation never
-          ran: the presence context was correct (`isPresent: false` on the outgoing child) and the
-          `exit` prop reached the element, but framer never started the animation, so the card sat
-          there and AnimatePresence held it mounted forever waiting for an exit that never finished.
-          One card leaked per swipe, in the production build as well as in dev.
-          
-          Rendering the current card alone means React unmounts the previous one immediately, which
-          is what the screen already looked like, minus the pile of dead cards behind it. Restoring
-          the throw animation is a separate job and wants a real thumb to tune against.
-        */}
+          {/* Render only the active card so outgoing cards cannot retain focus or gestures. */}
           {/* Named for the view transition into the match screen: the browser pairs this box with the
             one in `MatchScreen` carrying the same name and tweens between them. `contents` cannot
             carry it - a box is required - so the name goes on the wrapper that has one. */}
@@ -519,10 +334,9 @@ export function SwipeDeck({
             className={dealing ? "deal-in absolute inset-0" : "contents"}
             style={{ viewTransitionName: "chosen-card" } as CSSProperties}
           >
-            <TopCard
+            <SwipeCard
               key={restaurants[index]!.id}
               restaurant={restaurants[index]!}
-              exitDir={exitDir}
               revisit={revisitNote(visited, restaurants[index]!.id)}
               onCommit={commit}
               onOpenDetail={setDetail}
@@ -530,13 +344,7 @@ export function SwipeDeck({
           </div>
         </div>
 
-        {/*
-         * One slot for both, at a height it always occupies.
-         *
-         * Two conditional paragraphs would jump the buttons down as either appeared and back up when it
-         * went, and a control that moves as you reach for it is worse than the message is useful.
-         * would otherwise carry this is `lg:` only, so a phone has nowhere else to read it.
-         */}
+        {/* Reserve one feedback slot so vote controls stay under the user’s finger. */}
         <p
           className={`mt-4 flex h-8 items-center justify-center px-4 text-center text-xs ${
             spentNote ? "text-flare" : showHint ? "animate-pulse text-muted" : "text-muted"

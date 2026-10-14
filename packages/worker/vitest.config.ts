@@ -24,7 +24,6 @@ export default defineWorkersConfig(async () => {
               // The host-reassign grace, shrunk so the handover test runs in milliseconds.
               HOST_GRACE_MS: "50",
               GOOGLE_PLACES_API_KEY: "",
-              FOURSQUARE_API_KEY: "",
             },
           },
         },

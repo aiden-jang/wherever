@@ -32,11 +32,13 @@ function wazeDirectionsUrl(r: Restaurant): string {
 export function DirectionsDialog({
   restaurant,
   addressCopied,
+  addressCopyFailed,
   onCopyAddress,
   onClose,
 }: {
   restaurant: Restaurant;
   addressCopied: boolean;
+  addressCopyFailed: boolean;
   onCopyAddress: () => Promise<void>;
   onClose: () => void;
 }) {
@@ -86,7 +88,11 @@ export function DirectionsDialog({
           disabled={addressCopied}
           className="mt-3 w-full px-4 py-2 text-xs font-semibold text-muted transition hover:text-cream disabled:opacity-70"
         >
-          {addressCopied ? "Address copied" : "Copy address instead"}
+          {addressCopied
+            ? "Address copied"
+            : addressCopyFailed
+              ? "Couldn’t copy. Select the address above."
+              : "Copy address instead"}
         </button>
       )}
     </Modal>

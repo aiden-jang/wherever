@@ -1,9 +1,6 @@
 import type { SessionFilters, SessionStatus, Vote, VoteMode } from "@wherever/shared";
 
-/*
- * The two shapes a room keeps: what it persists about the session, and what it hangs on each
- * socket. Split out so the deck helpers can read a session without importing the Durable Object.
- */
+/* Persisted room metadata and hibernation-safe socket attachments. */
 
 export interface SessionMeta {
   code: string;

@@ -49,7 +49,7 @@ function comments(source, isCss) {
 
 const src = globSync("packages/*/src/**/*.{ts,tsx,css}").filter((f) => !/\.(test|spec)\.tsx?$/.test(f));
 // The gates' own source counts. A check that does not cover itself stops being checked.
-const own = globSync("scripts/*.mjs");
+const own = [...globSync("scripts/*.mjs"), ...globSync("packages/*/scripts/*.{mjs,cjs}")];
 
 const seen = new Map();
 const stranded = [];

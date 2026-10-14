@@ -19,7 +19,9 @@ async function join(code: string, displayName: string, clientId?: string) {
   const socket = res.webSocket!;
   socket.accept();
   const seen: ServerMessage[] = [];
-  socket.addEventListener("message", (e) => seen.push(JSON.parse(e.data as string) as ServerMessage));
+  socket.addEventListener("message", (e) => {
+    seen.push(JSON.parse(e.data as string) as ServerMessage);
+  });
   const send = (msg: ClientMessage) => socket.send(JSON.stringify(msg));
   const until = async <T extends ServerMessage["type"]>(
     type: T,

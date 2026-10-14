@@ -15,18 +15,12 @@ import {
   type VisitedPlace,
 } from "@wherever/shared";
 import { createRestaurantSource, isDemoSource, MockRestaurantSource } from "./restaurantSource.js";
+
 import { visitedPlaces } from "./db/schema.js";
 import type { Env } from "./env.js";
 import type { SessionMeta } from "./roomState.js";
 
-/*
- * Where a deck comes from: the source, the budget that decides whether it is real, the vibe folded
- * into the filters, and everywhere the group has already been.
- *
- * Lifted out of SessionRoom because none of it is about a room. It reads storage and env and knows
- * nothing about sockets, which is what made it the cleanest thing to cut off a Durable Object that
- * had grown to a thousand lines.
- */
+/* Deck sourcing combines the provider, monthly search budget, vibe filters, and visited history. It does not own sockets. */
 
 /** Everywhere this session has been, for the cooldown in revisit.ts to reason about. */
 export async function visitedFor(env: Env, code: string): Promise<VisitedPlace[]> {

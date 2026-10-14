@@ -1,70 +1,57 @@
-# Deploying Wherever, Honestly
+# Hosting and configuration
 
-Everything runs on Cloudflare's free tier: the Worker + Durable Objects + D1 for the backend, and Pages for the web app.
+One Cloudflare Worker on `wherever.aidenjang.com` serves the SPA, API, and sockets.
+There is no separate Pages deployment or cross-origin production API.
 
-**You do not normally need any of this.** Merging to `main` deploys both halves, and CI does it by running the same root script you would:
+## Normal delivery
 
-```bash
-pnpm run deploy    # worker (migrations, then code), then build + publish web to Pages
-```
+Merging to `main` starts CI. The complete check job, including browser journeys,
+must succeed before the delivery job runs `pnpm run deploy:only`. The Worker
+script builds web assets, applies pending remote D1 migrations, then ships code
+and assets together. A failure stops the chain.
 
-Say `run`. Bare `pnpm deploy` is a pnpm builtin for packing a workspace package and will fail with `ERR_PNPM_INVALID_DEPLOY_TARGET`.
+The repository secret `CLOUDFLARE_API_TOKEN` needs Workers Scripts and D1 permissions.
+The configured custom domain and D1 binding live in `packages/worker/wrangler.toml`.
+The asset fallback supports `/s/:code` and `/share` directly.
 
-The steps below are the individual halves, for standing things up by hand. They need your own Cloudflare login, so run them yourself.
+## Manual delivery
 
-One Worker on `wherever.aidenjang.com` serves both the SPA and the API (`/api/*`, `/ws/:code`).
-One origin means no CORS and one deploy.
-
-## 1. Authenticate
-
-```bash
-cd packages/worker
-npx wrangler login
-```
-
-## 2. Apply D1 migrations
-
-`pnpm run deploy` and the CI deploy both apply pending migrations before shipping code, so this is only needed when standing the database up by hand. The `database_id` is committed in `packages/worker/wrangler.toml`, so there is nothing to create:
+From the repository root, after authentication and browser setup:
 
 ```bash
-npx wrangler d1 migrations apply wherever --remote
+pnpm run deploy
 ```
 
-(Only run `npx wrangler d1 create wherever` if you are standing up a brand-new database and need to replace the `database_id` in `wrangler.toml`.)
+The root command runs full verification before invoking the same delivery script.
+Use `run`; the bare package-manager command of that name has different behavior.
+Remote migrations and delivery modify production and should be performed deliberately.
 
-## 3. Deploy the Worker
+## Restaurant configuration
+
+The committed Worker source flag selects Google; without a key it falls back to
+sample restaurants. Local `.dev.vars.example` selects `mock` explicitly.
+`RESTAURANT_SOURCE` accepts `google` or `mock`; unknown values log a warning and
+serve labeled samples. Live searches require `GOOGLE_PLACES_API_KEY` as a Worker
+secret. Location lookup also requires the provider's Geocoding API.
+
+`SEARCH_MONTHLY_CAP` and `PHOTO_MONTHLY_CAP` configure monthly search/photo
+reservations. Geocoding is rate-limited and cached separately. Provider quotas and
+billing settings should account for the actual requested fields, other consumers
+of the key, and local development. A local usage meter is separate from production.
+
+Photo URLs are relative by default. `PUBLIC_API_BASE` is an optional alternate
+photo origin; leave it empty for normal same-origin operation.
+
+## Operations
+
+Workers Logs is enabled. From the root:
 
 ```bash
-pnpm --filter @wherever/worker run deploy
+pnpm --filter @wherever/worker exec wrangler tail
 ```
 
-This builds the SPA, applies pending D1 migrations, then deploys the Worker with the built
-assets. It also provisions the custom domains declared in `wrangler.toml`.
+`GET /api/health` reports the configured source. `GET /api/usage` reports search and
+photo reservations and caps. The daily scheduled handler prunes old D1 session rows
+and visited records; room storage has its own Durable Object lifetime.
 
-**Deep links need no extra config.** `/s/CODE` and `/share` are SPA routes, not files, and
-`not_found_handling = "single-page-application"` in `wrangler.toml` serves `index.html` for them.
-Real files are matched first, so assets and icons are unaffected. This replaced a Pages
-`_redirects` file, which only worked because the web app used to be a separate Pages project.
-
-## Restaurant data (Google Places)
-
-The app ships on the seeded **mock** source, so it deploys and works with no API key. To go live with real places:
-
-1. Add the source flag under `[vars]` in `packages/worker/wrangler.toml`:
-   ```toml
-   [vars]
-   RESTAURANT_SOURCE = "google"
-   ```
-2. Set the key as a Worker secret (never commit it):
-   ```bash
-   npx wrangler secret put GOOGLE_PLACES_API_KEY
-   ```
-3. Redeploy the Worker.
-
-Restrict the key to the Places API and set a per-API usage quota to stay inside the budget. Place photos are proxied through the Worker's `/api/photo` route (keeps the key server-side, edge-caches the paid Place Photo SKU), which is why `PUBLIC_API_BASE` must match the API's custom domain. Foursquare remains available as an alternate source (`RESTAURANT_SOURCE=foursquare` + `FOURSQUARE_API_KEY`).
-
-## Notes
-
-- CORS on the Worker allows any origin, so the Pages site can call it cross-origin.
-- Local dev is unaffected: with the `VITE_*` vars unset, the app talks to `localhost:8787` through the Vite proxy, and with `RESTAURANT_SOURCE`/key unset it uses the mock deck.
-- Tail live logs with `npx wrangler tail`; browse them in the dashboard under Workers & Pages → the worker → Logs.
+Follow [migration guidance](packages/worker/migrations/README.md) when changing the schema.

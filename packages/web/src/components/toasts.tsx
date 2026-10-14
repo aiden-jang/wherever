@@ -2,14 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Participant } from "@wherever/shared";
 import { play } from "./sound.js";
 
-/*
- * Everything that says a thing once and then goes away: the stack itself, and the three rules for
- * what earns a place in it.
- *
- * Lifted out of the lobby because none of it is about the lobby. It is the same shape three times —
- * notice a change, say it, forget it — and it was three quarters of the state in a file whose real
- * job is running a round.
- */
+/* Announcements expire after delivery and seed silently from the first known roster. */
 
 export interface Toast {
   id: string;

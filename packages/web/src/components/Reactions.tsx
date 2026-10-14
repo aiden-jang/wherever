@@ -1,5 +1,5 @@
 import { REACTION_EMOJIS, reactionLane } from "@wherever/shared";
-import type { FloatingReaction } from "../useSessionSocket.js";
+import type { FloatingReaction } from "../sessionState.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 

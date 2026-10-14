@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTransitionNavigate } from "../useViewTransition.js";
-import { LocationPicker } from "../components/FilterFields";
+import { LocationPicker } from "../components/LocationPicker";
 import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
 import type { SessionFilters } from "@wherever/shared";
 import { TeaserStack } from "../components/TeaserStack.js";
@@ -12,19 +12,28 @@ import { createSession, getLocation, rememberName, recallName, DEFAULT_FILTERS }
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
 
-function CreateForm({ onError }: { onError: (m: string) => void }) {
+function CreateForm() {
   const go = useTransitionNavigate();
   const [name, setName] = useState(recallName());
   const [filters, setFilters] = useState<SessionFilters>(DEFAULT_FILTERS);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [locOff, setLocOff] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const alive = useRef(true);
+  useLayoutEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
   // Resolve location up front so we know whether to offer the NYC neighborhood shortcuts, and
   // reuse it at submit. If it's unavailable (denied/timeout), flag it so we can tell the user their
   // results will use a default area instead of silently serving the wrong city.
   useEffect(() => {
     getLocation().then((l) => {
+      if (!alive.current) return;
       setLoc(l);
       setLocOff(l === null);
     });
@@ -34,6 +43,7 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
     e.preventDefault();
     if (!name.trim() || busy) return;
     setBusy(true);
+    setError(null);
     try {
       rememberName(name.trim());
       // Apply browser geolocation only in the pure "near me" case. If the host picked a neighborhood
@@ -44,9 +54,10 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
         ...filters,
         ...(usingExplicitCenter ? {} : (loc ?? {})),
       });
-      go(`/s/${code}`);
+      if (alive.current) go(`/s/${code}`);
     } catch (err) {
-      onError(err instanceof Error ? err.message : "Something broke. Probably not you.");
+      if (!alive.current) return;
+      setError(err instanceof Error ? err.message : "Something broke. Probably not you.");
       setBusy(false);
     }
   }
@@ -66,6 +77,11 @@ function CreateForm({ onError }: { onError: (m: string) => void }) {
       {/* Location only. Everything else is set in the lobby, where the group can see it and where
           somebody is waiting for people to join anyway. */}
       <LocationPicker filters={filters} onChange={setFilters} />
+      {error && (
+        <p role="alert" className="text-sm text-flare">
+          {error}
+        </p>
+      )}
       <button
         type="submit"
         disabled={!name.trim() || busy}
@@ -179,7 +195,6 @@ export default function Landing() {
     if (!window.location.search) return;
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
-  const [error, setError] = useState<string | null>(null);
 
   return (
     <main className="landing">
@@ -204,10 +219,24 @@ export default function Landing() {
           </p>
           <p className="landing-aside">“Anything is fine” has entered the chat. Again.</p>
           <div className="landing-actions">
-            <button type="button" onClick={() => setModal("create")} className="landing-start">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.currentTarget.focus({ preventScroll: true });
+                setModal("create");
+              }}
+              className="landing-start"
+            >
               Start a session <span aria-hidden>↗</span>
             </button>
-            <button type="button" onClick={() => setModal("join")} className="landing-join">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.currentTarget.focus({ preventScroll: true });
+                setModal("join");
+              }}
+              className="landing-join"
+            >
               Join with a code <span aria-hidden>→</span>
             </button>
           </div>
@@ -270,17 +299,12 @@ export default function Landing() {
 
       {modal === "create" && (
         <Modal title="Start a session" onClose={() => setModal(null)}>
-          <CreateForm onError={setError} />
+          <CreateForm />
         </Modal>
       )}
       {modal === "join" && (
         <Modal title="Got a code?" onClose={() => setModal(null)}>
           <JoinForm />
-        </Modal>
-      )}
-      {error && (
-        <Modal title="That went poorly" onClose={() => setError(null)}>
-          <p className="text-muted">{error}</p>
         </Modal>
       )}
     </main>

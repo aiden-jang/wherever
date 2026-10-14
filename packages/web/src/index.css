@@ -21,31 +21,17 @@
   /* The orange between ember and gold. Used by the confetti and the teaser fan. */
   --color-flame: #ff8a3d;
 
-  /* The label tier under text-xs. It was written inline fourteen times as text-[10px], plus a
-     stray 9px and 11px; one name keeps the small print one size. */
+  /* A shared size for compact metadata and secondary labels. */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 1.15;
 
-  /*
-   * The full-screen state: a big glyph, a heading, a line of explanation. Five screens use it -- no
-   * such session, nothing survived the filters, 404, a crash, nobody agreed -- and it was written
-   * inline each time, so one of the five had drifted a step smaller than its four peers.
-   *
-   * The glyph has its own name on purpose. These pictographs were all sized off the type scale,
-   * which is not text riding on a token meant for text: changing a heading size later would
-   * silently resize a 60px shrug. This is the one glyph size that repeats (six of them, counting
-   * the teaser cards); the handful of one-off sizes elsewhere are left as they are, because a name
-   * used once is not a scale.
-   */
+  /* State headings and decorative glyphs use separate tokens so changing typography does not resize pictographs. */
   --text-state: 2.25rem;
   --text-state--line-height: 1.1;
   --text-glyph: 3.75rem;
   --text-glyph--line-height: 1;
 
-  /*
-   * The card corner. Written inline as rounded-[28px] six times, and it is the one radius in the app
-   * that is not on Tailwind's scale, sitting deliberately between 3xl (24px) and 4xl (32px).
-   */
+  /* Cards share one corner radius between the standard panel sizes. */
   --radius-card: 28px;
 
   /* The "Variable" suffix is the family name @fontsource registers, not a decoration. Drop it and the
@@ -143,14 +129,7 @@ p {
   text-wrap: pretty;
 }
 
-/* Keyboard focus indicator across every interactive control (mouse clicks stay ring-free via
-   :focus-visible). Outline follows border-radius in modern browsers, so rounded buttons get a
-   rounded ring.
-
-   <summary> and <select> are focusable without a tabindex, so neither was matched by the list below
-   and both fell back to the browser's own ring. The app uses four disclosures and a duration picker.
-   The text inputs are the deliberate exception: they set outline-none and answer focus with a border
-   colour instead, which is a decision, not an omission. */
+/* A visible keyboard outline covers buttons, links, disclosures, fields, and custom focus targets. */
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible,
@@ -268,8 +247,7 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Card stack float. The rotation this used to carry was a per-card knob applied to the container,
-   so `--rot` was never set and every frame rotated by the 0deg fallback. */
+/* Vertical drift preserves each card’s own rotation. */
 @keyframes float-soft {
   0%,
   100% {
@@ -317,15 +295,7 @@ body {
   animation: pop-in 0.5s var(--ease-bounce);
 }
 
-/*
- * The verdict, arriving in the order it is read.
- *
- * Everything on this screen used to land in the same frame, which is a lot to take in at the one
- * moment the group is looking up from their phones: the headline, the place, the tally and the
- * reasons all at once. Staggered, the eye is led "it's decided" -> the place -> by how much -> why,
- * and the whole sequence is over in under half a second, so it reads as one arrival rather than a
- * queue. `backwards` holds each one hidden until its turn instead of flashing first.
- */
+/* Stagger the verdict, pick, tally, and reasons as one brief reveal; reduced motion shows them together. */
 .reveal {
   animation: pop-in 0.42s var(--ease-bounce) backwards;
   animation-delay: var(--reveal-at, 0ms);
@@ -443,17 +413,7 @@ body {
   }
 }
 
-/*
- * Controls are pressed, not read.
- *
- * There are 84 buttons in this app and one of them said `select-none`. On a phone that means a long
- * press on any of the other 83 pops the text-selection callout over a button, and on the deck - where
- * the gesture *is* a press and drag - a slow swipe starts selecting the restaurant's name instead of
- * moving the card.
- *
- * Scoped to things you press. Prose stays selectable, including the address on the match screen,
- * which somebody may well want to copy by hand.
- */
+/* Pressable controls suppress text selection and the mobile callout. Prose, including restaurant addresses, remains selectable. */
 button,
 summary,
 [role="button"] {

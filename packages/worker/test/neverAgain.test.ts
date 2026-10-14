@@ -28,7 +28,9 @@ async function connect(code: string) {
   if (!socket) throw new Error(`no socket (status ${res.status})`);
   socket.accept();
   const seen: ServerMessage[] = [];
-  socket.addEventListener("message", (e) => seen.push(JSON.parse(e.data as string) as ServerMessage));
+  socket.addEventListener("message", (e) => {
+    seen.push(JSON.parse(e.data as string) as ServerMessage);
+  });
   const send = (msg: ClientMessage) => socket.send(JSON.stringify(msg));
   const waitFor = async (type: ServerMessage["type"]) => {
     for (let i = 0; i < 100; i += 1) {

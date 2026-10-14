@@ -1,5 +1,6 @@
 import type { AmenityKey, PriceTier, Restaurant, SessionFilters } from "@wherever/shared";
 import { googleTypeFor, NEIGHBORHOODS } from "@wherever/shared";
+import { googleTypesFor, mapGooglePlace, type GooglePlace } from "./googlePlace.js";
 import { MOCK_DECK } from "./mockDeck.js";
 
 // Fallback center when the host neither picked an area nor shared a location; keeps the app
@@ -69,16 +70,7 @@ export function passesAmenities(
   return required.every((key) => amenities?.[key] === true);
 }
 
-/**
- * Seeded data, filtered exactly the way the real source filters.
- *
- * Not just a test fixture: this is the deck a real session gets when the month's Google budget runs
- * out. A filter that works against Google and not here is one that silently stops working in front of
- * people, and three did - exclusions were dropped, the price-tier list was ignored in favour of the
- * max alone, and amenities were never checked, which is most of what a vibe does.
- *
- * `openNow` is the one honest exception: this data has no opening hours, so everything reads as open.
- */
+/* Apply the same cuisine, price, rating, review, and amenity filters to sample data. Sample opening status is a stand-in rather than live hours. */
 export class MockRestaurantSource implements RestaurantSource {
   async fetchDeck(filters: SessionFilters): Promise<Restaurant[]> {
     const excluded = new Set((filters.excludedCategories ?? []).map((c) => c.toLowerCase()));
@@ -99,201 +91,6 @@ export class MockRestaurantSource implements RestaurantSource {
 }
 
 // ---- Google Places (New) ----
-
-/** Subset of a Google Places (New) place we read from a searchNearby response. */
-export interface GooglePlace {
-  id: string;
-  displayName?: { text?: string };
-  primaryTypeDisplayName?: { text?: string };
-  location?: { latitude: number; longitude: number };
-  rating?: number;
-  userRatingCount?: number;
-  /** Enum string: PRICE_LEVEL_FREE | _INEXPENSIVE | _MODERATE | _EXPENSIVE | _VERY_EXPENSIVE. */
-  priceLevel?: string;
-  formattedAddress?: string;
-  photos?: { name: string }[];
-  currentOpeningHours?: { openNow?: boolean; weekdayDescriptions?: string[] };
-  googleMapsUri?: string;
-  websiteUri?: string;
-  nationalPhoneNumber?: string;
-  businessStatus?: string;
-  priceRange?: { startPrice?: GoogleMoney; endPrice?: GoogleMoney };
-  editorialSummary?: { text?: string };
-  accessibilityOptions?: { wheelchairAccessibleEntrance?: boolean };
-  goodForGroups?: boolean;
-  servesVegetarianFood?: boolean;
-  outdoorSeating?: boolean;
-  allowsDogs?: boolean;
-  reservable?: boolean;
-  takeout?: boolean;
-  delivery?: boolean;
-  servesCocktails?: boolean;
-  servesBrunch?: boolean;
-  liveMusic?: boolean;
-  goodForChildren?: boolean;
-}
-
-/** Google's Money shape: an integer amount as a string plus a currency code. */
-interface GoogleMoney {
-  currencyCode?: string;
-  units?: string;
-}
-
-/** At most this many photos are surfaced per place for the detail gallery. */
-const MAX_GALLERY_PHOTOS = 5;
-
-const CURRENCY_SYMBOL: Record<string, string> = {
-  USD: "$",
-  CAD: "$",
-  AUD: "$",
-  NZD: "$",
-  EUR: "€",
-  GBP: "£",
-  JPY: "¥",
-  CNY: "¥",
-  KRW: "₩",
-};
-
-function formatMoney(m?: GoogleMoney): string | null {
-  if (!m?.units) return null;
-  const symbol = m.currencyCode ? (CURRENCY_SYMBOL[m.currencyCode] ?? `${m.currencyCode} `) : "";
-  return `${symbol}${m.units}`;
-}
-
-/** Turn Google's start/end money range into a compact label like "$10–30", "$10+", or "Up to $30". */
-export function formatPriceRange(range?: {
-  startPrice?: GoogleMoney;
-  endPrice?: GoogleMoney;
-}): string | null {
-  if (!range) return null;
-  const start = formatMoney(range.startPrice);
-  const end = formatMoney(range.endPrice);
-  // Drop the repeated symbol on the high end when both share a currency: "$10-30", not "$10-$30".
-  // Hyphen, not an en-dash: a number range reads the same and the dash characters are the single
-  // most reliable giveaway that a string was written by a machine.
-  if (start && end) {
-    const endBare = range.endPrice?.units ?? end;
-    const sameCurrency = range.startPrice?.currencyCode === range.endPrice?.currencyCode;
-    return `${start}-${sameCurrency ? endBare : end}`;
-  }
-  if (start) return `${start}+`;
-  if (end) return `Up to ${end}`;
-  return null;
-}
-
-const GOOGLE_PRICE_TIER: Record<string, PriceTier> = {
-  PRICE_LEVEL_FREE: 1,
-  PRICE_LEVEL_INEXPENSIVE: 1,
-  PRICE_LEVEL_MODERATE: 2,
-  PRICE_LEVEL_EXPENSIVE: 3,
-  PRICE_LEVEL_VERY_EXPENSIVE: 4,
-};
-
-/**
- * Map our cuisine values to Google primary types via the shared cuisine list (single source of
- * truth). Empty or unmapped -> a generic restaurant search.
- */
-export function googleTypesFor(categories: string[]): string[] {
-  const types = categories.map((c) => googleTypeFor(c)).filter((t): t is string => Boolean(t));
-  return types.length > 0 ? [...new Set(types)] : ["restaurant"];
-}
-
-/**
- * A Google photo resource name looks like `places/<id>/photos/<ref>`. We only ever splice this
- * into `https://places.googleapis.com/v1/<name>/media`, so validate it tightly to keep the photo
- * route from being turned into an open proxy.
- */
-export function isValidPhotoRef(ref: string): boolean {
-  return /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/.test(ref);
-}
-
-/**
- * Build the URL the client's <img> loads. It points at our own /api/photo route (never Google
- * directly) so the API key stays server-side. `base` is the Worker's public origin in prod and
- * empty in dev, where a relative URL is proxied by Vite.
- */
-export function photoProxyUrl(name: string, base = ""): string {
-  return `${base}/api/photo?ref=${encodeURIComponent(name)}`;
-}
-
-/** Great-circle distance in meters between two lat/lng points. */
-export function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const R = 6_371_000;
-  const toRad = (d: number): number => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
-}
-
-/**
- * Pure mapping from a Google place to our domain shape. Google's Nearby Search (New) doesn't
- * return distance, so we compute it from the search center. `photoBase` is the Worker's public
- * origin used to build the photo-proxy URL (empty in dev). Unit-tested.
- */
-export function mapGooglePlace(
-  p: GooglePlace,
-  center: { lat: number; lng: number },
-  photoBase = "",
-): Restaurant {
-  // Proxy the first few photo refs (already in the search response — no extra billing for the refs
-  // themselves; a photo is only paid for when its bytes are actually fetched via /api/photo).
-  const photoUrls = (p.photos ?? [])
-    .map((ph) => ph.name)
-    .filter((name): name is string => Boolean(name))
-    .slice(0, MAX_GALLERY_PHOTOS)
-    .map((name) => photoProxyUrl(name, photoBase));
-  // Keep only amenities Google actually reported (a missing field means "unknown", not "no").
-  const amenities: Partial<Record<AmenityKey, boolean>> = {};
-  if (typeof p.goodForGroups === "boolean") amenities.goodForGroups = p.goodForGroups;
-  if (typeof p.servesVegetarianFood === "boolean") amenities.servesVegetarianFood = p.servesVegetarianFood;
-  if (typeof p.outdoorSeating === "boolean") amenities.outdoorSeating = p.outdoorSeating;
-  if (typeof p.allowsDogs === "boolean") amenities.allowsDogs = p.allowsDogs;
-  if (typeof p.reservable === "boolean") amenities.reservable = p.reservable;
-  if (typeof p.takeout === "boolean") amenities.takeout = p.takeout;
-  if (typeof p.delivery === "boolean") amenities.delivery = p.delivery;
-  if (typeof p.servesCocktails === "boolean") amenities.servesCocktails = p.servesCocktails;
-  if (typeof p.servesBrunch === "boolean") amenities.servesBrunch = p.servesBrunch;
-  if (typeof p.liveMusic === "boolean") amenities.liveMusic = p.liveMusic;
-  if (typeof p.goodForChildren === "boolean") amenities.goodForChildren = p.goodForChildren;
-  return {
-    id: p.id,
-    name: p.displayName?.text ?? "Unknown spot",
-    category: p.primaryTypeDisplayName?.text ?? "Food",
-    priceTier: (p.priceLevel ? GOOGLE_PRICE_TIER[p.priceLevel] : undefined) ?? 2,
-    // Google already rates 0-5, matching our scale.
-    rating: p.rating != null ? Math.round(p.rating * 10) / 10 : null,
-    reviewCount: p.userRatingCount ?? null,
-    distanceMeters: p.location
-      ? haversineMeters(center, { lat: p.location.latitude, lng: p.location.longitude })
-      : 0,
-    // Route through our own /api/photo proxy so the API key never reaches the client and the
-    // paid Place Photo SKU is fetched (and edge-cached) on demand.
-    imageUrl: photoUrls[0] ?? null,
-    photos: photoUrls,
-    address: p.formattedAddress ?? null,
-    googleMapsUri: p.googleMapsUri ?? null,
-    website: p.websiteUri ?? null,
-    phone: p.nationalPhoneNumber ?? null,
-    openNow: p.currentOpeningHours?.openNow ?? null,
-    /*
-     * Swap Google's en-dash for our hyphen, and nothing else.
-     *
-     * `weekdayDescriptions` arrives as "Monday: 8:00 AM - 11:00 PM" and is rendered verbatim, so an
-     * upstream en-dash ends up sitting next to our own typography. A time range reads the same either
-     * way, and it is the one character that makes a page look machine-set.
-     */
-    hours:
-      p.currentOpeningHours?.weekdayDescriptions?.map((line) => line.replace(/\s[–—]\s/g, " - ")) ?? null,
-    businessStatus: p.businessStatus ?? null,
-    priceRange: formatPriceRange(p.priceRange),
-    editorialSummary: p.editorialSummary?.text ?? null,
-    wheelchairAccessible: p.accessibilityOptions?.wheelchairAccessibleEntrance ?? null,
-    amenities,
-  };
-}
 
 export class GooglePlacesRestaurantSource implements RestaurantSource {
   constructor(
@@ -318,10 +115,7 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": this.apiKey,
-        // Field mask drives the billing tier: request only what the deck shows. rating,
-        // userRatingCount, priceLevel and currentOpeningHours are all the same (top) tier, and
-        // photos is a lower tier, so none of these add cost. Fetching the photo bytes is a
-        // separate SKU, billed by /api/photo.
+        // Card and detail fields determine the provider’s billing tier. Photo bytes use /api/photo.
         "X-Goog-FieldMask": [
           "places.id",
           "places.displayName",
@@ -333,22 +127,14 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
           "places.formattedAddress",
           "places.photos",
           "places.currentOpeningHours",
-          // All below are already within the tier this request is billed at (rating/priceLevel are
-          // the top tier), so surfacing them for the detail view adds no cost.
           "places.googleMapsUri",
           "places.websiteUri",
           "places.nationalPhoneNumber",
-          // businessStatus is a lower (Pro) tier and priceRange is the same (Enterprise) tier as
-          // rating/priceLevel, so neither raises the SKU this request is already billed at.
           "places.businessStatus",
           "places.priceRange",
-          // accessibilityOptions is Pro-tier (free at our tier). editorialSummary is Atmosphere-tier,
-          // which nudges the search SKU up ($35→$40/1k) — but both tiers include 1,000 free searches
-          // and the monthly cap keeps us under that, so in practice it's $0.
+          // Requested fields determine the provider’s billing tier; quotas must match this mask.
           "places.accessibilityOptions",
           "places.editorialSummary",
-          // Amenity flags (Atmosphere tier — already our tier via editorialSummary, so no extra
-          // cost). Used for the amenity chips and the optional amenity filters.
           "places.goodForGroups",
           "places.servesVegetarianFood",
           "places.outdoorSeating",
@@ -376,12 +162,12 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
         },
       }),
     });
-    // Fail soft: an API hiccup shows "nothing nearby" rather than crashing the round.
+    // A provider failure is distinct from a valid empty result; the host can retry.
     if (!res.ok) throw new Error("places_fetch_failed"); // distinct from "no results" so the caller can offer a retry
 
     const data = (await res.json()) as { places?: GooglePlace[] };
     const places = (data.places ?? []).filter((p) => p.id && p.displayName?.text);
-    // Open-now reads the raw place, so filter before mapping (Restaurant carries no hours).
+    // Filter by live open-now status before normalization.
     const visible = filters.openNow ? places.filter((p) => p.currentOpeningHours?.openNow === true) : places;
     return (
       visible
@@ -408,14 +194,7 @@ export function createRestaurantSource(
     case "mock":
       return new MockRestaurantSource();
     default:
-      /*
-       * A value nobody meant. `RESTAURANT_SOURCE` took a third name for months after that source was
-       * deleted, and the README went on telling people to set it, so this is documented rather than
-       * hypothetical.
-       *
-       * Still deals the mock, because an app that refuses to deal cards is worse than one dealing samples.
-       * But it says so, and `isDemoSource` lets the caller tell the room.
-       */
+      /* Unknown source names serve the sample deck and log the configuration mistake. The client receives a sample-data reason. */
       console.warn(`Unknown RESTAURANT_SOURCE "${kind}". Serving the sample deck.`);
       return new MockRestaurantSource();
   }

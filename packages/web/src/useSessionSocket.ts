@@ -1,55 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
 import { flushSync } from "react-dom";
-import type {
-  ClientMessage,
-  DecisionAlternative,
-  Restaurant,
-  ServerMessage,
-  Vibe,
-  Session,
-  TastePulse,
-  VisitedPlace,
-  DemoReason,
-} from "@wherever/shared";
-
-type Status = "connecting" | "open" | "closed";
-
-export interface Progress {
-  finishedCount: number;
-  totalParticipants: number;
-  /** Ids of participants who've finished; present only in reveal-voters sessions. */
-  finishedIds?: string[];
-  tastePulse?: TastePulse;
-  /** Every vote cast this round, by anyone. Moves on every swipe. */
-  votesCast?: number;
-}
-
-export type MatchState =
-  | {
-      kind: "match";
-      restaurant: Restaurant;
-      rightSwipes: number;
-      alternatives: DecisionAlternative[];
-      totalParticipants: number;
-      vetoedCount: number;
-      tiedWith: number;
-      vetoedTop: boolean;
-      superTipped: boolean;
-      round: number;
-    }
-  | { kind: "none"; vetoedCount: number }
-  | null;
-
-/** A reaction floating on screen; auto-removed after its animation. */
-export interface FloatingReaction {
-  id: string;
-  emoji: string;
-  from: string;
-  /** Stable id of the sender, so two people with one name still get their own lane. */
-  fromId?: string;
-  /** A consequence rather than chatter, and shown as one. */
-  kind?: "veto" | "super";
-}
+import type { ClientMessage, ServerMessage } from "@wherever/shared";
+import { initialSessionState, sessionReducer } from "./sessionState.js";
 
 /**
  * A stable id per session code, so a reconnect keeps the same identity and votes.
@@ -80,11 +32,6 @@ function clientIdFor(code: string): string {
 }
 
 /**
- * Owns the WebSocket to a session's Durable Object: connects, sends `join` with
- * a stable clientId, and surfaces server-pushed state (session, deck, progress,
- * match).
- */
-/**
  * A state update inside a view transition, where the browser has one. Not the router's: this swap is
  * a websocket message arriving, so nothing else would start one. Skipped under reduced motion.
  */
@@ -96,43 +43,22 @@ function withTransition(update: () => void) {
 }
 
 export function useSessionSocket(code: string, displayName: string) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [deck, setDeck] = useState<Restaurant[] | null>(null);
-  // True when the deck is the sample fallback served because the monthly live-data budget is spent.
-  const [demo, setDemo] = useState<DemoReason | null>(null);
-  const [alreadyVoted, setAlreadyVoted] = useState<string[]>([]);
-  // Whether this client already spent its super-like this round (seeded from the deck on reconnect).
-  const [superUsed, setSuperUsed] = useState(false);
-  // One state, not two: separate ones would be two toasts racing for the same moment.
-  const [deckNote, setDeckNote] = useState<string | null>(null);
-  const [behindBy, setBehindBy] = useState(0);
-  // Counter, not a boolean: a second nudge has to be distinguishable from the first.
-  const [nudges, setNudges] = useState(0);
-  const [vetoUsed, setVetoUsed] = useState(false);
-  // Absolute epoch-ms deadline when the round auto-decides (null = no timer this round).
-  const [roundEndsAt, setRoundEndsAt] = useState<number | null>(null);
-  const [progress, setProgress] = useState<Progress | null>(null);
-  const [match, setMatch] = useState<MatchState>(null);
-  // Tallies for the group and this client's own pick. The server never sends anybody else's.
-  const [vibeCounts, setVibeCounts] = useState<Partial<Record<Vibe, number>>>({});
-  const [myVibe, setMyVibe] = useState<Vibe | null>(null);
-  const [visited, setVisited] = useState<VisitedPlace[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [errorSeq, setErrorSeq] = useState(0);
-  const [status, setStatus] = useState<Status>("connecting");
-  const [everConnected, setEverConnected] = useState(false);
-  const [participantId, setParticipantId] = useState<string | null>(null);
-  const [reactions, setReactions] = useState<FloatingReaction[]>([]);
+  const [state, dispatch] = useReducer(sessionReducer, initialSessionState);
   const wsRef = useRef<WebSocket | null>(null);
   // Messages sent while the socket is mid-reconnect are buffered here and flushed on reopen, so a
   // vote cast during a blip isn't silently dropped (which would stall the round for everyone).
   const outboxRef = useRef<ClientMessage[]>([]);
 
+  useLayoutEffect(() => {
+    dispatch({ type: "reset" });
+    outboxRef.current = [];
+  }, [code, displayName]);
+
   useEffect(() => {
     if (!code || !displayName) return;
 
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    // In prod the Worker may live on another origin; in dev Vite proxies /ws.
+    // Same origin in production; Vite proxies /ws to the local Worker.
     const wsBase = import.meta.env.VITE_WS_BASE ?? `${proto}://${location.host}`;
 
     let disposed = false;
@@ -140,88 +66,28 @@ export function useSessionSocket(code: string, displayName: string) {
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     const MAX_ATTEMPTS = 6;
 
+    const reactionTimers = new Set<ReturnType<typeof setTimeout>>();
     const handleMessage = (event: MessageEvent) => {
-      const msg = JSON.parse(event.data as string) as ServerMessage;
-      switch (msg.type) {
-        case "session_state":
-          return setSession(msg.session);
-        case "deck":
-          // A fresh deck means a new round: clear any prior match outcome.
-          setMatch(null);
-          setProgress(null);
-          setDeck(msg.restaurants);
-          setDemo(msg.demo ?? null);
-          setDeckNote([msg.vibeEffect, msg.searchNote].filter(Boolean).join(" ") || null);
-          setBehindBy(msg.behindBy ?? 0);
-          setSuperUsed(msg.superUsed ?? false);
-          setVetoUsed(msg.vetoUsed ?? false);
-          setRoundEndsAt(msg.roundEndsAt ?? null);
-          return setAlreadyVoted(msg.alreadyVoted ?? []);
-        case "vote_progress":
-          return setProgress({
-            finishedCount: msg.finishedCount,
-            totalParticipants: msg.totalParticipants,
-            finishedIds: msg.finishedIds,
-            tastePulse: msg.tastePulse,
-            votesCast: msg.votesCast,
-          });
-        case "match":
-          /*
-           * Through a transition, so the chosen card grows into the result instead of the screen swapping.
-           * `SwipeDeck` and `MatchScreen` give their hero the same `view-transition-name` and the browser
-           * matches them across the two DOMs.
-           *
-           * `flushSync` is required: React batches by default, so otherwise the transition captures the old
-           * DOM, resolves, and animates nothing.
-           */
-          return withTransition(() =>
-            setMatch({
-              kind: "match",
-              restaurant: msg.restaurant,
-              rightSwipes: msg.rightSwipes,
-              alternatives: msg.alternatives ?? [],
-              totalParticipants: msg.totalParticipants,
-              vetoedCount: msg.vetoedCount ?? 0,
-              tiedWith: msg.tiedWith ?? 0,
-              vetoedTop: msg.vetoedTop ?? false,
-              superTipped: msg.superTipped ?? false,
-              round: msg.round ?? 1,
-            }),
-          );
-        case "nudge":
-          return setNudges((n) => n + 1);
-        case "no_match":
-          return setMatch({ kind: "none", vetoedCount: msg.vetoedCount ?? 0 });
-        case "history":
-          return setVisited(msg.visited);
-        case "vibes":
-          setVibeCounts(msg.counts);
-          return setMyVibe(msg.yours);
-        case "reaction": {
-          const id = crypto.randomUUID();
-          setReactions((prev) => [
-            ...prev,
-            {
-              id,
-              emoji: msg.emoji,
-              from: msg.from,
-              ...(msg.fromId ? { fromId: msg.fromId } : {}),
-              ...(msg.kind ? { kind: msg.kind } : {}),
-            },
-          ]);
-          // Drop it after the float animation so the list can't grow unbounded.
-          setTimeout(() => setReactions((prev) => prev.filter((r) => r.id !== id)), 4500);
-          return;
-        }
-        case "identity":
-          return setParticipantId(msg.participantId);
-        case "error":
-          setError(msg.message);
-          // Bumped so the same refusal twice in a row is still two events. Screens that show errors
-          // as a toast dedupe on this; without it, "pick a time that hasn't happened yet" would
-          // appear once and then stay silent however many times the host tried it.
-          setErrorSeq((n) => n + 1);
-          return;
+      if (disposed) return;
+      let msg: ServerMessage;
+      try {
+        msg = JSON.parse(event.data as string) as ServerMessage;
+      } catch {
+        return;
+      }
+      if (!msg || typeof msg !== "object" || typeof msg.type !== "string") return;
+      const reactionId = msg.type === "reaction" ? crypto.randomUUID() : undefined;
+      const update = () => {
+        if (!disposed) dispatch({ type: "received", message: msg, reactionId });
+      };
+      if (msg.type === "match") withTransition(update);
+      else update();
+      if (reactionId) {
+        const timer = setTimeout(() => {
+          reactionTimers.delete(timer);
+          if (!disposed) dispatch({ type: "expire_reaction", id: reactionId });
+        }, 4500);
+        reactionTimers.add(timer);
       }
     };
 
@@ -230,9 +96,9 @@ export function useSessionSocket(code: string, displayName: string) {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (disposed || ws !== wsRef.current) return;
         attempts = 0;
-        setStatus("open");
-        setEverConnected(true);
+        dispatch({ type: "connection", status: "open" });
         ws.send(
           JSON.stringify({
             type: "join",
@@ -247,14 +113,16 @@ export function useSessionSocket(code: string, displayName: string) {
         outboxRef.current = [];
         for (const m of queued) ws.send(JSON.stringify(m));
       };
-      ws.onmessage = handleMessage;
+      ws.onmessage = (event) => {
+        if (ws === wsRef.current) handleMessage(event);
+      };
       ws.onclose = () => {
-        if (disposed) return;
+        if (disposed || ws !== wsRef.current) return;
         // Auto-reconnect with capped exponential backoff; the DO restores our
         // identity + votes from the stable clientId on rejoin.
-        if (attempts >= MAX_ATTEMPTS) return setStatus("closed");
+        if (attempts >= MAX_ATTEMPTS) return dispatch({ type: "connection", status: "closed" });
         attempts += 1;
-        setStatus("connecting");
+        dispatch({ type: "connection", status: "connecting" });
         const delay = Math.min(1000 * 2 ** (attempts - 1), 5000);
         reconnectTimer = setTimeout(connect, delay);
       };
@@ -279,7 +147,7 @@ export function useSessionSocket(code: string, displayName: string) {
       if (open === WebSocket.OPEN || open === WebSocket.CONNECTING) return;
       clearTimeout(reconnectTimer);
       attempts = 0;
-      setStatus("connecting");
+      dispatch({ type: "connection", status: "connecting" });
       connect();
     };
     window.addEventListener("online", retryNow);
@@ -288,9 +156,11 @@ export function useSessionSocket(code: string, displayName: string) {
     return () => {
       disposed = true;
       clearTimeout(reconnectTimer);
+      for (const timer of reactionTimers) clearTimeout(timer);
       window.removeEventListener("online", retryNow);
       document.removeEventListener("visibilitychange", retryNow);
       wsRef.current?.close();
+      wsRef.current = null;
     };
   }, [code, displayName]);
 
@@ -304,28 +174,5 @@ export function useSessionSocket(code: string, displayName: string) {
     }
   }, []);
 
-  return {
-    session,
-    deck,
-    demo,
-    deckNote,
-    behindBy,
-    nudges,
-    superUsed,
-    vetoUsed,
-    roundEndsAt,
-    alreadyVoted,
-    progress,
-    match,
-    vibeCounts,
-    myVibe,
-    visited,
-    error,
-    errorSeq,
-    status,
-    everConnected,
-    participantId,
-    reactions,
-    send,
-  };
+  return { ...state, send };
 }

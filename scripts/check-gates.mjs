@@ -56,7 +56,7 @@ const workflows = globSync(".github/workflows/*.yml").map((f) => [f, readFileSyn
 const ci = readFileSync(".github/workflows/ci.yml", "utf8");
 const problems = [];
 
-const named = (text) => [...text.matchAll(/pnpm (run )?([\w:-]+)/g)];
+const named = (text) => [...text.matchAll(/pnpm (?:--filter \S+ )?(run )?([a-z][\w:-]*)/g)];
 const stepsIn = (text) =>
   named(text)
     .map((m) => m[2])
@@ -68,8 +68,12 @@ const stepsIn = (text) =>
  */
 const deployAt = ci.indexOf("\n  deploy:");
 const gateJobs = deployAt === -1 ? ci : ci.slice(0, deployAt);
-const ciSteps = new Set([...gateJobs.matchAll(/^\s*- run: (pnpm .+)$/gm)].flatMap((m) => stepsIn(m[1])));
-const verifySteps = new Set(stepsIn(scripts.verify ?? ""));
+const ciSequence = [...gateJobs.matchAll(/^\s*- run: (pnpm .+)$/gm)].flatMap((m) => stepsIn(m[1]));
+const ciSteps = new Set(ciSequence);
+const verifySequence = stepsIn(scripts.verify ?? "");
+const verifySteps = new Set(verifySequence);
+if (JSON.stringify(ciSequence) !== JSON.stringify(verifySequence))
+  problems.push("CI and verify must run the same gates in the same order");
 
 for (const name of verifySteps) {
   if (!scripts[name]) problems.push(`verify runs \`pnpm run ${name}\`, which is not a script`);

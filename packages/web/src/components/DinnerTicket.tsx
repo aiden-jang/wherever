@@ -26,7 +26,10 @@ export function DinnerTicket({
   return (
     <button
       type="button"
-      onClick={onOpen}
+      onClick={(event) => {
+        event.currentTarget.focus({ preventScroll: true });
+        onOpen();
+      }}
       aria-label={`See details for ${restaurant.name}`}
       className="dinner-ticket reveal"
       style={{ "--reveal-at": "90ms", viewTransitionName: "chosen-card" } as CSSProperties}

@@ -3,225 +3,19 @@ import {
   AMENITY_OPTIONS,
   CUISINE_OPTIONS,
   MIN_REVIEWS_OPTIONS,
-  NEIGHBORHOODS,
   PRICE_OPTIONS,
   RADIUS_OPTIONS,
   RATING_OPTIONS,
-  ROUND_TIMER_OPTIONS,
   SORT_OPTIONS,
-  isInNYC,
   type AmenityKey,
   type PriceTier,
   type RestaurantSort,
   type SessionFilters,
 } from "@wherever/shared";
-import { geocode } from "../api";
 
-const inputClass =
-  "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
-
-const segBase = "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors border min-h-11";
-const segOn = "bg-ember text-ink border-ember";
-const segOff = "bg-black/40 text-cream border-white/10 hover:border-white/30";
-
-/**
- * The knobs, in the lobby rather than the create modal. One person answering eight questions alone
- * before anybody joined was a strange opening for an app whose pitch is that deciding is exhausting.
- */
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <span className="text-xs font-semibold uppercase tracking-wider text-muted">{children}</span>;
-}
-
-/*
- * The whole "where" control: "Near me" beside a zip/town search, with the NYC shortcuts behind a
- * fold so the form is not a wall of chips. Geocoding runs on submit through the Worker and writes the
- * centre into `filters.lat/lng`.
- *
- * Lives inside the outer create `<form>`, so Enter is caught here and must not submit that one.
- */
-export function LocationPicker({
-  filters,
-  onChange,
-}: {
-  filters: SessionFilters;
-  onChange: (f: SessionFilters) => void;
-}) {
-  const [q, setQ] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  // Start expanded only if a neighborhood is already chosen, so the active pick is visible.
-  const [nycOpen, setNycOpen] = useState(Boolean(filters.area));
-
-  const nearMe = !filters.area && filters.lat == null;
-  /*
-   * The shortcuts are Manhattan and Brooklyn, so somebody who searched "Denver, CO" was being offered
-   * Williamsburg. `isInNYC` was written for exactly this and called nowhere.
-   *
-   * Shown while the location is unknown, which is what "near me" means here - the browser resolves
-   * coordinates at search time, so there is nothing yet to rule the group out on - and always once a
-   * neighbourhood is picked, or choosing one would hide the way to undo it.
-   */
-  const showNyc =
-    Boolean(filters.area) || filters.lat == null || filters.lng == null || isInNYC(filters.lat, filters.lng);
-
-  const activeNeighborhood = filters.area ? NEIGHBORHOODS.find((n) => n.value === filters.area) : undefined;
-
-  const useNearMe = () =>
-    onChange({ ...filters, area: undefined, lat: undefined, lng: undefined, locationLabel: undefined });
-
-  async function runSearch() {
-    const query = q.trim();
-    if (!query || busy) return;
-    setBusy(true);
-    setErr("");
-    const hit = await geocode(query);
-    setBusy(false);
-    if (!hit) {
-      setErr('Couldn\'t find that. Try a zip, or "Town, State".');
-      return;
-    }
-    onChange({ ...filters, lat: hit.lat, lng: hit.lng, locationLabel: hit.label, area: undefined });
-    setQ("");
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <FieldLabel>Where, geographically</FieldLabel>
-
-      {filters.locationLabel ? (
-        // A searched place is active: show it as a chip with a way back to "Near me".
-        <div className="flex items-center gap-2">
-          <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-acid bg-acid/10 px-3 py-2 text-sm text-cream">
-            <span aria-hidden>📍</span>
-            <span className="truncate">{filters.locationLabel}</span>
-          </span>
-          <button
-            type="button"
-            onClick={useNearMe}
-            className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm text-muted hover:bg-white/5"
-          >
-            Change
-          </button>
-        </div>
-      ) : (
-        // Consolidated row: "Near me" beside the zip/town search.
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-pressed={nearMe}
-            onClick={useNearMe}
-            className={`shrink-0 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors ${
-              nearMe ? "bg-acid text-ink border-acid" : "border-white/15 text-cream hover:border-white/30"
-            }`}
-          >
-            📍 Near me
-          </button>
-          <input
-            type="text"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault(); // don't submit the outer create form
-                runSearch();
-              }
-            }}
-            // Takes a town too, but the zip is the case a phone can fill for you.
-            autoComplete="postal-code"
-            enterKeyHint="search"
-            placeholder="Zip or town"
-            maxLength={120}
-            className={`${inputClass} min-w-0 flex-1 !py-2 !text-base`}
-          />
-          {q.trim() && (
-            <button
-              type="button"
-              onClick={runSearch}
-              disabled={busy}
-              className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50 transition"
-            >
-              {busy ? "..." : "Go"}
-            </button>
-          )}
-        </div>
-      )}
-      {err && <p className="text-xs text-flare">{err}</p>}
-
-      {/* NYC neighborhood shortcuts, collapsed by default, and only where they mean anything. */}
-      {showNyc && (
-        <div>
-          <button
-            type="button"
-            aria-expanded={nycOpen}
-            onClick={() => setNycOpen((o) => !o)}
-            className="flex w-full items-center justify-between rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="text-muted">NYC neighborhoods</span>
-              {activeNeighborhood && (
-                <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
-                  {activeNeighborhood.label}
-                </span>
-              )}
-            </span>
-            <span className="shrink-0 text-muted">
-              <Chevron open={nycOpen} />
-            </span>
-          </button>
-          {nycOpen && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {NEIGHBORHOODS.map((n) => {
-                const on = filters.area === n.value;
-                return (
-                  <button
-                    key={n.value}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() =>
-                      onChange({
-                        ...filters,
-                        area: n.value,
-                        lat: undefined,
-                        lng: undefined,
-                        locationLabel: undefined,
-                      })
-                    }
-                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                      on
-                        ? "bg-acid text-ink border-acid font-semibold"
-                        : "border-white/10 text-cream hover:border-white/30"
-                    }`}
-                  >
-                    {n.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M5 8l5 5 5-5" />
-    </svg>
-  );
-}
-
+import { FieldLabel, Chevron, segBase, segOn, segOff } from "./FilterControls.js";
+import { LocationPicker } from "./LocationPicker.js";
+import { RoundRules } from "./RoundRules.js";
 /**
  * Cuisine multi-select + distance / price / open-now up front, with rating / min-reviews / sort
  * tucked behind a collapsible "get picky" disclosure. The app's whole premise is that deciding is
@@ -243,7 +37,6 @@ export function FilterFields({
   // silently tucked away out of view.
   const hasHiddenSelected = moreCuisines.some((c) => filters.categories.includes(c.value));
   const [showAllCuisines, setShowAllCuisines] = useState(hasHiddenSelected);
-  const [rulesOpen, setRulesOpen] = useState(false);
 
   function toggleCuisine(value: string) {
     const has = filters.categories.includes(value);
@@ -287,9 +80,6 @@ export function FilterFields({
     (filters.amenities?.length ?? 0) +
     (filters.excludedCategories?.length ?? 0);
 
-  // "House rules" = how the round runs (reveal voters + timer), folded away from the food filters.
-  const rulesCount = (filters.revealVoters ? 1 : 0) + (filters.roundSeconds ? 1 : 0);
-
   return (
     <div className="filter-fields flex flex-col gap-4">
       <LocationPicker filters={filters} onChange={onChange} />
@@ -330,7 +120,7 @@ export function FilterFields({
 
       <div className="flex flex-col gap-2">
         <FieldLabel>How far you'll actually go</FieldLabel>
-        <div className="flex gap-2">
+        <div className="filter-options gap-2">
           {RADIUS_OPTIONS.map((o) => (
             <button
               key={o.meters}
@@ -347,7 +137,7 @@ export function FilterFields({
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Budget, realistically</FieldLabel>
-        <div className="flex gap-2">
+        <div className="filter-options gap-2">
           {PRICE_OPTIONS.map((o) => {
             const on = (filters.priceTiers ?? []).includes(o.tier as PriceTier);
             return (
@@ -372,7 +162,7 @@ export function FilterFields({
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Standards</FieldLabel>
-        <div className="flex gap-2">
+        <div className="filter-options gap-2">
           {RATING_OPTIONS.map((o) => {
             const on = (filters.minRating ?? 0) === o.value;
             return (
@@ -392,7 +182,7 @@ export function FilterFields({
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Enough reviews to trust it</FieldLabel>
-        <div className="flex gap-2">
+        <div className="filter-options gap-2">
           {MIN_REVIEWS_OPTIONS.map((o) => {
             const on = (filters.minReviews ?? 0) === o.value;
             return (
@@ -532,83 +322,7 @@ export function FilterFields({
         )}
       </div>
 
-      {/* How the round runs — reveal-voters + timer. Separate from the food filters so the form
-          reads as "what to eat" then "how we decide", not one long settings wall. */}
-      <div className="rounded-2xl border border-white/10">
-        <button
-          type="button"
-          aria-expanded={rulesOpen}
-          onClick={() => setRulesOpen((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-3 text-left"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 font-semibold">House rules</span>
-            {rulesCount > 0 && (
-              <span className="shrink-0 whitespace-nowrap rounded-full bg-ember px-2 py-0.5 text-xs font-bold text-ink">
-                {rulesCount} on
-              </span>
-            )}
-            <span className="hidden truncate text-xs text-muted sm:inline">timer, who's voted</span>
-          </span>
-          <Chevron open={rulesOpen} />
-        </button>
-
-        {rulesOpen && (
-          <div className="flex flex-col gap-4 border-t border-white/10 px-4 py-4">
-            <button
-              type="button"
-              aria-pressed={filters.revealVoters ?? false}
-              onClick={() => onChange({ ...filters, revealVoters: !filters.revealVoters })}
-              className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
-                filters.revealVoters ? "border-ember bg-ember/10" : "border-white/10 hover:border-white/30"
-              }`}
-            >
-              <span className="flex flex-col">
-                <span className="font-semibold">Show who's voted</span>
-                <span className="text-xs text-muted">
-                  {filters.revealVoters ? "Everyone sees who's finished" : "Off. Votes stay anonymous"}
-                </span>
-              </span>
-              <span
-                className={`relative h-6 w-11 rounded-full transition-colors ${
-                  filters.revealVoters ? "bg-ember" : "bg-white/15"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                    filters.revealVoters ? "translate-x-[22px]" : "translate-x-0.5"
-                  }`}
-                />
-              </span>
-            </button>
-
-            <div className="flex flex-col gap-2">
-              <FieldLabel>Round timer</FieldLabel>
-              <div className="flex gap-2">
-                {ROUND_TIMER_OPTIONS.map((o) => {
-                  const on = (filters.roundSeconds ?? 0) === o.seconds;
-                  return (
-                    <button
-                      key={o.seconds}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => onChange({ ...filters, roundSeconds: o.seconds })}
-                      className={`${segBase} ${on ? segOn : segOff}`}
-                    >
-                      {o.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-xs text-muted">
-                {(filters.roundSeconds ?? 0) === 0
-                  ? "No timer. Decide when everyone's done"
-                  : "When time's up, the votes so far decide"}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
+      <RoundRules filters={filters} onChange={onChange} />
     </div>
   );
 }

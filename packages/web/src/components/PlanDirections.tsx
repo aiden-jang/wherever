@@ -18,7 +18,14 @@ export function PlanDirections({
       See it in Google Maps <span aria-hidden>↗</span>
     </a>
   ) : (
-    <button type="button" onClick={onOpen} className={style}>
+    <button
+      type="button"
+      onClick={(event) => {
+        event.currentTarget.focus({ preventScroll: true });
+        onOpen();
+      }}
+      className={style}
+    >
       Get directions <span aria-hidden>↗</span>
     </button>
   );

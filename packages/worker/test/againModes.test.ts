@@ -1,6 +1,9 @@
-import { SELF } from "cloudflare:test";
+import { SELF, env, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
+import { RoundController } from "../src/roundController.js";
+import type { Env } from "../src/env.js";
+import type { SessionRoom } from "../src/sessionRoom.js";
 
 /*
  * Running it back two ways. "new" costs a Places fetch and is capped; "same" re-deals the deck in
@@ -25,7 +28,9 @@ async function host() {
   const socket = res.webSocket!;
   socket.accept();
   const seen: ServerMessage[] = [];
-  socket.addEventListener("message", (e) => seen.push(JSON.parse(e.data as string) as ServerMessage));
+  socket.addEventListener("message", (e) => {
+    seen.push(JSON.parse(e.data as string) as ServerMessage);
+  });
   const send = (msg: ClientMessage) => socket.send(JSON.stringify(msg));
   const waitFor = async <T extends ServerMessage["type"]>(type: T, from = 0) => {
     for (let i = 0; i < 200; i += 1) {
@@ -40,7 +45,7 @@ async function host() {
   };
   send({ type: "join", code, displayName: "Alex" });
   await waitFor("identity");
-  return { send, seen, waitFor, close: () => socket.close() };
+  return { code, send, seen, waitFor, close: () => socket.close() };
 }
 
 /** Swipe right on everything so the round decides. */
@@ -50,6 +55,22 @@ async function decide(h: Awaited<ReturnType<typeof host>>, deck: { id: string }[
 }
 
 describe("running it back", () => {
+  it("starts only one round when replay requests overlap", async () => {
+    const h = await host();
+    h.send({ type: "start_round" });
+    await decide(h, (await h.waitFor("deck")).restaurants);
+    const before = h.seen.length;
+    const bindings = env as unknown as Env;
+    const stub = bindings.SESSION_ROOM.get(bindings.SESSION_ROOM.idFromName(h.code));
+    await runInDurableObject(stub, async (_room: SessionRoom, state) => {
+      const controller = new RoundController(state, bindings);
+      const socket = state.getWebSockets()[0]!;
+      await Promise.all([controller.handleAgain(socket, "same"), controller.handleAgain(socket, "same")]);
+    });
+    await h.waitFor("deck", before);
+    expect(h.seen.slice(before).filter((m) => m.type === "deck")).toHaveLength(1);
+    h.close();
+  });
   it("deals the very same places on `same`", async () => {
     const h = await host();
     h.send({ type: "start_round" });

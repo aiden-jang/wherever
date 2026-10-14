@@ -1,43 +1,35 @@
-# ADR 0001: Cloudflare Durable Objects for realtime sessions
+# ADR 0001: Durable Objects for realtime sessions
 
-Status: accepted (Phase 0)
+Status: accepted
 
 ## Context
 
-The core of the app is many people swiping on the same deck at the same time,
-with the server deciding the moment a restaurant wins. That needs:
-
-- a single authoritative place to count votes per session,
-- "decide the winner exactly once" even when the last swipe and a host
-  "decide now" arrive at the same instant,
-- realtime fan-out to everyone in the session,
-- and it has to run on a free tier (no always-on server budget).
-
-A conventional long-running Node server (Fastify + ws + Redis) solves this but
-needs a host that does not sleep, and the exactly-once decision becomes a
-distributed-locking problem across instances.
+A group votes on one deck and needs an authoritative roster, tally, host, and
+result. Reconnects must retain identity and votes. The realtime service should
+support local integration tests and avoid an always-running application server.
 
 ## Decision
 
-One session = one Durable Object (`SessionRoom`), addressed by session code.
-The object owns every WebSocket for that session and holds the live vote tally
-in memory. Durable cross-session data (session records, visited-places history)
-lives in D1 via Drizzle. The web client is static on Cloudflare Pages.
+Address one `SessionRoom` Durable Object by session code. The room owns WebSockets
+and persists live metadata, identity maps, votes, decks, and results in its
+storage. Socket attachments support hibernation-safe presence.
+
+`RoundController` handles voting and round transitions using the same storage;
+`deckSource.ts` owns provider/reserve/history concerns. External provider awaits
+can admit another event, so a transition guard spans fetch and persistence.
+Pure shared logic ranks the result, while server handlers enforce permissions
+and vote budgets.
+
+D1 stores HTTP-created session records and visited history. One Worker serves the
+built SPA and API; Vite proxies to it during local development.
 
 ## Consequences
 
-Good:
+The model gives each room one authority and supports stable reconnects, anonymous
+projections, host grace, and a shared round deadline. Storage writes and transition
+guards remain part of correctness; single-threaded JavaScript alone does not
+make asynchronous handlers mutually exclusive.
 
-- A Durable Object is single-threaded, so counting a vote and deciding a winner
-  cannot interleave. Exactly-once is free, no Redis, no locks.
-- The session is naturally an actor; the primitive matches the problem shape.
-- Runs entirely on free tiers with no sleep/cold-start penalty for the realtime
-  path.
-- Removes Redis from the stack.
-
-Costs / tradeoffs:
-
-- Cloudflare-specific. Local dev and integration tests run through Wrangler /
-  Miniflare rather than a plain Node harness.
-- Diverges from our other project's raw-ws + Redis pattern, so less shared
-  muscle memory.
+The runtime and deployment are Cloudflare-specific. Integration tests use the
+real Worker runtime and migrations. Pruning D1 does not remove Durable Object
+storage, and physical-device behavior needs separate review.

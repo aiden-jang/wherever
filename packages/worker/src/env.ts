@@ -6,7 +6,7 @@ import type { UsageMeter } from "./usageMeter.js";
 export interface Env {
   SESSION_ROOM: DurableObjectNamespace<SessionRoom>;
   RATE_LIMITER: DurableObjectNamespace<RateLimiter>;
-  /** Global monthly counter that caps paid Google calls to keep usage in the free tier. */
+  /** Global monthly reservation counter for Nearby Search and Place Photos. */
   USAGE_METER: DurableObjectNamespace<UsageMeter>;
   DB: D1Database;
   /** Monthly cap on Google Nearby Search calls before the app stops calling Google. Default 950. */

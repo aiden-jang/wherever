@@ -2,12 +2,7 @@ import type { Vibe } from "@wherever/shared";
 import type { SocketAttachment } from "./roomState.js";
 import { sendTo } from "./roomSockets.js";
 
-/*
- * The lobby's mood vote: who picked what, and the counts that decide which deck gets fetched.
- *
- * The tally was written twice in the Durable Object, once to show the room and once to feed the
- * deck fetch, so a change to how a vote counts had two places to land.
- */
+/* Only aggregate vibe counts leave storage; a participant receives their own choice for reconnects. */
 
 type VibeMap = Record<string, Vibe>;
 

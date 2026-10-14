@@ -5,19 +5,23 @@
  * Prose rots with nothing to fail. The request diagram still named `getSessionUser` a phase after
  * the auth client stopped exporting it, and the sentence read fine.
  */
-import { globSync, readFileSync } from "node:fs";
+import { globSync, readFileSync, existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 // CLAUDE.md and AGENTS.md are symlinks to CONVENTIONS.md; listing them would report twice.
-const DOCS = ["README.md", "DEPLOY.md", "DECISIONS.md", "CONVENTIONS.md", ...globSync("docs/adr/*.md")];
+const DOCS = [
+  "README.md",
+  "DEPLOY.md",
+  "DECISIONS.md",
+  "CONVENTIONS.md",
+  "CONTRIBUTING.md",
+  ...globSync("docs/**/*.md"),
+  "packages/worker/migrations/README.md",
+];
 
 /* Named in the docs because they are absent, or because they belong to somebody else's API.
    Never add a name the code actually lost. */
-const NOT_OURS = new Set([
-  // Somebody else's API, or not a symbol at all. Never add a name the code actually lost.
-  "getAnimations", // Element.getAnimations(), a browser API
-  "popLayout", // framer-motion's AnimatePresence mode
-  "sRGB", // a colour space
-]);
+const NOT_OURS = new Set(["iPhone"]);
 
 const code = [
   ...globSync("packages/*/src/**/*.{ts,tsx}"),
@@ -47,6 +51,29 @@ const problems = [];
 const known = (name) => new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(code);
 
 for (const doc of DOCS) {
+  const prose = readFileSync(doc, "utf8").replace(/```[\s\S]*?```/g, "");
+  for (const match of prose.matchAll(/\]\((<[^>]+>|[^\s)]+)\)/g)) {
+    const target = match[1].replace(/^<|>$/g, "");
+    if (/^[a-z][a-z\d+.-]*:/i.test(target)) continue;
+    const [path, fragment] = target.split("#");
+    const destination = path ? resolve(dirname(doc), decodeURIComponent(path)) : resolve(doc);
+    if (!existsSync(destination)) {
+      problems.push(`${doc}: missing link target \`${target}\``);
+      continue;
+    }
+    if (fragment && destination.endsWith(".md")) {
+      const headings = readFileSync(destination, "utf8").match(/^#{1,6} .+$/gm) ?? [];
+      const anchors = headings.map((heading) =>
+        heading
+          .replace(/^#+ /, "")
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N} _-]/gu, "")
+          .replace(/ /g, "-"),
+      );
+      if (!anchors.includes(decodeURIComponent(fragment)))
+        problems.push(`${doc}: missing heading \`${target}\``);
+    }
+  }
   // Per document: a stray fence in one must not change how the next one is read.
   let fenced = false;
   readFileSync(doc, "utf8")
@@ -55,18 +82,22 @@ for (const doc of DOCS) {
       const at = `${doc}:${i + 1}`;
       if (line.trimStart().startsWith("```")) fenced = !fenced;
 
-      for (const m of line.matchAll(/[\w./@-]*\w+\.(?:ts|tsx|css|mjs|toml|yml)\b/g)) {
+      for (const m of line.matchAll(/[\w./@-]*\w+\.(?:ts|tsx|css|mjs|cjs|toml|yml)\b/g)) {
         const bare = m[0].replace(/^`|`$/g, "");
         const tail = bare.split("/").pop();
-        if (![...files].some((f) => f.endsWith(bare) || f.endsWith(`/${tail}`))) {
+        if (
+          ![...files].some((f) =>
+            bare.includes("/") ? f === bare || f.endsWith(`/${bare}`) : f.endsWith(`/${tail}`),
+          )
+        ) {
           problems.push(`${at}: no such file \`${bare}\``);
         }
       }
 
       /* Only inside backticks or a fence: English prose says things like "a pnpm command of the
          same name", and that is not an invocation. */
-      /* Inside a fence, a `#` starts a shell comment: "corepack enable  # makes pnpm available"
-         is English about pnpm, not an invocation of a script called `available`. */
+      /* Inside a fence a `#` starts a shell comment: "corepack enable  # makes pnpm available" is
+         English about pnpm, not an invocation of a script called `available`. */
       const commands = fenced
         ? [line.replace(/#.*$/, "")]
         : [...line.matchAll(/`([^`]+)`/g)].map((b) => b[1]);
@@ -79,10 +110,12 @@ for (const doc of DOCS) {
 
       /*
        * Anchored per prefix, or `/api` would also swallow `/apikey`. The full path is looked for
-       * with the `/api` prefix stripped too: routes are registered on a sub-app and mounted, so the
-       * whole path is never a literal anywhere.
+       * with the mount prefix stripped too: routes are registered on a sub-app as `/shared/:token`
+       * and mounted at `/api`, so the whole path is never a literal anywhere.
        */
-      for (const m of line.matchAll(/(\/api\/[\w:-]+(?:\/[\w:-]+)*|\/ws\/[\w:-]+|\/health)\b/g)) {
+      for (const m of line.matchAll(
+        /(?<![\w/.-])(?:https?:\/\/[^/\s`]+)?(\/api\/[\w:-]+(?:\/[\w:-]+)*|\/ws\/[\w:-]+|\/health)\b/g,
+      )) {
         const full = m[1];
         const mounted = full.replace(/^\/api/, "");
         if (!code.includes(full) && !(mounted !== "" && code.includes(`'${mounted}'`))) {

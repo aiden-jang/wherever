@@ -17,8 +17,8 @@
     },
     "packages/web": {
       // The SPA entry comes from index.html, which knip reads for itself.
-      "entry": ["scripts/*.mjs"],
-      "project": ["src/**/*.{ts,tsx,css}", "scripts/*.mjs"],
+      "entry": ["scripts/*.{mjs,cjs}", "src/**/*.test.{ts,tsx}", "e2e/**/*.ts"],
+      "project": ["src/**/*.{ts,tsx,css}", "scripts/*.{mjs,cjs}", "e2e/**/*.ts"],
     },
   },
   // `cloudflare:test` is the vitest-pool-workers virtual module, not a package on disk.

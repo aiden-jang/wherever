@@ -1,14 +1,7 @@
 import type { DecisionResult, Participant, ServerMessage } from "@wherever/shared";
-import type { SocketAttachment } from "./roomState.js";
+import type { SessionMeta, SocketAttachment } from "./roomState.js";
 
-/*
- * Talking to the room: who is on the other end, and how a message reaches them.
- *
- * The three things here were spread across the Durable Object and written more than once. The
- * result payload existed twice, once to answer a single socket and once to tell everyone, and they
- * drifted apart the moment either gained a field. The send loop existed twice for the same reason,
- * the second copy only because it needed to skip a closing socket.
- */
+/* Fan-out and participant projections share one payload shape for joins and round transitions. */
 
 /** Live sockets, deduped by participant: a reconnect overlaps with the socket it replaces. */
 export function attachmentsOn(ctx: DurableObjectState, exclude?: WebSocket): SocketAttachment[] {
@@ -66,4 +59,25 @@ export function resultMessage(
     superTipped: result.superTipped,
     round,
   };
+}
+
+/** Shared session projection for presence changes and round transitions. */
+export async function broadcastSessionState(ctx: DurableObjectState, closing?: WebSocket): Promise<void> {
+  const meta = await ctx.storage.get<SessionMeta>("meta");
+  if (!meta) return;
+  broadcastTo(
+    ctx,
+    {
+      type: "session_state",
+      session: {
+        id: meta.code,
+        code: meta.code,
+        status: meta.status,
+        voteMode: meta.voteMode,
+        filters: meta.filters,
+        participants: participantsOn(ctx, closing),
+      },
+    },
+    closing,
+  );
 }

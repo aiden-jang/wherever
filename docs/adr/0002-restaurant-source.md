@@ -1,71 +1,40 @@
-# ADR 0002: Google Places (New) as the restaurant source
+# ADR 0002: Google Places behind a restaurant-source interface
 
-Status: accepted (Phase 1)
+Status: accepted
 
 ## Context
 
-The deck a session swipes on has to come from real nearby restaurants with
-enough metadata to filter and rank: cuisine, price, rating, and distance. Two
-hard constraints shape the choice:
-
-- **Budget:** the whole project stays under ~$5/month. Any paid API has to be
-  usage-capped, not just budget-alerted.
-- **Swappability:** the data provider should never leak into vote logic or the
-  UI, so we can change it without a rewrite.
-
-Candidates were Foursquare Places and Google Places API (New). Both cover the
-needed fields. Google has broader, more accurate coverage and richer place
-types; Foursquare has a simpler free tier.
+The deck needs nearby places, cuisine, prices, ratings, photos, and practical
+restaurant details. Voting should not depend on a provider's response format.
+Local work and verification should remain usable without live keys.
 
 ## Decision
 
-Use **Google Places API (New) `places:searchNearby`** as the default source,
-behind a `RestaurantSource` interface (`fetchDeck(filters) -> Restaurant[]`).
-`MockRestaurantSource` (seeded deck) is the fallback when no key is configured,
-and `FoursquareRestaurantSource` stays as an alternate implementation selected
-by `RESTAURANT_SOURCE`.
+Use Google Places Nearby Search through `RestaurantSource`. Normalize provider
+records in `googlePlace.ts`, with source-independent filter predicates in
+`restaurantSource.ts`. Google and the seeded sample source are the supported
+implementations; unknown configuration serves labeled samples and logs a warning.
 
-> **Superseded on this point.** The Foursquare source was deleted: nothing could
-> reach it, no key was ever configured, and it had drifted out of step with the
-> filtering rules the other two share. `RESTAURANT_SOURCE` now takes `google` or
-> `mock`. The `RestaurantSource` seam stays and still earns its keep, because the
-> mock behind it is what a real session gets when the month's budget is spent.
-> The rest of this record stands as written.
+Cuisine/radius restrictions are sent upstream. Price, rating, reviews, open-now,
+and amenities are enforced in the Worker before dealing. The sample source uses
+the same applicable filters; its restaurant details are stand-ins.
 
-Cost is controlled deliberately, since Google billing budgets are only alerts,
-not hard caps:
+Fetch one source result per new search, keep the dealt deck and a reserve in room
+storage, and use reserve data before another call. Same-deck replay does not fetch.
+An exhausted reserve widens the radius before a new search; failures preserve a
+retryable state rather than claiming no restaurants exist.
 
-- A **per-API usage quota** on the key is the real ceiling.
-- A **tight field mask** requests only what the deck renders. `rating` and
-  `priceLevel` set the SKU tier; reviews and other Preferred fields are omitted.
-- The deck is fetched **once per session** and cached in the `SessionRoom`, so a
-  whole group swiping costs one search, not one per person.
-- **Photos go through a Worker proxy.** Place Photos is a separate paid SKU and
-  the raw media URL needs the API key, so `imageUrl` points at our own
-  `/api/photo` route (validated ref, key server-side). The route edge-caches for
-  30 days, so each photo hits the SKU at most once per width. The deck still
-  renders fine without images when a place has none.
+Photo URLs point to `/api/photo`: validated references and snapped widths keep the
+key server-side and make cache reuse practical. Search/photo reservations are
+bounded by [ADR 0003](0003-usage-meter.md). Location search uses a separately
+rate-limited and cached geocode route.
 
 ## Consequences
 
-Good:
+The interface keeps the provider out of voting and UI state. Pure normalization
+and filter tests detect missing fields and sample/live inconsistencies.
 
-- Better coverage and place-type granularity than Foursquare; cuisine filters
-  map to Google primary types and run server-side.
-- The `RestaurantSource` seam means mock and Google are interchangeable, and
-  `mapGooglePlace` is pure and unit-tested. (The Foursquare implementation named
-  above was later deleted; see the supersession note under Decision.)
-- Fail-soft: a non-OK response yields an empty deck ("nothing nearby") rather
-  than crashing a round.
-
-Costs / tradeoffs:
-
-- Nearby Search (New) does not return distance, so we compute it from the search
-  center with a haversine. Good enough for a "how far" label, not routing.
-- Price and rating filters run client-side after the fetch (the API filters
-  cuisine and radius). Fine at `maxResultCount: 20`.
-- Cost safety depends on the quota being set on the key, which is an external
-  console step, not something the code can enforce.
-- The photo proxy adds a small always-on cost path: a cache miss is one Place
-  Photo SKU call plus Worker egress. The 30-day edge cache keeps repeats free,
-  but a fresh deck of unseen places still pays per first view.
+Straight-line distance is a display estimate, not routing. Provider field masks
+can change the billing tier, and quota/key setup remains external. Cache hits
+reduce calls but do not guarantee each image is fetched only once globally.
+Live provider behavior is outside sample-backed browser verification.

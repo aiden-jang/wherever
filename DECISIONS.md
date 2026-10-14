@@ -1,514 +1,65 @@
-# Decisions and trade-offs
+# Design decisions
 
-_Moved out of the README, which is the front door and was carrying the whole house._
+## One authority per room
 
-## Decisions & trade-offs
+`SessionRoom` owns identity, presence, message validation, and host handover.
+`RoundController` uses the same Durable Object storage for round transitions,
+votes, progress, and verdicts. `deckSource.ts` handles the provider, reserve,
+search budget, and visited history. This separates responsibilities while keeping
+one authoritative room and one wire protocol.
 
-**One Durable Object per session, as the single writer.** Realtime voting needs a single source of
-truth for "who has voted on what" with no races. A Durable Object gives that natively: one isolate
-owns one session, so votes serialize without a lock or an external store. The cost is that a session
-lives in one isolate (not horizontally sharded), which is the right trade for group-sized rooms.
+The provider can yield while fetching. An in-memory transition guard prevents
+concurrent starts or replays until the full transition finishes; persisted state
+still determines which operations are valid after hibernation.
 See [ADR 0001](docs/adr/0001-durable-objects.md).
 
-**The decision is computed in a pure core, and made exactly once.** Whether the group has reached a
-decision is a pure function of the votes, unit-tested in isolation from any I/O. Votes are
-idempotent (re-sending the same vote is a no-op), and the "decided" transition fires exactly once
-even if two final votes land in the same tick, so nobody sees a double-decide or a flicker between
-outcomes.
+## A decision without unanimous agreement
 
-**Majority, not consensus.** A left swipe is a downvote, not a veto. This is a product decision with
-teeth: it means one holdout cannot stall the group, which is the entire reason the app exists.
+The winner is the highest weighted positive score, with deck order breaking ties.
+Passing is not a veto. Each person gets one weighted super-like and one veto that
+removes a place outright. The server enforces these budgets and keeps vetoes
+anonymous. Ranked backups let the host change an impractical result without
+another search. A guest can wait for another round or leave from either result state.
 
-**The data source is swappable behind an interface.** Google Places (New) is the default, but the
-app is written against a `RestaurantSource` interface with a seeded mock behind it.
-That keeps the vendor at arm's length, keeps CI and offline dev fully playable with no key, and made
-the provider a one-line switch. See [ADR 0002](docs/adr/0002-restaurant-source.md).
+## Providers behind one interface
 
-**Staying inside the free tier is enforced in code, not just hoped for.** A single global Durable
-Object (`UsageMeter`) counts paid Google calls per calendar month. Before every Nearby Search and
-every Place Photo fetch the Worker checks the budget; once the monthly cap is hit it stops calling
-Google and serves a seeded sample deck ("demo mode") and photo fallbacks instead of billing. Photos
-are proxied through the Worker and edge-cached, so each unique photo is paid for at most once. The
-result: the live demo cannot run up a bill even if it goes viral, and it degrades to a fully-playable
-demo rather than an error. See [ADR 0003](docs/adr/0003-usage-meter.md).
+`RestaurantSource` supplies normalized restaurants. Google normalization is separate
+from HTTP transport, and sample data follows the same filters. Missing configuration
+or a spent search cap yields labeled samples; an upstream failure remains retryable.
+See [ADR 0002](docs/adr/0002-restaurant-source.md).
 
-**One voice, in one file, with a test that it is heard.** The landing had a rotating set of deadpan
-lines and nowhere else did, so the app opened funny and went quiet exactly where a group is bored:
-dealing, waiting on the slow one, and a dead tie. Those lines live in `shared/lines.ts` keyed by
-moment, seeded so a re-render never swaps a sentence mid-read, and a test walks the web source and
-fails if any moment is no longer rendered anywhere. That is what stops it drifting back into a
-landing-page-only sprinkle.
+`UsageMeter` limits search and photo reservations. Geocoding has its own per-IP
+limit and edge cache. These controls are not a guarantee of zero cost: provider
+prices, project-wide usage, quotas, and live local development are separate concerns.
+See [ADR 0003](docs/adr/0003-usage-meter.md).
 
-**The deck leaked a card per swipe.** `AnimatePresence` was wrapping the top card so the outgoing
-one could fly off, and the exit animation never ran: `getAnimations()` returned nothing on the
-outgoing card and its transform stayed `none`. Presence itself was fine -- the outgoing
-`PresenceChild` correctly carried `isPresent: false` and the `exit` prop reached the element -- but
-framer never started the animation, so `AnimatePresence` held the card mounted forever waiting for an
-exit that would not finish. One card accumulated per vote, in the production build as well as in dev,
-at every width, going back well before this session.
+## One origin and a network-dependent room
 
-Rendering the current card alone fixes it: React unmounts the previous one immediately, which is what
-the screen already looked like, minus the pile of dead cards behind it. Ruled out along the way: the
-`x` MotionValue in the exit target (stripping it to opacity changed nothing), the nested stamp
-elements (giving them their own exit changed nothing), StrictMode and HMR (it reproduces in a
-production build), and `popLayout` (framer renders `PopChild` regardless and it is inert when the
-mode is unset). The throw is kept in place and documented as inert, because restoring it is a
-separate job that wants a real thumb to tune against.
+The Worker serves the built SPA, API, and sockets. Vite proxies to a local Worker
+in development; browser verification uses production assets served by Wrangler.
+The service worker caches an interface shell and static assets, never API/socket
+responses. Opening a cached interface offline does not establish a live room.
 
-**One branch left the non-host with nowhere to go.** When a round decides, a non-host gets "Show
-myself out" beside the host's "Run it back". When nobody agrees, the same person got the sentence
-"Round two is the host's call." and no action at all -- the one screen where they cannot do anything
-was also the one that offered them no way off it. Same words and the same button as the sibling
-branch, kept quieter than the host's so the default is still to wait rather than to split the group.
+## Room-scoped client state
 
-**A wait answered with a label instead of a sentence.** "No votes yet." was the only line on the
-screen in the moment before anybody has voted, and the app has a module whose entire job is to talk
-during a wait -- it just had no moment for this one. There is a `quiet` moment now, rotating like the
-others, and the reachability test covers it the same way. The rest of the empty states were left
-alone: they already had a voice.
+The subscription reduces server messages into a coherent state. A code change
+clears the previous room and command buffer; disposed/superseded sockets cannot
+update it. Reconnects join with the stable client ID before buffered commands flush.
 
-**The verdict arrives in the order it is read.** Everything on the decided screen used to land in
-the same frame, which is a lot to take in at the one moment the group looks up from their phones: the
-headline, the place, the tally and the reasons all at once. It is staggered now -- "it's decided",
-then the place, then by how much, then why -- over 290ms, so it reads as one arrival rather than a
-queue. `backwards` holds each piece hidden until its turn instead of flashing first, and the whole
-thing is off under reduced motion, where the screen simply appears.
+Location lookups preserve current non-location filters and cannot supersede a
+new explicit neighborhood choice. Share and clipboard feedback belongs to the
+surface that requested it; canceling a native share sheet does not copy instead.
 
-**The Foursquare source is gone.** It was a second full restaurant source that nothing could reach:
-`RESTAURANT_SOURCE` is `"google"`, no key was ever configured for it, and it had drifted out of step
-with the filtering rules the other two sources share, ignoring exclusions, the explicit price-tier
-list and amenities. An alternate implementation that cannot run is not a fallback, it is a second
-definition of the rules that nobody is checking. The `RestaurantSource` interface stays and is still
-earning its keep, because the mock behind it is what a real session gets when the month's Google
-budget is spent. 125 lines out.
+## Interface choices
 
-**The whole app was one 506kB chunk.** This is opened on a phone, outside, on cellular, so first
-paint is the part of the experience nobody thinks of as design. The decided screen was the heaviest
-thing in the app, and none of it is reachable until a round ends, so it is its own chunk, fetched
-while people are still swiping. It is in cache long before it is needed, and the reveal never waits
-on a network round trip. 506kB to 465kB, 154.6kB to 144.3kB gzipped.
+Voting stays one column on phones and uses the adjacent rail on desktop. Only the
+active interactive card is mounted, so outgoing cards cannot retain gestures or
+focus. Details and keyboard controls offer the same choices as dragging.
 
-Splitting the routes as well was measured and rejected: it saves nothing on the invite path, because
-the weight is React and framer-motion shared by both routes rather than route code, and it buys a
-serial round trip on the one path that matters most. The next real lever is framer-motion itself, at
-roughly 47kB gzipped.
+The winner is a dinner plan: ticket, tally, reasons, backups, directions, and a
+share action. Motion, synthesized sound, haptics, and display effects respect their
+supported browser APIs and the user's reduced-motion/sound choices.
 
-**Two roles were written inline instead of named, and one had drifted.** Five screens share a
-full-screen state -- no such session, nothing survived the filters, 404, a crash, nobody agreed --
-built each time as a big glyph over a heading. Four used a 36px heading and the fifth had drifted to
-30px, which is only visible if you happen to see two of them in a row. Both halves are tokens now, so
-the five are one thing.
-
-The glyph is deliberately a separate token from the type scale. Every one of these pictographs was
-sized off `text-6xl`, meaning something that is not text at all was riding on a token meant for text:
-a heading size changed later would silently resize a 60px shrug. Six of them share that size, so it
-earns a name; the one-off glyph sizes elsewhere are left alone, because a name used once is not a
-scale.
-
-**The card corner was an arbitrary value, and one panel disagreed with it.** `rounded-[28px]` was
-written inline six times -- the one radius in the app deliberately off Tailwind's scale, sitting
-between 3xl and 4xl -- and is now `--radius-card`. The join-QR panel used a 32px radius while nested
-inside a 24px modal, so its corner was rounder than the thing containing it, which reads as a mistake
-however briefly you look at it. It takes the app's panel radius now.
-
-**The decided screen was a 384px column at any window size.** It is the densest screen in the app --
-winner, tally, the reasons, the receipt, the backups and the history -- and it had no `lg` treatment
-at all, so on a laptop it was a phone-width ribbon with a thousand pixels of dark either side. Two
-columns from `lg`: what happened on the left, what to do about it on the right. One cut rather than
-a rearrangement, so a phone reads it top to bottom in exactly the order it always did. 492px each,
-695px and 862px tall, where it used to be one column of about 1550.
-
-**Half the swiping screen was holding one line of text.** At 1440px the deck ran 416x662 and the
-column beside it held 128px: "no votes yet" and the reaction bar. Everything else about the round --
-where you are in the deck, what the keys do, whether you can undo -- was stacked underneath a card
-that already reaches the bottom of the viewport. The deck owns that state, so it now owns the split
-too and takes the group panel as a prop rather than being placed next to it. The right column carries
-202px of real content, the deck column gave back 62px of height, and on a phone nothing moved: same
-single column, same order. The finished-deck state splits the same way, which is the one moment other
-people's progress is the thing you are actually waiting on.
-
-**The card's stats row had no hierarchy.** Rating, price and travel time sat at one weight, so the
-number the vote actually turns on read exactly like the price tier. The rating keeps its accent
-because it answers "is it any good", the price stays muted because it is a detail, and the travel
-estimate now carries the row: it is what somebody is agreeing to when they swipe right. Applied to
-all three places the row appears, so the card, the winner and the detail sheet say it the same way.
-
-**An interrupted drag left the sheet stuck open and pushed down.** Drag-to-dismiss handled start,
-move and end, but not cancel, and the OS takes a touch away often enough to matter -- an incoming
-call, a system edge gesture, the browser claiming the gesture. `touchend` never arrives in that case,
-so the offset stayed frozen wherever the finger got to and the sheet sat askew until the next touch.
-A cancelled gesture now resets the drag and never dismisses, because a cancelled gesture is not a
-decision. Verified by dragging a sheet 60px and cancelling: it snaps back and stays open.
-
-**Blocked site data hung the app on "connecting".** Every `localStorage` call in this app is wrapped
-in a try/catch; all four `sessionStorage` calls were bare. Where a browser blocks site data, touching
-storage throws on access, and one of those calls builds the join message inside the socket's `onopen`
--- so the join was never sent and the session sat on "connecting" forever rather than degrading. They
-are guarded now, with an in-memory fallback for the client id that still holds identity across
-reconnects within the page and only stops surviving a refresh. Verified by making every
-`sessionStorage` access throw and joining a session anyway: no errors, no hang, and it falls back to
-asking for a name.
-
-**The avatars were not showing initials.** Two copies of the same helper, already drifted apart --
-one fell back to "?" on an empty name and the other left the circle blank -- and neither returned an
-initial: both sliced the first two characters of the whole string, so "Aiden Jang" appeared as "AI"
-rather than "AJ", and a name starting with an emoji had its surrogate pair cut in half. There is one
-implementation now, in shared where it can be tested, taking the first grapheme of each of the first
-two names.
-
-**Not one input told the browser what it was for.** Four fields, no `autocomplete` between them, so
-a phone that knows the user's name and postcode offered neither and everyone typed them by hand every
-session. The three name fields say `name`, the location field says `postal-code` (it takes a town
-too, but the zip is the half a phone can fill), and the invite-code field says `off`, because no
-address book has a value for it. Identifying an input's purpose is also a WCAG AA requirement, not
-only a convenience.
-
-**The two riskiest controls on the swiping screen were 20px tall.** "just decide now" ends the round
-for everybody and "hurry them" prods people, and on a phone both were inline links the height of
-their own text, under the 24px tap floor. Padding grows them to 36px and a matching negative margin
-takes it back out of the layout, so the line measures the same 20px it always did. The footer credit
-is still small and stays that way: it is a name in a sentence, not an action.
-
-**Nine pieces of text were under the contrast floor, from two causes.** The purple accent measured
-3.47:1 on the ink behind it, so the "· ⭐ super" hint and the veto and super-like labels were all
-under AA; it is lifted to 4.68:1 and looks like the same purple. The other seven were `text-muted`
-dimmed further with an opacity modifier: muted on its own is 7.56:1, which is the entire point of it,
-but `/70` measured 4.05 and `/60` measured 3.38. The modifiers are gone and the token carries the
-rule, since size and weight were already doing the work of the hierarchy. The keyboard legend now
-dims only the key cap and not the word beside it, because dimming the word put it under too and
-dimming it far enough to read would have erased the difference it exists to show. Measured with the
-sRGB conversion, not by eye: Tailwind emits `oklab()` for opacity-modified colours, and a naive
-parser reports nonsense for them.
-
-**Distance changed unit system at a kilometre.** It printed metres under 1000 and miles over, so two
-cards a block apart could be measured in different systems in an app whose audience reads miles. It
-is feet below a tenth of a mile and miles above it now. The same function also produced "NaN mi" from
-a missing distance, and since five of its six call sites only reached it when the travel estimate had
-already returned null, the broken case was the only case it ran in. It returns nothing instead, and
-the separators around it are conditional so nothing is left dangling. Those five sites were the same
-two-call fallback copied out; that is one `distanceText` now.
-
-**Both overlays claimed the page behind them was inert, and neither made it true.** The modal
-declared `aria-modal="true"`, which tells a screen reader everything else is unavailable, while focus
-stayed on the button that opened it: pressing Tab walked through the whole page underneath a
-full-screen overlay. The card's detail sheet did not even claim it. One hook now moves focus in on
-open, wraps Tab at both ends, pulls focus back if it is outside, and returns it to the trigger on
-close; both overlays use it and both now declare what is true.
-
-**Three filters worked against Google and silently did nothing in the demo deck.** The mock source
-is not only a test fixture: it is what a real session is dealt once the month's Google budget is
-spent. It dropped "not that" exclusions entirely, ignored the explicit price-tier list in favour of
-the ceiling alone, and never checked amenities, which is most of what a vibe does. Making it filter
-like the real source then exposed the next layer: every mock place was tier 1 or 2 and none carried
-amenities, so "fancy" emptied the deck outright and the old bug had been hiding it. The deck now
-carries amenities and one upscale entry, and a test asserts every vibe the app offers still deals
-something. Opening hours stay the one honest exception, since the mock data has none.
-
-**A client could finish the deck without seeing it.** Who has finished is counted as how many
-distinct restaurant ids that person has voted on, and the ids come from the client, so sending as
-many made-up ids as there are cards marked you finished without a single real vote -- and every one
-of those ids became a key in the vote map, which is Durable Object storage. Swipes are now checked
-against the dealt deck. The id itself was also bounded to 200 characters in one message and unbounded
-in three others; there is one definition now, so they cannot drift apart again.
-
-**A long restaurant name broke out of the backups panel.** The runner-up rows are a grid, and grid
-columns floor at min-content: a bare `1fr` on desktop and the implicit `auto` column on mobile both
-grew to fit the longest name rather than letting the `truncate` inside them do anything, so the row
-ran 350px past the panel and the page scrolled sideways. Both templates are `minmax(0,1fr)` now. The
-lobby's own grid already had this right, which is what made it a slip rather than a pattern.
-
-**A veto could take the group's favourite and nobody would ever know.** Vetoed places are dropped
-from the ranking before a winner is picked, silently, so three people could agree on somewhere, one
-person could kill it, and the round would read as a clean win for second place. The winner screen now
-says a higher-scoring place was vetoed. Strictly higher, not level: a vetoed place tied with the
-winner was joint favourite, and "your top pick was vetoed" would overstate it. It is a flag on the
-result and never a name, because the veto is anonymous by design and naming what it killed narrows
-the vetoer down in a group of four; a test asserts the vetoed id appears nowhere in the payload.
-
-**The server said no and nobody heard it.** Socket errors were stored in state and rendered as a
-line of text on the create/lobby screen only. The decided screen had no error rendering and no toast
-container at all, and the swiping screen had a container but never put errors in it, so a host
-hitting the round limit on "run it back" pressed a button and watched nothing happen, with no reason
-given. Refusals now surface as a toast on both, keyed on a counter rather than on their own words:
-the same refusal twice in a row is two events, and deduping on the text would have shown "you've been
-through a lot of rounds" once and then stayed silent however many times the host tried it.
-
-**Denver was being offered Williamsburg.** `isInNYC` exists, with a comment stating the rule it was
-written for -- the neighbourhood shortcuts only make sense inside the city, so the UI shows them only
-when the location falls in the box -- and it was called from nowhere and covered by nothing. The
-create form offered Manhattan and Brooklyn shortcuts to everyone. They now appear only when the
-resolved location is in NYC, still appear when it is unknown, because "near me" resolves coordinates
-at search time and there is nothing yet to rule anyone out on, and always appear once a neighbourhood
-is picked, since hiding them would take away the way to undo it.
-
-**One mutation never asked who was calling.** Every socket message that changes something reads the
-sender's attachment first, and most also check the host flag. `set_never_again` was dispatched
-without the socket at all, so it could not have checked even if it wanted to: any connection that
-opened and skipped the join could permanently block a restaurant from every future deck in that
-session. It stays open to everyone who joined rather than becoming host-only, because it is the
-group's memory and the button is offered to the whole group. The test that covers it was run against
-the old code first to confirm it fails there; a test that passes either way proves nothing.
-
-**The service worker cached failures and served them first.** Nothing checked `res.ok`, so a
-transient 404 on an asset or a 500 on a navigation was written to the cache and then served ahead of
-the network until somebody remembered to bump the version constant by hand; the offline fallback also
-returned `undefined` when there was no cached shell, which is a network error rather than a fallback,
-and that is exactly the first-visit-offline case it existed for. Static assets are now
-stale-while-revalidate instead of cache-first, which matters for everything in `public/` with no
-content hash in its name: `og.png`, the icons and the teaser photos keep their URL when their
-contents change, so the old copy used to be kept indefinitely. Vite's hashed bundles are unaffected,
-since their URL changes anyway.
-
-**The share preview had no image, which for this app is the whole front door.** `og:image` was
-relative, with a comment reasoning that it would resolve against whatever origin served the app.
-Crawlers do not do that: a relative Open Graph URL is ignored, so every link pasted into a group
-chat, the only way anyone joins, previewed with no picture. It is absolute now, along with a missing
-`og:url` and an `og:image:alt`. The origin is substituted at build time from committed config rather
-than an `.env` file, because `.env` is gitignored here and an unset variable would have shipped the
-literal `%SITE_URL%` to crawlers, which is worse than what it replaced. `SITE_URL` still overrides it
-for a preview deploy.
-
-**Three screens had no heading at all.** The swiping screen had no heading of any level, so anyone
-navigating by headings arrived mid-round with nothing to orient on; the waiting room had none either;
-and the winner screen's only h1 lived in the "nobody agreed" branch, so the app's main success screen
-started at h2 with a minor section. Each has one now, hidden on the two screens whose design is a
-single card or a six-character code, and the winner's h1 carries the restaurant name for a screen
-reader because on screen that name is a button. The restaurant photos keep `alt=""` on purpose, which
-is now written down: the name is beside every one of them, and repeating it first is noise.
-
-**The winner screen went back to straight-line miles.** The card says "23 min drive" because that is
-the number people decide on; the screen where the group is deciding how to get there still said "3.2
-mi". Both the winner and its runners-up now use the same estimate the card does. The runner-up list
-also had one "Make Plan A" button per place, so a screen reader heard the same name twice with
-nothing to tell them apart; each now names its restaurant.
-
-**The keyboard worked and nobody was told.** Arrows voted, up super-liked, backspace undid, and the
-only hint on screen said "tap for details, drag or tap below to vote", which is phone language on a
-machine with no touchscreen. The veto was the one action with no key at all. It has one now, and
-desktop gets a persistent row of key caps under the counter rather than a hint that fades after five
-seconds, because a key nobody knows about is a feature nobody has. Spent actions dim instead of
-disappearing, so the row does not reflow under the counter mid-round.
-
-**The anonymous default was only anonymous in the docs.** This README claimed twice that votes are
-anonymous by default and enforced server-side, and the toggle beside the setting read "Off. Votes
-stay anonymous", while the client shipped `revealVoters: true`, so every session ever created
-revealed who had finished. The server half was always right and still is: identities are omitted from
-the progress payload when the flag is falsy, so nothing was recoverable from devtools. Only the
-default was wrong. It now lives in shared rather than the web app, because it is a product rule
-rather than UI state, and a default nobody can unit-test is a default that drifts back.
-
-**Chaotic does something now.** Its filters asked for every price, the widest radius and no rating
-floor, which is the host's default already, so picking it changed nothing and the toast said as much
-out loud. Breadth was never its promise anyway; adventurous already covers that. It now deals the
-deck in no particular order, which is the only thing that makes "everything is on the table" true:
-the source ranks best-first, so the same safe handful was always on top and the interesting places
-sat behind swipes nobody made. Expressed as a filter rather than a special case, so `vibeEffect`
-keeps deriving its own copy instead of having it written by hand. Seeded on the session code, so a
-bad deal can be reproduced from the code alone.
-
-**A place you have been before says so.** `revisitNote` was written, tested, and rendered nowhere,
-so a restaurant coming back after its ninety-day cooldown arrived looking exactly like one the group
-had never heard of. Half the value of a place returning is remembering you liked it. It now shows on
-the card and is read out with it, and a test walks the web source and fails if it stops being
-rendered, which is the only reason the gap was findable at all.
-
-**The host can hurry the slow one.** The round timer was the only pressure available, and it is
-all-or-nothing. One tap now prods whoever has not finished, in the app's own voice, with a buzz,
-because it is aimed at a person rather than announced to a room. It is sent only to the sockets it is
-about, so nobody learns from a broadcast who the slow one is, and it skips the host, who has usually
-not finished either. Twenty-second cooldown, enforced on the server and mirrored on the button:
-socket errors are not rendered mid-round, so a refused second tap would otherwise be silent.
-
-**The card answers the two questions people actually ask.** It showed "3.1 mi", which is not a unit
-anybody argues in at dinner time, and said nothing about whether the place was open, even though
-`openNow` was already fetched and sitting on the type. It now reads "21 min drive" and carries an
-open or closed marker, and the screen-reader description says the same. The estimate is honest about
-being one: straight-line distance with the usual correction for a city grid, no routing API, because
-none is worth paying for to decide where six people eat.
-
-**A reaction knows which person sent it, not just which name.** Lanes were keyed on display name, and
-`indexOf` returns the first match, so two people called Sam shared one. The app already identifies
-people by a stable id everywhere else for exactly this reason; the reaction channel now does too.
-
-**The button says "Deal the cards", so they get dealt.** They used to simply exist. The three visible
-cards now arrive staggered 90ms apart with a short riffle from the same synth as the votes. It runs
-once per deck, on a timed window rather than on mount, because the background cards are keyed by
-restaurant: a new one mounts on every swipe, and animating those would make the stack twitch on every
-vote. Reduced motion skips it.
-
-**A flick counts, and the card leaves like it was thrown.** A swipe was decided on distance alone, so
-a fast flick that did not travel 110px did nothing: you threw the card and it sat there. On a phone
-that is most of the gesture, because a quick flick covers less ground than a slow drag of the same
-intent. Velocity now counts too, provided the card actually moved, so a hard short flick is a vote and
-a fast tap still is not. The exit carries the throw as well: a hard flick clears the screen further
-and faster, a nudge over the line barely gets out. Reduced motion still just fades.
-
-**A one-vote win says so.** The tally and the runners-up were already computed for the Plan B list,
-but the margin was never said, so "2 of 2 picked it" read the same whether the group agreed or whether
-one swipe decided the night. When the runner-up came within a single vote the winner screen now names
-it: "Din Tai Fung lost by one." Only at exactly one, because "won by six" is not a story, and never
-alongside the tie line, which is its own. Counted in right-swipes, the headcount people can check
-against each other, rather than the weighted score a super-like inflates.
-
-**A reaction comes from a person.** Reactions already floated, but from a lane derived from the
-reaction's own random id, and the sender's name was on the wire and never used, so the same person's
-emoji appeared somewhere new every time and the whole thing read as weather. Each person now keeps one
-lane for the round and their reactions carry their name. Lanes are spread across the roster rather
-than hashed, because hashing put two people at 24% and 26% in a real session and they overlapped.
-Anonymous system events have no sender, so they keep neither.
-
-**Something on screen moves when somebody else does.** During a round every signal about the group
-was near-static: the avatars sit there, and `finishedCount` only ticks when a whole deck is done,
-which can be minutes apart. So the app's central promise, that everyone is voting on this together
-right now, was invisible. `vote_progress` already fanned out on every swipe, so it now carries a
-plain count of every vote cast, which moves each time anybody swipes and pulses when it lands. A
-count and nothing else: it says nothing about who voted or on what, so it holds in an anonymous
-session exactly as it does in a revealed one.
-
-**The deck stops being a small card in a void.** On a laptop the swiping screen was a 384px card
-centred in 1280px of empty gradient, with the group's avatars, progress and reactions stacked under
-it and fighting for the vertical space this screen never has. From `lg` up they sit beside the deck
-instead, which fills the empty half and buys back the height, so the card can finally be the size of
-the thing the app is about. Below `lg` nothing changed: the phone layout still fits with the reaction
-bar above the fold, which is the constraint that shaped this screen in the first place.
-
-**A veto looks like a consequence, not a passing reaction.** A veto reused the floating-reaction
-channel, so the thing that removes a place for everybody drifted up the screen exactly like somebody
-tapping 🔥. It lands in the middle now at twice the size behind a tint of its own colour, and it is
-announced, because that overlay is `aria-hidden` and it was silent for a screen reader. It names
-neither the place nor the person: a veto is a vote, and votes here are anonymous.
-
-Closing that also closed a leak. The super-like broadcast carried the sender's display name while the
-veto deliberately carried none. A super-like is a weighted vote, so "the server never sends per-voter
-identities" has to hold on every channel, not just the progress payload. It sends no name now.
-
-**"New places" could not have worked.** Nearby Search returns at most twenty places and has no
-pagination, and the whole result set went out as round one's deck. So running it back excluded every
-card just swiped, asked Google the identical question, got the identical twenty back, crossed them all
-out and reported the area picked clean. It did that on the first press, in any city.
-
-A round is ten cards now and the overflow is held as a reserve, so the second round is dealt from
-places already paid for: free, instant, and genuinely new. The cap on `again` counts paid fetches, so
-a reserve round does not spend one. Alongside it the session remembers every id it has ever dealt, not
-just the deck in hand, because otherwise the fetch after the reserve drains would offer round one's
-places back as new ones. "Picked clean" now means what it says.
-
-An empty reserve then means this radius has nothing left, so the search steps up the ladder the app
-already offers -- 1, 3, 5, 10 miles -- before it calls Google rather than after a wasted call, because
-the same radius provably cannot return anything new. Walking that ladder rather than multiplying keeps
-the widened search to a radius the group could have picked themselves, so the receipt chip reads "5 mi"
-instead of an invented number, and the top of it is a real end: past ten miles this is not the same
-night out. The room is told in the same breath the deck arrives: "Nothing new within 3 mi, so the
-search went out to 5 mi." The widened radius sticks even when the wider search also comes up empty, so
-the next attempt steps further instead of paying again for the radius that just failed, and the
-refusal names where it looked: "That is everywhere within 10 mi, picked clean."
-
-**A super-like is nobody else's business until the result.** It fanned out to the room like a veto,
-but the two are not alike. A veto takes a place off everybody's list, so "something just died" is a
-true thing to tell the room. A super-like changes nothing anyone can see: it is a weight applied at
-the tally. And because everyone swipes the same deck at their own pace, the star landed on another
-screen over whatever card that person happened to be on, which is the one restaurant it was not
-about. It is sent back to the presser alone now.
-
-Removing it left a hole, because the tally on the winner screen is a deliberate headcount and a
-super-like leaves no mark on it. So the result says when one changed the outcome: `superTipped` is
-set when the weighted winner is not the one plain right-swipes would have picked, and the screen
-reads "⭐ A super-like tipped it past the headcount." That is the moment it means something, and the
-first moment there is anything to point at.
-
-It is not hidden below three people the way the veto is, and that asymmetry is deliberate. In a room
-of two the line does tell you who spent the star, but "1 of 2 picked it" already told you who liked
-the winner, so it leaks nothing the screen was not showing anyway. Suppressing it would cost more
-than it saves: two people, a star on one place and a plain like on another, and the screen shows a
-winner and a runner-up each on one vote with nothing to say why one of them won. That is the exact
-confusion the line exists to answer, in the smallest room there is. The veto is gated because
-attribution turns it into an argument; wanting somewhere for dinner is not the same kind of thing.
-
-**Ending the round early asks first.** "just decide now" was a bare underlined link that decided
-instantly. It is the one control that acts on everybody else's behalf, and it read like a shortcut
-rather than what it is. It now takes two steps and says the consequence in between: "2 people are
-still swiping. Their unvoted cards will not count." The confirm replaces the link in the same row,
-because that screen cannot afford another line.
-
-**Voting is no longer silent.** The card already had a full label, the arrow keys already worked, and
-every other realtime moment already announced itself, so the one thing missing was the vote itself:
-pressing a button swapped the card underneath with nothing said. It now announces what you did, what
-is in front of you, and where you are: "Vetoed Ellen's Stardust Diner. It is out for everyone. Next,
-LOS TACOS No.1. 4 of 19." Undo says so too, and the end of the deck says it is the end rather than
-naming a card that is not there.
-
-**Walking in mid-round says so.** Somebody who opens the link after voting has started was dropped
-straight into a deck with no sign the round was under way, while the group watched "3 of 4 done"
-become "3 of 5" for no visible reason. The deck they receive now carries how far ahead the
-furthest-along person is, and they get one line: "They started without you, 3 cards in. Your votes
-still count." Counted from votes rather than from arrival time, so a reconnect that missed a stretch
-gets the same honest answer as a genuine latecomer, and it is only ever sent to the person it
-describes.
-
-**The install prompt waits until it has a reason.** Asking on arrival is the thing everybody hates,
-and it is also the worst moment: nobody installs an app they have not used. So it appears once, on
-the winner screen, after a round has actually decided something, saying the only true thing there is
-to say ("next argument could take one tap"). No is remembered. It never appears in Safari, which does
-not fire `beforeinstallprompt`, because walking somebody through a share-sheet menu they did not ask
-for is worse than staying quiet.
-
-**A vibe says what it did, and the server is the only one who can say it.** Picking "chaotic" quietly
-rewrote the group's filters and then dealt a deck that looked like any other, so the choice read as
-decoration. It now arrives as a toast when the cards do: "fancy: tightened the search to 4 km, raised
-the rating floor to 4.4." The line is built in the Worker at the moment the vibe is applied, because
-`applyVibe` overwrites the very filters it would be measured against and the client only ever sees the
-after. The wording is derived from the vibe's own filters rather than written by hand, so a vibe whose
-numbers change cannot end up described as something it no longer does. It also only reports a real
-change: chaotic against wide-open defaults asks for the deck you were already getting, and says so.
-
-**The background keeps the clock's hours, but not at dinner time.** The aurora behind every screen
-takes its three stops from the local hour, so 8pm is deeper than 5pm and 2am goes cold. Two rules
-keep it from being a gimmick. The 4pm-to-7pm window is the brand's exact orange-and-pink, because
-prime time is the wrong hour to stop looking like yourself, and a test pins those hex values. And
-opacity stays in a narrow band, because the aurora is a blurred wash behind body copy and anything
-brighter starts eating contrast. Reduced motion gets the palette without the drift.
-
-**A tie is reported, not quietly resolved.** Ties break on deck order, which every client agrees on,
-so the winner is deterministic. Before, nobody was told it happened. `decideWinner` now returns
-`tiedWith`, and the winner screen says how many finished level and that this one was dealt first.
-The line is seeded from the winner's id, so every phone in the room shows the same sentence. What it
-does not do is pretend to flip a coin, because the tie-break is not random and saying so would be a
-lie.
-
-**Privacy is enforced on the wire, not in the UI.** "Show who's voted" is off by default, and when
-it's off the server never sends per-voter identities at all: the field is omitted from the progress
-payload, so it can't be recovered from devtools. Revealing is an explicit host opt-in. The only
-thing that leaves the server is what the current mode permits.
-
-**One Durable Object alarm, multiplexed.** A DO gets a single alarm, and two features need one: the
-host hand-off grace window and the round countdown. Rather than fight over it, both write their
-deadline to storage and a small scheduler sets the alarm to the earliest pending one; the handler
-runs whichever elapsed (hand off host and/or decide the round) and reschedules the rest.
-
-**Realtime resilience is handled, not hand-waved.** These edge cases decide whether a live app
-feels solid or broken:
-
-- **Reconnect.** A dropped client reconnects and the Worker replays full session state, so a flaky
-  phone connection never desyncs the deck or loses your votes.
-- **Host hand-off, with a grace window.** A refresh or a brief blip does _not_ demote the host, because a
-  short grace timer means host only passes to another player if they're really gone, so the session
-  never gets stuck with no one able to start or decide.
-- **No leaks.** Stale sessions are pruned on a daily cron and bounded by a TTL, so abandoned rooms
-  do not accumulate in D1.
-
-**Every browser capability degrades to nothing.** The QR scanner only appears where `BarcodeDetector`
-can do `qr_code`, the badge and the wake lock are silently absent on iOS and Firefox, and a view
-transition is skipped entirely under `prefers-reduced-motion` rather than cross-faded quietly. None of
-them are load-bearing: the typed code, the counter in the page and a plain screen swap were the whole
-app before, and still are wherever the platform says no.
-
-**A reconnect has to survive a pocket.** The socket retried six times on a capped backoff and then gave
-up for good, which is about twenty-two seconds - a lift, a walk past the kitchen, or most of what a
-restaurant's wifi does to a phone. It now also retries whenever the tab becomes visible or the browser
-reports it is back online, resetting the attempt count, because that is a new chance rather than a
-seventh go at the old one.
-
-**Sample restaurants say why they are sample restaurants.** The deck falls back to a seeded mock when
-the month's Google budget is spent _or_ when no live source is configured, and those are different
-sentences. The banner used to assert the budget for both, which is a small lie about the one thing this
-app is careful with.
+Room announcements use seeded lines so re-renders do not change a sentence mid-read.
+Dialogs trap visible controls, including WebKit's default button-skipping Tab
+behavior, and restore focus to their trigger.

@@ -1,68 +1,58 @@
-# Working in wherever
+# Repository conventions
 
-How this repo expects to be worked in. Personal working style (commits, planning,
-how to explain things) lives in the global `~/.claude/CLAUDE.md`.
+`AGENTS.md` and `CLAUDE.md` link here so guidance has one source.
+Setup and commit conventions are in [Contributing](CONTRIBUTING.md).
 
-The sections below are engineering standards that apply to any codebase. Anything specific to wherever
--- its checks, its deliberate oddities, the patterns to follow -- gets added when this repo is
-next cleaned up, and only once each claim has been verified against the code.
+## Verification
 
-## Do not trust your own measurements
+Run `pnpm run verify` before reporting work complete. CI runs the same gates in the
+same order. Use `pnpm run <name>` so a package-manager builtin cannot shadow a script.
 
-Most false statements come from scans that measured nothing, not from misreading code. Real cases:
-a glob with `{src,test}` braces matched zero files, so a coverage sweep compared against an empty
-string and called every module untested; a `cd` inside a backgrounded command did not apply, so
-three "stability runs" ran nothing; a coverage tool reported 0% because it could not instrument the
-runtime; a script name silently resolved to an npm builtin, so a check reported green for a day
-without ever executing.
+- Source and script modules stay within the size and local-state ceilings.
+- Comment ceilings must not be raised to retain prose. Re-read comments at moved seams.
+- Custom properties must be declared, even when a reference has a fallback.
+- Documentation paths, scripts, routes, names, links, and headings must resolve.
+- Unused dependencies, exports, source files, and missing emitted CSS classes fail checks.
+- Browser journeys use isolated local state and refuse to reuse a manual server.
 
-So: an impossibly clean result means suspect the scan first. And **green is not proof unless you
-have seen that check fail**: break the thing it guards, watch it go red, then believe it.
+Check that scans examined the intended files. An empty or implausibly clean result
+can indicate a bad glob. New guards cover their own implementation: introduce a
+failure, observe the check fail, restore the original, and confirm no temporary
+changes remain. Do not loosen assertions or timeouts to get a pass.
 
-## Writing a new check
+## Room invariants
 
-- It has to cover its own source, or the checks stop being checked.
-- It has to cover every place the failure can appear, not just where you first saw it.
-- Exclude test files from source scans: tests mount throwaway routes and declare throwaway types.
-- Prove it fails before trusting it, and prove a failure leaves the tree clean.
-- Always `pnpm run <name>`, and never name a script after an npm command. A script called `docs` is
-  shadowed by npm's own `docs`, which exits 0 without running anything.
+The room is the authority for participant identity, host rights, shared filters,
+vote budgets, and the result. A hidden control does not enforce a rule.
 
-## Numbers in prose
+Votes are keyed by participant and restaurant. Only dealt restaurants accept votes;
+undo removes the requesting participant's vote while a round is still active.
+One super-like and one veto are allowed per person per round. Vetoes remove places
+from the ranking and never reveal who used them or which top choice was removed.
+Identified completion is sent only when the host enabled voter disclosure.
 
-Do not write live counts into docs: test totals, check totals, file lengths. Nothing verifies them
-and they go stale silently. Say what a thing is and let the check print the number. Describing a
-past change is different, and fine.
+Preserve stable identities across reconnects, even when two people share a name.
+Host handover updates stored identity maps and live socket attachments together.
+The one alarm schedules both host grace and the round deadline.
 
-## Comments
+Provider fetches can yield to another event. Keep start/replay guards active until
+the resulting status and deck are written. Failed fetches preserve a retryable
+lobby or result; a successful empty search is a different outcome.
 
-- Keep an inline comment to a line or two. A longer block has to earn it by recording something a
-  reader would otherwise rediscover the hard way: a trap that has bitten, a constraint that fails
-  silently, a reason not to try the obvious thing. Well over a hundred blocks here run longer than
-  that and they are mostly the good ones, so length is not the test. "Why, not what" is.
-- Never explain a refactor, or what the code used to do. A reader never saw that version.
-- A comment that logs successive changes is a changelog. Git has it, and the log drifts out of step
-  with the value it describes.
-- After moving code, re-read every comment near the seam. A move strands them on the wrong function.
-- Never raise a comment budget to fit prose. Trim instead; no script can enforce that about itself.
+The client clears old room state and its buffered commands on a code change.
+Callbacks from a disposed or superseded socket must not mutate the current room.
+Keep the new deck's round state coherent and its display consistent with server data.
 
-## How the code is commented
+## Tests, comments, and docs
 
-A comment here is a warning, not an essay. The bar is whether it records something that would cost
-somebody real time to rediscover: a trap that has actually bitten, a rule the server enforces that a
-reader might assume the client owns, a constraint that fails silently when broken, or why not the
-obvious alternative.
+Worker tests apply the production migrations to isolated D1 and run the real
+Durable Object runtime. Pure rules belong in shared tests; browser behavior also
+needs browser coverage. Capture fixtures stay inside the review tool's browser.
 
-What that looks like in practice:
+Inline comments explain non-obvious constraints or decisions. Remove stale
+implementation history and changelog prose; preserve migration/compatibility reasons
+when old persisted data is still accepted.
 
-- _Enforced here, not by hiding a control. A hidden button is not a rule._
-- _`windowMs: 0` looks like the cheap way to reach the expiry path and is not._
-- _Book notes slightly ahead of `currentTime`, never at it. A note booked for exactly now lands in the
-  past and the hardware skips it, which eats the attack and leaves the tail - so it is easy to miss._
-- _A flag and not a name, on purpose. The veto is anonymous, and naming what it killed narrows the
-  vetoer down to one person in a group of four._
-
-Everything else goes, and the reasoning behind a whole feature lives here or in `docs/adr/` rather
-than in a docstring where it rots. The tree sits at about 1,600 comment lines across 13,000 of source,
-which is lower than it looks: the rules of this game are genuinely subtle, and most of what survives is
-a rule rather than a description.
+Do not put live test totals, file lengths, or gate totals in docs. Let checks print
+current measurements. Recorded visual reviews describe their own revision and
+must state what browser emulation cannot establish.

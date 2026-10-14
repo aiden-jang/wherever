@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { createSessionSchema, type SessionFilters } from "@wherever/shared";
 import { sessions, visitedPlaces } from "./db/schema.js";
 import { generateSessionCode } from "./code.js";
-import { isValidPhotoRef } from "./restaurantSource.js";
+import { isValidPhotoRef } from "./googlePlace.js";
 import type { Env } from "./env.js";
 
 export { SessionRoom } from "./sessionRoom.js";
@@ -52,7 +52,7 @@ app.onError((err, c) => {
 app.get("/api/health", (c) => c.json({ ok: true, source: c.env.RESTAURANT_SOURCE ?? "mock" }));
 
 // This month's Google usage vs. the caps that stop the app from calling Google. Handy for keeping
-// an eye on how close you are to the free tier.
+// inspecting reservation headroom.
 app.get("/api/usage", async (c) => {
   const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
   return c.json(await meter.stats());
@@ -94,8 +94,7 @@ app.post("/api/sessions", async (c) => {
 });
 
 // Geocode a zip/town to a search center, keeping the Google key server-side. Rate-limited per IP
-// and edge-cached (geocodes are stable), so "search another area" costs at most one paid Geocoding
-// call per distinct query per cache window. Requires the Geocoding API enabled on the key.
+// and edge-cached by normalized query. Requires the Geocoding API enabled on the key.
 const GEOCODE_LIMIT = 20;
 const GEOCODE_WINDOW_MS = 60_000;
 const GEOCODE_CACHE_SECONDS = 86_400; // 1 day
@@ -151,7 +150,7 @@ app.get("/api/geocode", async (c) => {
 });
 
 // Proxy a Google Place photo, keeping the API key server-side. The deck's imageUrl points here.
-// Edge-cached so the paid Place Photo SKU is fetched at most once per (photo, width).
+// The edge cache reuses successful responses for a normalized photo reference and width.
 const PHOTO_MAX_WIDTH = 1600;
 const PHOTO_DEFAULT_WIDTH = 800;
 const PHOTO_CACHE_SECONDS = 2_592_000; // 30 days
@@ -178,7 +177,7 @@ app.get("/api/photo", async (c) => {
   if (cached) return cached;
 
   // Cache miss → this would be a paid Place Photo fetch. Gate it on the monthly budget so we never
-  // spill past Google's free tier; over budget, the client's <img> onError shows the emoji fallback.
+  // exceed the configured call cap; the client’s image fallback handles a budget refusal.
   const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
   if (!(await meter.tryConsume("photo"))) {
     return c.json({ error: "Monthly photo budget reached." }, 429);

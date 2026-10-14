@@ -262,3 +262,6 @@ export const ROUND_TIMER_OPTIONS: RoundTimerOption[] = [
   { seconds: 120, label: "2 min" },
   { seconds: 300, label: "5 min" },
 ];
+
+/** Shared with the countdown; the room still enforces this interval. */
+export const NUDGE_COOLDOWN_MS = 20_000;

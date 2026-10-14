@@ -15,7 +15,9 @@ async function join(code: string, displayName: string) {
   const socket = res.webSocket!;
   socket.accept();
   const seen: ServerMessage[] = [];
-  socket.addEventListener("message", (e) => seen.push(JSON.parse(e.data as string) as ServerMessage));
+  socket.addEventListener("message", (e) => {
+    seen.push(JSON.parse(e.data as string) as ServerMessage);
+  });
   const send = (msg: ClientMessage) => socket.send(JSON.stringify(msg));
   const waitFor = async <T extends ServerMessage["type"]>(type: T, from = 0) => {
     for (let i = 0; i < 200; i += 1) {

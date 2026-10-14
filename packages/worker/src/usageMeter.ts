@@ -10,20 +10,10 @@ interface UsageState {
   photo: number;
 }
 
-// Just under Google's 1,000/month free tier for Nearby Search (Enterprise) and Place Photos, with
-// margin so a burst near month-end can't overshoot. Overridable via wrangler [vars].
+// Deployment vars override the monthly reservation limit.
 const DEFAULT_CAP = 950;
 
-/**
- * Global monthly circuit breaker for paid Google calls. A single instance (idFromName("global"))
- * counts Nearby Search and Place Photo calls per calendar month; once a kind hits its cap the caller
- * skips the Google request and serves a fallback, so usage stays inside the free tier and the bill
- * stays at zero. Counts reset automatically at the start of each UTC month.
- *
- * This covers every paid path because all Google calls funnel through the Worker (search in the
- * session DO, photos through /api/photo). It's the app-level guard; a Google Cloud quota cap is the
- * belt-and-suspenders backstop.
- */
+/* Monthly reservations bound Nearby Search and Place Photo calls, then serve fallbacks. Geocoding has a separate per-IP limit and cache; provider quotas remain an external backstop. */
 export class UsageMeter extends DurableObject<Env> {
   private caps(): Record<UsageKind, number> {
     return {

@@ -153,3 +153,23 @@
     display: flex;
   }
 }
+
+/* A code must fit its invite panel even when glyphs are wide or text is enlarged. */
+.session-code {
+  font-size: min(3rem, 10vw);
+  letter-spacing: 0.18em;
+}
+
+.filter-fields,
+.round-rule-fields {
+  container-type: inline-size;
+}
+.filter-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@container (min-width: 16rem) {
+  .filter-options {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

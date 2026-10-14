@@ -1,16 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-/**
- * Reads the join QR the other phone is already showing.
- *
- * `JoinQr` has drawn one since the beginning and the only way to use it was to point a *camera app*
- * at it. This closes the loop from inside the room.
- *
- * `BarcodeDetector` rather than a decoding library, so nothing ships to the people who never open
- * this: the whole feature is the camera plus a browser API. Where it does not exist - Safari, today -
- * the button is never rendered and the typed code stays what it always was. See `qrScan.ts` for the
- * support probe, which lives outside this file so Fast Refresh keeps working.
- */
+/* Scan a shared invite into a code; camera access is scoped to the open scanner. */
 interface ScanQrProps {
   onCode: (raw: string) => void;
   onClose: () => void;

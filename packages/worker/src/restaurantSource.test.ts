@@ -1,20 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
   MockRestaurantSource,
-  formatPriceRange,
-  googleTypesFor,
-  isValidPhotoRef,
-  mapGooglePlace,
   passesAmenities,
   passesPrice,
   passesRating,
   passesReviews,
-  photoProxyUrl,
   resolveSearchCenter,
   createRestaurantSource,
   isDemoSource,
-  type GooglePlace,
 } from "./restaurantSource.js";
+import {
+  formatPriceRange,
+  googleTypesFor,
+  isValidPhotoRef,
+  mapGooglePlace,
+  photoProxyUrl,
+  type GooglePlace,
+} from "./googlePlace.js";
 import { VIBES, type SessionFilters } from "@wherever/shared";
 
 describe("mapGooglePlace", () => {

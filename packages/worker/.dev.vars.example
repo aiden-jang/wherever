@@ -1,11 +1,8 @@
 # Copy to .dev.vars (gitignored) to run the Worker locally.
 #
-# `mock` is the default on purpose. The monthly cap is enforced by a Durable Object, and in
-# `wrangler dev` that object is *local* - it starts at zero and knows nothing about what the deployed
-# app has spent, while the Google call itself goes to the real internet with the real key. So local
-# development against `google` spends real quota with no circuit breaker in front of it.
-#
-# Set it to `google` deliberately, for as long as you need it, and put it back.
+# Sample restaurants need no provider key. A local UsageMeter has its own counters;
+# live development consumes provider quota independently of the deployed meter.
+# Enable `google` deliberately when checking live data.
 
 RESTAURANT_SOURCE=mock
 GOOGLE_PLACES_API_KEY=your-google-places-api-key

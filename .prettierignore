@@ -11,3 +11,5 @@ dist/
 # Playwright artefacts.
 test-results/
 playwright-report/
+
+coverage/

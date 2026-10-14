@@ -18,37 +18,24 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # First, because it is the check that keeps the rest honest: a gate that quietly leaves either
-      # this file or `verify` stops gating, and nothing else would say so.
       - run: pnpm run gates
-      # A god-file is never added in one go; it accretes and no single diff looks wrong. Ratcheted,
-      # so the eight already over the line can only shrink.
       - run: pnpm run size
-      # A cleanup pass is a moment and drift is permanent; and a `var(--x)` nothing declares fails
-      # silently, using the fallback or inheriting.
       - run: pnpm run comments
       - run: pnpm run css-vars
-      # Prose rots with nothing to fail: a rename leaves a doc naming a symbol that is gone.
       - run: pnpm run check:docs
-      # An export nothing imports and a dependency nothing uses are both dead weight nobody notices.
       - run: pnpm run knip
-      - run: pnpm typecheck
-      - run: pnpm lint
-      # .prettierrc had no printWidth, so `pnpm format` reflowed the whole repo to prettier's 80
-      # default and nothing ever said the code did not match its own config. 110 matches the sibling
-      # apps; this step is what keeps it true.
+      - run: pnpm run typecheck
+      - run: pnpm run lint
       - run: pnpm run format:check
-      - run: pnpm build
-      # After the build: most classes here are Tailwind utilities that only exist in the output once
-      # Tailwind has seen them used, so a token missing from it produces no CSS anywhere.
+      - run: pnpm run build
+      # Emitted CSS is needed to validate Tailwind class usage.
       - run: pnpm run dead-classes
-      - run: pnpm test
+      - run: pnpm run test
+      - run: pnpm --filter @wherever/web exec playwright install --with-deps chromium webkit
+      - run: pnpm run e2e
 
-  # Auto-deploy to Cloudflare on merge to main, only after the checks above pass.
-  # Requires a CLOUDFLARE_API_TOKEN repo secret with BOTH Workers Scripts:Edit and D1:Edit.
-  # D1 is not optional: `pnpm run deploy` applies pending migrations before it ships the code, and a
-  # Workers-only token fails that step with a 7403 and never reaches the deploy.
-  # Wrangler infers the account from the token, so no account_id is needed here.
+  # Merge-to-main delivery depends on the complete check job.
+
   deploy:
     needs: check
     if: github.ref == 'refs/heads/main'
@@ -66,14 +53,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Both halves through the same root script a human would run, so CI and your terminal cannot
-      # deploy different things. Worker first: it chains `d1 migrations apply --remote` ahead of
-      # `wrangler deploy`, and shipping code whose migration has not run is what 500'd /auth/me for
-      # every app once — the column was missing in production and every session lookup threw.
-      #
-      # NOTE: CLOUDFLARE_API_TOKEN must include Pages:Edit (not just Workers). Don't also enable a
-      # Pages "connect to Git" integration in the dashboard, or you'll get two competing deploys.
-      - name: Deploy Worker + web to Cloudflare
-        run: pnpm run deploy
+      # Validation ran in check; this fresh runner builds assets and applies migrations before shipping.
+      - name: Deploy Worker and assets to Cloudflare
+        run: pnpm run deploy:only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

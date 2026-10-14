@@ -1,3 +1,5 @@
+import { NUDGE_COOLDOWN_MS } from "@wherever/shared";
+import { RoundController } from "./roundController.js";
 import { DurableObject } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
 import { and, eq } from "drizzle-orm";
@@ -5,22 +7,15 @@ import { visitedPlaces } from "./db/schema.js";
 import {
   cardsBehind,
   clientMessageSchema,
-  decideWinner,
   finishedParticipantIds,
-  promoteAlternative,
-  tastePulse,
   vetoedRestaurantIds,
   type DecisionResult,
-  type Restaurant,
   type ServerMessage,
-  type Session,
-  type SwipeDirection,
   type SessionFilters,
   type Vibe,
-  type Vote,
 } from "@wherever/shared";
 import type { Env } from "./env.js";
-import { writeEvent } from "./events.js";
+
 import { readVotes } from "./roomState.js";
 import type { ClientMap, SessionMeta, SocketAttachment, VoteMap } from "./roomState.js";
 import {
@@ -29,47 +24,13 @@ import {
   reassignHostAway,
   rescheduleAlarm,
 } from "./hostHandover.js";
-import { sendVibes, setVibe, vibeCounts } from "./vibeTally.js";
-import { attachmentsOn, broadcastTo, participantsOn, resultMessage, sendTo } from "./roomSockets.js";
-import { getOrCreateDeck, nextRoundDeck, readDemoMode, recordVisit, visitedFor } from "./deckSource.js";
+import { sendVibes, setVibe } from "./vibeTally.js";
+import { attachmentsOn, broadcastTo, resultMessage, sendTo, broadcastSessionState } from "./roomSockets.js";
+import { readDemoMode, visitedFor } from "./deckSource.js";
 
-/** Attached to each WebSocket so presence survives DO hibernation. */
-
-// Each "again" round is a paid Places fetch; cap how many a single session can trigger.
-const MAX_AGAIN_ROUNDS = 20;
-
-// Grace window after the host's last socket drops before host is handed to someone else. Long enough
-// that a refresh or a brief network blip keeps the host as host; short enough that a group isn't
-// stranded for long if the host genuinely leaves. Reassignment happens in alarm().
-
-/** Long enough that nudging is a decision, not a drum roll. */
-const NUDGE_COOLDOWN_MS = 20_000;
-
-/** clientId -> stable identity, so a reconnecting client keeps its votes. */
-/** Votes keyed by `${participantId}:${restaurantId}` for idempotency. */
-/**
- * Who picked which vibe. Never leaves this object - clients get tallies only, so "nobody finds out
- * who said fancy" is a property of the server rather than of every screen that renders it.
- */
-
-/**
- * One per session, addressed by session code. Owns every socket in the room and the live votes.
- *
- * Single-threaded, so counting a vote and deciding a winner cannot interleave: the check-and-flip in
- * `decide` fires the result exactly once with no locks. See docs/adr/0001-durable-objects.md.
- *
- * Every rule below is enforced here, not by hiding a control. A hidden button is not a rule.
- */
+/** One room owns socket identity, presence, and host handover. RoundController enforces voting and verdict transitions using the same storage. */
 export class SessionRoom extends DurableObject<Env> {
-  /*
-   * One start at a time. The status flip in handleStartRound deliberately happens after the Places
-   * fetch so a failed fetch leaves everyone in the lobby to retry, and that gap let a host who
-   * double-tapped through the `status !== "lobby"` guard twice. Each pass charges the budget meter
-   * for its own Google search. In memory rather than storage on purpose: an evicted instance comes
-   * back able to start, which is the safe direction for a flag whose only job is to close a gap
-   * between two awaits.
-   */
-  private starting = false;
+  private rounds = new RoundController(this.ctx, this.env);
 
   /** RPC: the Worker calls this right after creating the session row. */
   async initialize(meta: SessionMeta): Promise<void> {
@@ -106,17 +67,23 @@ export class SessionRoom extends DurableObject<Env> {
       case "join":
         return this.handleJoin(ws, msg.displayName, msg.clientId);
       case "start_round":
-        return this.handleStartRound(ws);
+        return this.rounds.handleStartRound(ws);
       case "swipe":
-        return this.handleSwipe(ws, msg.restaurantId, msg.direction, msg.super ?? false, msg.veto ?? false);
+        return this.rounds.handleSwipe(
+          ws,
+          msg.restaurantId,
+          msg.direction,
+          msg.super ?? false,
+          msg.veto ?? false,
+        );
       case "undo_swipe":
-        return this.handleUndoSwipe(ws, msg.restaurantId);
+        return this.rounds.handleUndoSwipe(ws, msg.restaurantId);
       case "decide_now":
-        return this.handleDecideNow(ws);
+        return this.rounds.handleDecideNow(ws);
       case "again":
-        return this.handleAgain(ws, msg.deck ?? "new");
+        return this.rounds.handleAgain(ws, msg.deck ?? "new");
       case "choose_alternative":
-        return this.handleChooseAlternative(ws, msg.restaurantId);
+        return this.rounds.handleChooseAlternative(ws, msg.restaurantId);
       case "set_vibe":
         return this.handleSetVibe(ws, msg.vibe);
       case "set_filters":
@@ -159,9 +126,7 @@ export class SessionRoom extends DurableObject<Env> {
    * any id you like - without the check, anybody with the code could quietly shrink the deck.
    */
   private async handleSetNeverAgain(ws: WebSocket, restaurantId: string, neverAgain: boolean): Promise<void> {
-    // Anyone in the room may set this -- it is the group's memory, not the host's. But it was the one
-    // mutation that never looked at who was asking, so a socket that opened and never joined could
-    // block a restaurant from every future deck. Not host-only; joined.
+    // Joined participants may update the group’s visited history; an unjoined socket may not.
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att) return;
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
@@ -190,7 +155,7 @@ export class SessionRoom extends DurableObject<Env> {
     }
     await this.ctx.storage.put("lastNudge", Date.now());
 
-    const deck = await this.deckFor(meta);
+    const deck = await this.rounds.deckFor(meta);
     const votes = await readVotes(this.ctx.storage);
     const participants = this.connectedParticipants();
     const finished = new Set(
@@ -221,21 +186,7 @@ export class SessionRoom extends DurableObject<Env> {
     // which getWebSockets still returns here) so a finished group decides instead of stalling on
     // the person who just left.
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (meta?.status === "swiping") await this.evaluate(meta, ws);
-  }
-
-  /** Set (or clear) the round countdown from the session's roundSeconds; returns the deadline. */
-  private async setRoundDeadline(meta: SessionMeta): Promise<number | undefined> {
-    const secs = meta.filters.roundSeconds ?? 0;
-    if (secs > 0) {
-      const deadline = Date.now() + secs * 1000;
-      await this.ctx.storage.put("roundEndsAt", deadline);
-      await rescheduleAlarm(this.ctx);
-      return deadline;
-    }
-    await this.ctx.storage.delete("roundEndsAt");
-    await rescheduleAlarm(this.ctx);
-    return undefined;
+    if (meta?.status === "swiping") await this.rounds.evaluate(meta, ws);
   }
 
   /** Run whichever deadlines have passed - hand off host, decide the round, or both - then reschedule
@@ -258,7 +209,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (roundEnd && now >= roundEnd) {
       await this.ctx.storage.delete("roundEndsAt");
       const meta = await this.ctx.storage.get<SessionMeta>("meta");
-      if (meta?.status === "swiping") await this.decide(meta); // time's up → tally decides
+      if (meta?.status === "swiping") await this.rounds.decide(meta); // time's up → tally decides
     }
 
     await rescheduleAlarm(this.ctx);
@@ -299,7 +250,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (meta.status === "lobby") await sendVibes(this.ctx);
 
     if (meta.status === "swiping") {
-      const deck = await this.deckFor(meta);
+      const deck = await this.rounds.deckFor(meta);
       const votes = await readVotes(this.ctx.storage);
       const mine = votes.filter((v) => v.participantId === identity.participantId);
       const alreadyVoted = mine.map((v) => v.restaurantId);
@@ -316,285 +267,10 @@ export class SessionRoom extends DurableObject<Env> {
         demo: await readDemoMode(this.ctx.storage),
         roundEndsAt: (await this.ctx.storage.get<number>("roundEndsAt")) ?? undefined,
       });
-      await this.evaluate(meta); // refresh progress for the new arrival
+      await this.rounds.evaluate(meta); // refresh progress for the new arrival
     } else if (meta.status === "decided") {
       await this.sendResult(ws);
     }
-  }
-
-  private async handleStartRound(ws: WebSocket): Promise<void> {
-    const att = ws.deserializeAttachment() as SocketAttachment | null;
-    if (!att?.isHost) {
-      return this.send(ws, {
-        type: "error",
-        message: "Only the host can start swiping.",
-      });
-    }
-    if (this.starting) return;
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta || meta.status !== "lobby") return;
-
-    // Fetch BEFORE flipping to swiping: if the Places call fails we stay in the lobby and let the
-    // host retry, rather than stranding everyone on an empty "swiping" screen. (An empty-but-ok
-    // result is distinct — that legitimately shows "nothing survived the filters".)
-    this.starting = true;
-    let deck: Restaurant[];
-    try {
-      deck = await this.deckFor(meta);
-    } catch {
-      return this.send(ws, {
-        type: "error",
-        message: "couldn't load restaurants right now. give it a moment and try again.",
-      });
-    } finally {
-      this.starting = false;
-    }
-
-    meta.status = "swiping";
-    await this.ctx.storage.put("meta", meta);
-    const roundEndsAt = await this.setRoundDeadline(meta);
-    const vibeEffect = await this.ctx.storage.get<string>("vibeEffect");
-    this.broadcast({
-      type: "deck",
-      restaurants: deck,
-      demo: await readDemoMode(this.ctx.storage),
-      roundEndsAt,
-      ...(vibeEffect ? { vibeEffect } : {}),
-    });
-    await this.broadcastState();
-    await this.evaluate(meta);
-  }
-
-  private async handleSwipe(
-    ws: WebSocket,
-    restaurantId: string,
-    direction: SwipeDirection,
-    isSuper: boolean,
-    isVeto: boolean,
-  ): Promise<void> {
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta || meta.status !== "swiping") return;
-    const att = ws.deserializeAttachment() as SocketAttachment | null;
-    if (!att) return;
-
-    /*
-     * The vote has to be for a card that was actually dealt.
-     *
-     * "Finished the deck" counts distinct restaurant ids voted on, so without this a client could send
-     * `deckSize` invented ids and be finished without seeing a card. Every one of those ids also becomes
-     * a key in the vote map, which is Durable Object storage.
-     */
-    const deck = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
-    if (!deck.some((r) => r.id === restaurantId)) return;
-
-    const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
-    // One super-like per participant per round (server-enforced): a super only sticks on a right
-    // swipe, and only if they haven't already spent it on a still-standing vote. Otherwise it's a
-    // normal right-swipe.
-    let superLike = isSuper && direction === "right";
-    if (superLike) {
-      const spent = Object.values(votes).some((v) => v.participantId === att.participantId && v.super);
-      if (spent) superLike = false;
-      else writeEvent(this.env, "super_like_used");
-    }
-    // One veto per participant per round, enforced here for the same reason as the super-like: the
-    // client hides a spent button, and a hidden button is not a rule. A veto removes a place from
-    // contention outright, so a client that simply sent the flag twice could quietly clear the deck.
-    let vetoing = isVeto && direction === "left";
-    if (vetoing) {
-      const spent = Object.values(votes).some((v) => v.participantId === att.participantId && v.veto);
-      if (spent) vetoing = false;
-    }
-    // Keyed by participant+restaurant: a re-vote overwrites, never double-counts.
-    votes[`${att.participantId}:${restaurantId}`] = {
-      participantId: att.participantId,
-      restaurantId,
-      direction,
-      ...(superLike ? { super: true } : {}),
-      ...(vetoing ? { veto: true } : {}),
-    };
-    await this.ctx.storage.put("votes", votes);
-
-    /*
-     * The star goes back to the presser alone: everyone swipes at their own pace, so on another
-     * screen it lands over a card it is not about. The veto fans out because it takes a place off
-     * everybody's list, and it needs a crowd to hide in -- with two people, anonymity is arithmetic.
-     * Below three it lands silently and still counts.
-     */
-    if (superLike) this.send(ws, { type: "reaction", emoji: "⭐", from: "", kind: "super" });
-    if (vetoing && this.connectedParticipants().length >= 3) {
-      this.broadcast({ type: "reaction", emoji: "🚫", from: "", kind: "veto" });
-    }
-
-    await this.evaluate(meta);
-  }
-
-  /**
-   * Rewind belongs here too. Removing the card only in React would leave the original vote in the
-   * tally, turning the replacement into an overwrite that can keep a spent super or veto. The
-   * participant comes from the socket, so nobody can rewind somebody else's choice.
-   */
-  private async handleUndoSwipe(ws: WebSocket, restaurantId: string): Promise<void> {
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta || meta.status !== "swiping") return;
-    const att = ws.deserializeAttachment() as SocketAttachment | null;
-    if (!att) return;
-    const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
-    const key = `${att.participantId}:${restaurantId}`;
-    if (!votes[key]) return;
-    delete votes[key];
-    await this.ctx.storage.put("votes", votes);
-    await this.evaluate(meta);
-  }
-
-  private async handleDecideNow(ws: WebSocket): Promise<void> {
-    const att = ws.deserializeAttachment() as SocketAttachment | null;
-    if (!att?.isHost) {
-      return this.send(ws, {
-        type: "error",
-        message: "Only the host can call it.",
-      });
-    }
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta || meta.status !== "swiping") return;
-    await this.decide(meta);
-  }
-
-  /** Let the host rescue a good result when the winning place is impractical, without another round. */
-  private async handleChooseAlternative(ws: WebSocket, restaurantId: string): Promise<void> {
-    const att = ws.deserializeAttachment() as SocketAttachment | null;
-    if (!att?.isHost) {
-      return this.send(ws, { type: "error", message: "Only the host can switch the final pick." });
-    }
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    const result = await this.ctx.storage.get<DecisionResult | null>("winner");
-    if (!meta || meta.status !== "decided" || !result) return;
-
-    const promoted = promoteAlternative(result, restaurantId);
-    if (!promoted) {
-      return this.send(ws, { type: "error", message: "That place is no longer a finalist." });
-    }
-
-    await this.ctx.storage.put("winner", promoted);
-    await recordVisit(this.env, meta.code, promoted.restaurant.id, promoted.restaurant.name);
-    const votes = await readVotes(this.ctx.storage);
-    const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
-    this.broadcastResult(
-      promoted,
-      this.connectedParticipants().length,
-      vetoedRestaurantIds(votes).size,
-      round,
-    );
-    await this.broadcastHistory(meta.code);
-  }
-
-  // ---- core round logic ----
-
-  /** Recompute + broadcast progress, then decide if everyone connected is done. */
-  private async evaluate(meta: SessionMeta, excludeWs?: WebSocket): Promise<void> {
-    const deck = await this.deckFor(meta);
-    const votes = await readVotes(this.ctx.storage);
-    const participants = this.connectedParticipants(excludeWs);
-    const total = participants.length;
-    const finishedIds = finishedParticipantIds(
-      votes,
-      participants.map((p) => p.participantId),
-      deck.length,
-    );
-    const pulse = tastePulse(deck, votes);
-
-    this.broadcast({
-      type: "vote_progress",
-      finishedCount: finishedIds.length,
-      totalParticipants: total,
-      votesCast: votes.length,
-      ...(pulse ? { tastePulse: pulse } : {}),
-      // Only reveal identities when the host chose to; otherwise the field is omitted and the round
-      // stays anonymous on the wire, not just in the UI.
-      ...(meta.filters.revealVoters ? { finishedIds } : {}),
-    });
-
-    if (total > 0 && finishedIds.length >= total) {
-      await this.decide(meta);
-    }
-  }
-
-  /** Flip to decided exactly once and broadcast the outcome. */
-  private async decide(meta: SessionMeta): Promise<void> {
-    if (meta.status !== "swiping") return; // already decided; do nothing
-    meta.status = "decided";
-    writeEvent(this.env, "session_decided", "", "", this.connectedParticipants().length);
-    await this.ctx.storage.put("meta", meta);
-    // Round's over — drop any pending countdown so its alarm can't fire on a decided round.
-    await this.ctx.storage.delete("roundEndsAt");
-    await rescheduleAlarm(this.ctx);
-
-    const deck = await this.deckFor(meta);
-    const votes = await readVotes(this.ctx.storage);
-    const result = decideWinner(deck, votes);
-    await this.ctx.storage.put("winner", result);
-
-    // The chosen place joins the group's history so it drops out of next time.
-    if (result) {
-      await recordVisit(this.env, meta.code, result.restaurant.id, result.restaurant.name);
-    }
-
-    const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
-    this.broadcastResult(result, this.connectedParticipants().length, vetoedRestaurantIds(votes).size, round);
-    await this.broadcastHistory(meta.code);
-    await this.broadcastState();
-  }
-
-  /** Host runs the round again, on new places or on the same ones. */
-  private async handleAgain(ws: WebSocket, mode: "new" | "same"): Promise<void> {
-    const att = ws.deserializeAttachment() as SocketAttachment | null;
-    if (!att?.isHost) {
-      return this.send(ws, { type: "error", message: "Only the host can run it back." });
-    }
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta || meta.status !== "decided") return;
-
-    const rounds = (await this.ctx.storage.get<number>("againRounds")) ?? 0;
-    const dealt = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
-    let next: { deck: Restaurant[]; paid: boolean; note?: string };
-    if (mode === "same") {
-      if (dealt.length === 0) {
-        return this.send(ws, { type: "error", message: "nothing to vote on again. deal a new list." });
-      }
-      next = { deck: dealt, paid: false };
-    } else {
-      const fetched = await nextRoundDeck(
-        {
-          ...this.deckRequest(meta, new Set(dealt.map((r) => r.id))),
-          vibeCounts: await vibeCounts(this.ctx.storage),
-        },
-        rounds < MAX_AGAIN_ROUNDS,
-      );
-      if ("error" in fetched) {
-        await this.broadcastState(); // the radius may have moved even though the round did not
-        return this.send(ws, { type: "error", message: fetched.error });
-      }
-      next = fetched;
-    }
-    const { deck, paid, note: searchNote } = next;
-
-    await this.ctx.storage.delete("votes");
-    await this.ctx.storage.delete("winner");
-    if (paid) await this.ctx.storage.put("againRounds", rounds + 1);
-    meta.status = "swiping";
-    await this.ctx.storage.put("meta", meta);
-    const roundEndsAt = await this.setRoundDeadline(meta);
-    const vibeEffect = await this.ctx.storage.get<string>("vibeEffect");
-    this.broadcast({
-      type: "deck",
-      restaurants: deck,
-      demo: await readDemoMode(this.ctx.storage),
-      roundEndsAt,
-      ...(vibeEffect ? { vibeEffect } : {}),
-      ...(searchNote ? { searchNote } : {}),
-    });
-    await this.broadcastState();
-    await this.evaluate(meta);
   }
 
   // ---- helpers ----
@@ -629,20 +305,7 @@ export class SessionRoom extends DurableObject<Env> {
     return identity;
   }
 
-  /*
-   * The deck helpers live in deckSource.ts; these hand them the room's storage, env and vibe tally.
-   * Kept as one-liners rather than inlined at a dozen call sites, so the wiring exists once.
-   */
-  private deckRequest(meta: SessionMeta, exclude?: ReadonlySet<string>) {
-    return { storage: this.ctx.storage, env: this.env, meta, exclude };
-  }
-
-  private async deckFor(meta: SessionMeta): Promise<Restaurant[]> {
-    return getOrCreateDeck({ ...this.deckRequest(meta), vibeCounts: await vibeCounts(this.ctx.storage) });
-  }
-
   /** Unique connected participants (dedup across reconnect overlap). */
-  /* Thin, so a hundred call sites stay short; the substance is in roomSockets.ts. */
   private connectedParticipants(exclude?: WebSocket): SocketAttachment[] {
     return attachmentsOn(this.ctx, exclude);
   }
@@ -672,30 +335,7 @@ export class SessionRoom extends DurableObject<Env> {
     sendTo(ws, resultMessage(result, total, vetoedCount, round));
   }
 
-  private async broadcastHistory(code: string): Promise<void> {
-    this.broadcast({ type: "history", visited: await visitedFor(this.env, code) });
-  }
-
-  private broadcastResult(
-    result: DecisionResult | null,
-    total: number,
-    vetoedCount: number,
-    round: number,
-  ): void {
-    broadcastTo(this.ctx, resultMessage(result, total, vetoedCount, round));
-  }
-
   private async broadcastState(closing?: WebSocket): Promise<void> {
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta) return;
-    const session: Session = {
-      id: meta.code,
-      code: meta.code,
-      status: meta.status,
-      voteMode: meta.voteMode,
-      filters: meta.filters,
-      participants: participantsOn(this.ctx, closing),
-    };
-    broadcastTo(this.ctx, { type: "session_state", session }, closing);
+    await broadcastSessionState(this.ctx, closing);
   }
 }

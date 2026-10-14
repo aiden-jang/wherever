@@ -22,5 +22,6 @@ export default defineConfig({
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
     timeout: 60_000,
+    env: { WRANGLER_LOG_PATH: "../../.wrangler/e2e-logs/" },
   },
 });

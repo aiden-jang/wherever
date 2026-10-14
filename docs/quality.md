@@ -38,9 +38,13 @@ The browser suite uses isolated local Wrangler data, sample restaurants, and a
 separate local IP budget for each scenario/engine. Native rate limiting stays
 enabled. It refuses to reuse a development server. API/browser fixtures never
 require live provider keys.
+An interrupted-upload regression checks that client cancellation leaves the Worker,
+existing room, and new session creation usable.
 
 Failures retain a screenshot and trace in the web package's ignored test-output
-directory. Use the trace viewer with the file path printed by Playwright.
+directory. Wrangler logs are saved in `.wrangler/e2e-logs/` at the repository root.
+CI uploads both as the `browser-test-diagnostics` artifact when checks fail.
+Use the trace viewer with the file path printed by Playwright.
 
 ## Interface review
 

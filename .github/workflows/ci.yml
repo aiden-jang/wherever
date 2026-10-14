@@ -33,6 +33,16 @@ jobs:
       - run: pnpm run test
       - run: pnpm --filter @wherever/web exec playwright install --with-deps chromium webkit
       - run: pnpm run e2e
+      - name: Retain browser and Worker diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-test-diagnostics
+          path: |
+            packages/web/test-results/
+            .wrangler/e2e-logs/
+          include-hidden-files: true
+          retention-days: 7
 
   # Merge-to-main delivery depends on the complete check job.
 

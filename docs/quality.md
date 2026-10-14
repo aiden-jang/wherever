@@ -32,6 +32,8 @@ pnpm --filter @wherever/shared run test
 pnpm --filter @wherever/worker run test
 pnpm --filter @wherever/web run test
 pnpm run e2e
+pnpm run security:check
+pnpm run check:migrations
 ```
 
 The browser suite uses isolated local Wrangler data, sample restaurants, and a
@@ -45,6 +47,11 @@ Failures retain a screenshot and trace in the web package's ignored test-output
 directory. Wrangler logs are saved in `.wrangler/e2e-logs/` at the repository root.
 CI uploads both as the `browser-test-diagnostics` artifact when checks fail.
 Use the trace viewer with the file path printed by Playwright.
+
+The dependency audit runs locally and in CI, including development tools and
+transitive packages. The targeted esbuild override patches Drizzle's legacy config
+loader until its upstream dependency is updated. Worker tests clear binding storage
+and apply production D1 migrations before each case.
 
 ## Interface review
 

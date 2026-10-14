@@ -1,4 +1,5 @@
-import { SELF, env, runInDurableObject } from "cloudflare:test";
+import { exports as workers, env } from "cloudflare:workers";
+import { runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 import { RoundController } from "../src/roundController.js";
@@ -13,7 +14,7 @@ import type { SessionRoom } from "../src/sessionRoom.js";
 const BASE = "https://wherever.test";
 
 async function host() {
-  const created = await SELF.fetch(`${BASE}/api/sessions`, {
+  const created = await workers.default.fetch(`${BASE}/api/sessions`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -24,7 +25,7 @@ async function host() {
   });
   const { code } = (await created.json()) as { code: string };
 
-  const res = await SELF.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
+  const res = await workers.default.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
   const socket = res.webSocket!;
   socket.accept();
   const seen: ServerMessage[] = [];

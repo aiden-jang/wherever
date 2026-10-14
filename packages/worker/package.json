@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@wherever/shared": "workspace:*",
-    "drizzle-orm": "^0.38.3",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.13.7"
   },
   "devDependencies": {
@@ -21,7 +21,7 @@
     "@cloudflare/workers-types": "^5.20261014.1",
     "drizzle-kit": "^0.30.1",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8",
+    "vitest": "^4.1.11",
     "wrangler": "^4.151.0"
   }
 }

@@ -30,11 +30,11 @@
     "e2e": "pnpm --filter @wherever/web run e2e"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "@typescript-eslint/parser": "^8.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.71.1",
+    "@typescript-eslint/parser": "^8.71.1",
     "eslint": "^8.57.1",
-    "knip": "^6.34.0",
-    "prettier": "^3.4.2",
+    "knip": "^6.41.0",
+    "prettier": "^3.9.10",
     "typescript": "^5.7.2"
   }
 }

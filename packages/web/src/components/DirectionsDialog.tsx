@@ -6,7 +6,7 @@ import { Modal } from "./Modal.js";
  * tapping the button just opens the spot in Maps. Prefers the place's canonical Maps URI; otherwise
  * a name+address search, with the address included so it resolves to the right spot even for chains.
  */
-export function mapsUrl(r: Restaurant): string {
+export function mapsUrl(r: Pick<Restaurant, "name" | "address" | "googleMapsUri">): string {
   return (
     r.googleMapsUri ??
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${r.name} ${r.address ?? ""}`.trim())}`

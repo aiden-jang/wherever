@@ -1,3 +1,4 @@
+import { SavePlanImage } from "./SavePlanImage.js";
 import { type CSSProperties, useEffect, useState } from "react";
 
 import { useShareAction } from "../useShareAction.js";
@@ -329,6 +330,7 @@ export function WinnerScreen({
                       ? "Couldn’t share"
                       : "Send the plan"}
             </button>
+            <SavePlanImage key={restaurant.id} restaurant={restaurant} />
             <PlaceLinks restaurant={restaurant} />
             {installOffer && (
               /* Asked here and nowhere else: the round just ended, so there is an actual reason. */

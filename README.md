@@ -84,3 +84,9 @@ Merge-to-main delivery follows the complete CI check job.
 ## License
 
 [MIT](LICENSE) © Aiden Jang. Bundled font packages carry their own licenses.
+
+After a match, **Save plan image** downloads a dinner ticket with the chosen place,
+its address, and a map QR code. It uses no restaurant photo or extra provider call,
+and includes no participant names or individual votes. **Send the plan** remains
+the text/link share action. Image creation and delivery live in
+`packages/web/src/lib/dinnerImage.ts` and `SavePlanImage.tsx`.

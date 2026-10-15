@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Restaurant } from "@wherever/shared";
 import { saveDinnerImage } from "../lib/dinnerImage.js";
+import { SharePlanImage } from "./SharePlanImage.js";
 
 export function SavePlanImage({ restaurant }: { restaurant: Restaurant }) {
   const [busy, setBusy] = useState(false);
@@ -30,6 +31,7 @@ export function SavePlanImage({ restaurant }: { restaurant: Restaurant }) {
       <p role="status" className="mt-2 text-center text-xs text-muted">
         {message}
       </p>
+      <SharePlanImage restaurant={restaurant} />
     </div>
   );
 }

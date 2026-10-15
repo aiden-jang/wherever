@@ -1,6 +1,7 @@
+import { AppUpdate } from "./AppUpdate.js";
 import type { CSSProperties } from "react";
 import { MotionConfig } from "framer-motion";
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import Landing from "./routes/Landing.js";
 import Share from "./routes/Share.js";
 import Lobby from "./routes/Lobby.js";
@@ -53,6 +54,7 @@ export default function App() {
             </Routes>
           </ErrorBoundary>
 
+          <LandingUpdate />
           <footer className="site-footer">
             <p>Place data powered by Google</p>
             <p className="mt-1">
@@ -71,4 +73,9 @@ export default function App() {
       </BrowserRouter>
     </MotionConfig>
   );
+}
+
+function LandingUpdate() {
+  const { pathname } = useLocation();
+  return <AppUpdate safe={pathname === "/"} />;
 }

@@ -20,6 +20,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  if (request.cache === "no-store") return;
   const url = new URL(request.url);
 
   // Never cache realtime / API traffic.

@@ -2,7 +2,7 @@ import QRCode from "qrcode";
 import type { Restaurant } from "@wherever/shared";
 import { mapsUrl } from "../components/DirectionsDialog.js";
 
-export async function saveDinnerImage(restaurant: Pick<Restaurant, "name" | "address" | "googleMapsUri">) {
+export async function createDinnerImage(restaurant: Pick<Restaurant, "name" | "address" | "googleMapsUri">) {
   await document.fonts.ready;
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
@@ -55,15 +55,22 @@ export async function saveDinnerImage(restaurant: Pick<Restaurant, "name" | "add
       "image/png",
     ),
   );
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
   const name =
     restaurant.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 60) || "dinner";
-  anchor.download = `wherever-${name}-${new Date().toISOString().slice(0, 10)}.png`;
+  return new File([blob], `wherever-${name}-${new Date().toISOString().slice(0, 10)}.png`, {
+    type: "image/png",
+  });
+}
+
+export async function saveDinnerImage(restaurant: Pick<Restaurant, "name" | "address" | "googleMapsUri">) {
+  const file = await createDinnerImage(restaurant);
+  const url = URL.createObjectURL(file);
+  const anchor = document.createElement("a");
+  anchor.download = file.name;
   anchor.href = url;
   document.body.appendChild(anchor);
   anchor.click();

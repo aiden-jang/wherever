@@ -1,3 +1,4 @@
+import { readFile, mkdir, copyFile } from "node:fs/promises";
 import { test, expect, audit, createRoom } from "./fixtures.js";
 
 test("create, vote, decide, and run the same deck again", async ({ page }) => {
@@ -28,6 +29,30 @@ test("create, vote, decide, and run the same deck again", async ({ page }) => {
   });
   await page.getByRole("button", { name: "Share dinner plan", exact: true }).click();
   await expect(page.getByRole("button", { name: "Couldn’t share dinner plan" })).toBeVisible();
+  const imageDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Save plan image", exact: true }).click();
+  const image = await imageDownload;
+  expect(image.suggestedFilename()).toMatch(/^wherever-.+-\d{4}-\d{2}-\d{2}\.png$/);
+  const imagePath = await image.path();
+  const bytes = await readFile(imagePath!);
+  expect(bytes.subarray(1, 4).toString()).toBe("PNG");
+  expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([1080, 1350]);
+  if (process.env.UI_QA_CAPTURE) {
+    await mkdir("../../docs/ui-review", { recursive: true });
+    await copyFile(imagePath!, "../../docs/ui-review/dinner-plan.png");
+    await page.screenshot({
+      path: "../../docs/ui-review/winner-mobile.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.screenshot({
+      path: "../../docs/ui-review/winner-desktop.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
   await page.getByRole("button", { name: "Get directions", exact: true }).click();
   const directions = page.getByRole("dialog", { name: "How are we getting there?" });
   await directions.getByRole("button", { name: "Copy address instead" }).click();

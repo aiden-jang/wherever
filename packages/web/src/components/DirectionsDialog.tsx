@@ -56,6 +56,7 @@ export function DirectionsDialog({
         <a
           href={directionsUrl(restaurant)}
           target="_blank"
+          aria-describedby="external-link-hint"
           rel="noopener noreferrer"
           onClick={onClose}
           className="rounded-full bg-ember px-5 py-3 text-center text-sm font-semibold text-ink transition hover:brightness-110 active:scale-[0.98]"
@@ -65,6 +66,7 @@ export function DirectionsDialog({
         <a
           href={appleDirectionsUrl(restaurant)}
           target="_blank"
+          aria-describedby="external-link-hint"
           rel="noopener noreferrer"
           onClick={onClose}
           className="rounded-full border border-white/15 px-5 py-3 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"
@@ -74,6 +76,7 @@ export function DirectionsDialog({
         <a
           href={wazeDirectionsUrl(restaurant)}
           target="_blank"
+          aria-describedby="external-link-hint"
           rel="noopener noreferrer"
           onClick={onClose}
           className="rounded-full border border-white/15 px-5 py-3 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"

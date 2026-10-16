@@ -18,7 +18,7 @@ export function SavePlanImage({ restaurant }: { restaurant: Restaurant }) {
           setMessage("");
           try {
             await saveDinnerImage(restaurant);
-            setMessage("Image downloaded. The plan travels well.");
+            setMessage("Download started. The plan travels well.");
           } catch {
             setMessage("Couldn’t save the image. Try again, or send the plan above.");
           } finally {

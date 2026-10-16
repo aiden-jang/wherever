@@ -62,6 +62,7 @@ export default function App() {
               <a
                 href="https://aidenjang.com"
                 target="_blank"
+                aria-describedby="external-link-hint"
                 rel="noopener"
                 className="underline underline-offset-2 hover:text-cream transition-colors"
               >

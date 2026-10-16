@@ -191,6 +191,7 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
             <a
               href={mapsUrlFor(restaurant)}
               target="_blank"
+              aria-describedby="external-link-hint"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 rounded-2xl bg-ember px-4 py-3 text-sm font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
             >
@@ -202,6 +203,7 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
                   <a
                     href={restaurant.website}
                     target="_blank"
+                    aria-describedby="external-link-hint"
                     rel="noopener noreferrer"
                     className={`${actionClass} flex-1`}
                   >

@@ -251,6 +251,7 @@ export function WinnerScreen({
                     <a
                       href={mapsUrl(choice.restaurant)}
                       target="_blank"
+                      aria-describedby="external-link-hint"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/15 p-2 transition hover:border-white/25 hover:bg-white/5 active:scale-[0.99]"
                     >

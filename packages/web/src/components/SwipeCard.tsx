@@ -71,6 +71,9 @@ export function SwipeCard({
       onPointerDown={(e) => {
         pressStart.current = { x: e.clientX, y: e.clientY };
       }}
+      onPointerCancel={() => {
+        pressStart.current = null;
+      }}
       onPointerUp={(e) => {
         const start = pressStart.current;
         pressStart.current = null;
@@ -113,6 +116,7 @@ export function SwipeCard({
           event.currentTarget.focus({ preventScroll: true });
           onOpenDetail(restaurant);
         }}
+        data-deck-control
         data-card-info
         className="absolute bottom-3 right-3 grid h-9 w-9 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm"
       >

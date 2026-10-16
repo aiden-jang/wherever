@@ -16,6 +16,7 @@ export function PlaceLinks({ restaurant }: { restaurant: Restaurant }) {
         <a
           href={restaurant.website}
           target="_blank"
+          aria-describedby="external-link-hint"
           rel="noopener noreferrer"
           className="rounded-full border border-white/15 px-4 py-2.5 text-center text-sm font-semibold transition hover:bg-white/5 active:scale-[0.98]"
         >

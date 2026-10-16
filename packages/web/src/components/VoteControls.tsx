@@ -14,15 +14,16 @@ export function VoteControls({
   return (
     <div className="vote-controls">
       <div className="vote-main">
-        <button type="button" onClick={() => onVote("left")} className="vote-no">
+        <button data-deck-control type="button" onClick={() => onVote("left")} className="vote-no">
           <span aria-hidden>✕</span> Nope
         </button>
-        <button type="button" onClick={() => onVote("right")} className="vote-yes">
+        <button data-deck-control type="button" onClick={() => onVote("right")} className="vote-yes">
           <span aria-hidden>♥</span> Yes, please
         </button>
       </div>
       <div className="vote-special">
         <button
+          data-deck-control
           type="button"
           aria-disabled={vetoUsed}
           aria-label={vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"}
@@ -31,6 +32,7 @@ export function VoteControls({
           <span aria-hidden>⊘</span> Veto <small>{vetoUsed ? "Used" : "1 per round"}</small>
         </button>
         <button
+          data-deck-control
           type="button"
           aria-disabled={superUsed}
           aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}

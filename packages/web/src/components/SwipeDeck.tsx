@@ -53,12 +53,7 @@ export function SwipeDeck({
   /** Seeded from the server so a reconnect can't hand back a spent veto. */
   vetoSpent?: boolean;
   onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean, isVeto?: boolean) => void;
-  /*
-   * The group panel, in the second column on a wide screen and under the deck on a phone.
-   *
-   * Passed in rather than placed by the caller, because the deck's own status - where you are, what the
-   * keys do, whether you can undo - belongs in that column too, and only the deck knows any of it.
-   */
+  // The deck owns its status rail; the group panel joins it on desktop and follows it on phones.
   aside?: ReactNode;
   onUndo: (restaurantId: string) => void;
   /** Feeds the page's live region, so voting is not silent for a screen reader. */
@@ -86,13 +81,7 @@ export function SwipeDeck({
   // it never blocks voting since a drag isn't a tap.
   const [detail, setDetail] = useState<Restaurant | null>(null);
 
-  /*
-   * First-run gesture hint: shown once ever, then remembered.
-   *
-   * The first swipe dismisses it and nothing else does. Don't add a timeout: five seconds is about
-   * how long the line takes to read, and less than a first-timer spends looking at the restaurant
-   * rather than the hint. A swipe is the signal that it landed.
-   */
+  // A first swipe confirms the hint was understood; a timeout cannot establish that.
   const [showHint, setShowHint] = useState(() => {
     try {
       return !localStorage.getItem(HINT_KEY);
@@ -100,13 +89,7 @@ export function SwipeDeck({
       return false;
     }
   });
-  /*
-   * Why a spent button did nothing, said at the moment it does nothing.
-   *
-   * Don't mark the veto or the super-like `disabled`: it swallows the click, so tapping a spent
-   * one twice gives only silence and the button reads as broken. `aria-disabled` keeps it
-   * focusable and clickable so it can answer for itself.
-   */
+  // Keep spent actions focusable so they can explain their limit when pressed.
   const [spentNote, setSpentNote] = useState<string | null>(null);
   const saySpent = useCallback(
     (moment: "vetoSpent" | "superSpent") => {
@@ -196,14 +179,37 @@ export function SwipeDeck({
   // card behind it (the sheet has its own concerns, e.g. dismissing).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (detail) return;
+      if (
+        detail ||
+        e.defaultPrevented ||
+        e.isComposing ||
+        e.repeat ||
+        e.altKey ||
+        e.shiftKey ||
+        (e.target instanceof HTMLElement &&
+          e.target.closest(
+            'input, textarea, select, button:not([data-deck-control]), a, [contenteditable]:not([contenteditable="false"])',
+          )) ||
+        window.getSelection()?.isCollapsed === false
+      )
+        return;
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() !== "z") return;
       if ((e.key === "Backspace" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z")) && canUndo) {
         e.preventDefault();
         undoLast();
-      } else if (e.key === "ArrowLeft") commit("left");
-      else if (e.key === "ArrowRight") commit("right");
-      else if (e.key === "ArrowUp" && !superUsed) commit("right", true);
-      else if (e.key === "ArrowDown" && !vetoUsed) commit("left", false, true);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        commit("left");
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        commit("right");
+      } else if (e.key === "ArrowUp" && !superUsed) {
+        e.preventDefault();
+        commit("right", true);
+      } else if (e.key === "ArrowDown" && !vetoUsed) {
+        e.preventDefault();
+        commit("left", false, true);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -377,6 +383,7 @@ export function SwipeDeck({
         {canUndo && (
           <button
             type="button"
+            data-deck-control
             onClick={undoLast}
             className="mx-auto mt-2 block px-3 py-1 text-xs font-medium text-muted transition hover:text-cream hover:underline lg:mx-0"
           >

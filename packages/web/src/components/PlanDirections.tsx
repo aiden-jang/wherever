@@ -14,7 +14,13 @@ export function PlanDirections({
 }) {
   const style = `plan-directions ${className}`;
   return unavailable ? (
-    <a href={mapsUrl(restaurant)} target="_blank" rel="noopener noreferrer" className={style}>
+    <a
+      href={mapsUrl(restaurant)}
+      target="_blank"
+      aria-describedby="external-link-hint"
+      rel="noopener noreferrer"
+      className={style}
+    >
       See it in Google Maps <span aria-hidden>↗</span>
     </a>
   ) : (

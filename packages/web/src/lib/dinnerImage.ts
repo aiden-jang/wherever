@@ -2,6 +2,9 @@ import QRCode from "qrcode";
 import type { Restaurant } from "@wherever/shared";
 import { mapsUrl } from "../components/DirectionsDialog.js";
 
+const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+const charactersOf = (text: string) => Array.from(segmenter.segment(text), ({ segment }) => segment);
+
 export async function createDinnerImage(restaurant: Pick<Restaurant, "name" | "address" | "googleMapsUri">) {
   await document.fonts.ready;
   const canvas = document.createElement("canvas");
@@ -89,10 +92,10 @@ function lines(
 ) {
   let line = "",
     row = 0;
-  for (const character of Array.from(text)) {
+  for (const character of charactersOf(text)) {
     if (ctx.measureText(line + character).width > width) {
       if (row === max - 1) {
-        while (ctx.measureText(line + "…").width > width) line = Array.from(line).slice(0, -1).join("");
+        while (ctx.measureText(line + "…").width > width) line = charactersOf(line).slice(0, -1).join("");
         ctx.fillText(line + "…", x, y + row * height);
         return;
       }

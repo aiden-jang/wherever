@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
 import { line, type Restaurant, type SwipeDirection, type VisitedPlace } from "@wherever/shared";
 
+import { CARD_SIZE, DECK_LAYOUT } from "./cardStyle.js";
 import { CardFace } from "./CardFace.js";
 import { VoteControls } from "./VoteControls.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
@@ -31,10 +32,6 @@ function Key({ children, dim = false }: { children: ReactNode; dim?: boolean }) 
   );
 }
 
-/* Deck left, everything else right, one column on a phone. The left column is capped at the card's
-   own width so it does not stretch on a wide screen. */
-const SPLIT =
-  "w-full lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-center lg:gap-12";
 const RAIL = "mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none lg:text-left";
 
 export function SwipeDeck({
@@ -239,7 +236,7 @@ export function SwipeDeck({
 
   if (done) {
     return (
-      <div className={SPLIT}>
+      <div className={DECK_LAYOUT}>
         <div className="text-center max-w-sm mx-auto mt-10">
           <div className="text-5xl">🧾</div>
           <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
@@ -293,9 +290,9 @@ export function SwipeDeck({
   const upcoming = restaurants.slice(index + 1, index + 3);
 
   return (
-    <div className={SPLIT}>
+    <div className={DECK_LAYOUT}>
       <div className="mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none">
-        <div className="relative h-[clamp(340px,52dvh,410px)] lg:h-[clamp(360px,64dvh,520px)]">
+        <div className={CARD_SIZE}>
           {/* Background cards, peeking behind the top one. */}
           {upcoming
             .map((r, i) => (

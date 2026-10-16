@@ -1,6 +1,6 @@
 import type { Restaurant } from "@wherever/shared";
 import { distanceText } from "@wherever/shared";
-import { categoryLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
+import { PHOTO_SIZE, categoryLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 
 export function CardFace({
@@ -29,11 +29,7 @@ export function CardFace({
   return (
     <>
       <div data-card-photo className="relative">
-        <RestaurantPhoto
-          imageUrl={photoUrl ?? null}
-          category={restaurant.category}
-          className="h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,300px)]"
-        />
+        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className={PHOTO_SIZE} />
         {photoCount > 1 && (
           <div className="photo-tracks" aria-hidden>
             {Array.from({ length: photoCount }).map((_, i) => (

@@ -20,6 +20,7 @@
   font-size: 11px;
 }
 .meal-name {
+  overflow-wrap: anywhere;
   margin-top: 8px;
   font: 750 26px/1.05 var(--font-display);
   letter-spacing: -0.7px;

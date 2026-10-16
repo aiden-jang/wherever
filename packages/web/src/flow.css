@@ -17,6 +17,7 @@
   display: none;
 }
 .restaurant-detail {
+  overflow-wrap: anywhere;
   background: var(--color-cream);
   color: var(--color-ink);
 }

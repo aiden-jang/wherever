@@ -16,8 +16,8 @@ export function RestaurantPhoto({
   className?: string;
 }) {
   const s = styleFor(category);
-  const [failed, setFailed] = useState(false);
-  const showImage = imageUrl != null && !failed;
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const showImage = imageUrl != null && failedUrl !== imageUrl;
 
   return (
     <div
@@ -31,7 +31,7 @@ export function RestaurantPhoto({
           // read out before the name it repeats is noise, not description.
           alt=""
           className="h-full w-full object-cover"
-          onError={() => setFailed(true)}
+          onError={() => setFailedUrl(imageUrl)}
         />
       ) : (
         <span className="drop-shadow-lg">{s.emoji}</span>

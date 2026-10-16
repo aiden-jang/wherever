@@ -104,3 +104,8 @@ export function reviewCountLabel(count: number): string {
   if (count < 1000) return String(count);
   return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}k`;
 }
+
+export const DECK_LAYOUT =
+  "w-full lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-center lg:gap-12";
+export const CARD_SIZE = "relative h-[clamp(340px,52dvh,410px)] lg:h-[clamp(360px,64dvh,520px)]";
+export const PHOTO_SIZE = "h-[clamp(132px,24dvh,192px)] lg:h-[clamp(200px,38dvh,300px)]";

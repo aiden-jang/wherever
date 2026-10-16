@@ -4,12 +4,12 @@ import { distanceLabel, distanceText, travelEstimate, travelLabel } from "./trav
 describe("how long it takes to get there", () => {
   it("walks you to somewhere close", () => {
     expect(travelEstimate(400)?.mode).toBe("walk");
-    expect(travelLabel(400)).toMatch(/^\d+ min walk$/);
+    expect(travelLabel(400)).toMatch(/^≈ \d+ min walk$/);
   });
 
   it("drives you to somewhere nobody is walking to", () => {
     expect(travelEstimate(5000)?.mode).toBe("drive");
-    expect(travelLabel(5000)).toMatch(/^\d+ min drive$/);
+    expect(travelLabel(5000)).toMatch(/^≈ \d+ min drive$/);
   });
 
   it("takes longer the further it is", () => {

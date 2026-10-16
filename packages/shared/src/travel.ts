@@ -27,10 +27,10 @@ export function travelEstimate(distanceMeters: number): Travel | null {
   return { minutes, mode };
 }
 
-/** "8 min walk" / "12 min drive". Null when there is no usable distance. */
+/** Approximate travel time. Null when there is no usable distance. */
 export function travelLabel(distanceMeters: number): string | null {
   const travel = travelEstimate(distanceMeters);
-  return travel && `${travel.minutes} min ${travel.mode}`;
+  return travel && `≈ ${travel.minutes} min ${travel.mode}`;
 }
 
 /*

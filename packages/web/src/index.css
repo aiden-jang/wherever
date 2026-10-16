@@ -482,3 +482,20 @@ summary,
     animation: none;
   }
 }
+
+input:is(:autofill, :-webkit-autofill),
+textarea:is(:autofill, :-webkit-autofill) {
+  -webkit-text-fill-color: var(--color-cream);
+  caret-color: var(--color-cream);
+  box-shadow: 0 0 0 1000px var(--color-ink-soft) inset;
+}
+
+::selection {
+  background: var(--color-ember);
+  color: var(--color-ink);
+}
+
+input::selection,
+textarea::selection {
+  -webkit-text-fill-color: var(--color-ink);
+}

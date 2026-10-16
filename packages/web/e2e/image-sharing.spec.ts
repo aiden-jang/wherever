@@ -31,14 +31,14 @@ test("the dinner image reaches native sharing from the click and cancellation do
   const share = page.getByRole("button", { name: "Share plan image", exact: true });
   await expect(share).toBeVisible();
   if (process.env.CAPTURE_DETAILS && test.info().project.name === "chromium") {
-    const folder = new URL("../../../docs/ui-review/finishing-details/", import.meta.url).pathname;
+    const folder = new URL("../../../docs/ui-review/refinements-oct15/", import.meta.url).pathname;
     await mkdir(folder, { recursive: true });
     for (const [name, width, height] of [
       ["desktop", 1440, 900],
       ["mobile", 390, 844],
     ] as const) {
       await page.setViewportSize({ width, height });
-      await share.scrollIntoViewIfNeeded();
+      await page.getByRole("heading", { name: /Dinner is handled/ }).scrollIntoViewIfNeeded();
       await page.screenshot({
         path: `${folder}sharing-${name}.png`,
         fullPage: false,

@@ -1,13 +1,4 @@
-/*
- * Which vertical lane a floating reaction rises in.
- *
- * Seeded from the sender, not the reaction's own id, so everyone keeps one lane for the whole
- * round. Keying off the reaction puts the same person somewhere new every time, and the emoji
- * reads as weather rather than as somebody in the room with you.
- *
- * Falls back to the id for anything with no sender, which is how the anonymous system events (a veto,
- * a super-like) stay anonymous. They are rendered differently anyway.
- */
+// Keep a participant in one reaction lane; anonymous events fall back to event ID.
 const LANES = 61;
 const FIRST = 20;
 
@@ -17,14 +8,7 @@ function hashed(seed: string): number {
   return FIRST + (sum % LANES);
 }
 
-/**
- * `seatKey` identifies the sender and `roster` is the seat order, both by participant id. Names will
- * not do: two people in one session can both be called Sam, which is why the rest of the app
- * identifies people by id, and `indexOf` on a name would sit them in the same lane.
- *
- * `roster` spreads a known group evenly instead of leaving it to the hash, which put two people at
- * 24% and 26% in a real session: legible, because the names are there, but they overlap.
- */
+/** Space known seats evenly by participant ID, including participants who share a name. */
 export function reactionLane(seatKey: string, id: string, roster: readonly string[] = []): number {
   const key = seatKey.trim();
   if (!key) return hashed(id);

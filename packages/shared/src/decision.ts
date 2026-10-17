@@ -65,15 +65,7 @@ export interface DecisionResult {
    * most interesting thing a vote can do, and without this nobody is ever told it happened.
    */
   tiedWith: number;
-  /**
-   * True when a vetoed place beat the winner: the group's actual favourite was killed.
-   *
-   * Vetoed places are dropped before ranking, silently, so without this a group agrees on somewhere,
-   * loses it, and is handed second place with no sign the vote went any other way.
-   *
-   * A flag and not a name, on purpose. The veto is anonymous, and naming what it killed narrows the
-   * vetoer down to one person in a group of four.
-   */
+  /** A veto removed a higher-ranked choice. Expose no place or participant identity. */
   vetoedTop: boolean;
   /**
    * The weighted winner is not the one a plain headcount would have picked.
@@ -146,13 +138,7 @@ export function vetoedRestaurantIds(votes: Vote[]): Set<string> {
   return out;
 }
 
-/**
- * Majority wins, ties broken by deck order so every client lands on the same answer. Null when
- * nobody swiped right, or when everything that got a right-swipe was also vetoed.
- *
- * A plain left swipe is only a downvote. A veto is absolute and beats any number of right-swipes,
- * super-likes included: one a big enough majority could overrule would not be a veto.
- */
+/** Most weighted votes wins; deck order breaks ties. Vetoes exclude a place regardless of score. */
 export function decideWinner(deck: Restaurant[], votes: Vote[]): DecisionResult | null {
   const scores = tallyScores(votes); // weighted — decides the winner
   const counts = tallyRightSwipes(votes); // unweighted — the headcount we display
@@ -189,13 +175,7 @@ export function decideWinner(deck: Restaurant[], votes: Vote[]): DecisionResult 
   };
 }
 
-/**
- * How close the runner-up came, when it came close. Null when it was not: "won by six" is not a story.
- *
- * Without it, "1 of 2 picked it" reads the same whether the group agreed or one swipe decided the
- * night. Counted in right-swipes - the headcount people can check against each other - rather than
- * the weighted score a super-like inflates.
- */
+/** Compare close results using voter headcounts rather than super-like weights. */
 export function nearMissLine(
   winnerName: string,
   winnerRightSwipes: number,
@@ -219,13 +199,7 @@ export function decideNowWarning(finishedCount: number, totalParticipants: numbe
   return `${who} still swiping. Their unvoted cards will not count.`;
 }
 
-/**
- * How far ahead the furthest-along person is. Zero when you are level or leading.
- *
- * Somebody opening the link mid-round otherwise lands in a deck with no sign voting started without
- * them, while the group watches "3 of 4 done" become "3 of 5" for no visible reason. Counted from
- * votes, not arrival time, so a reconnect that missed a stretch gets the same honest answer.
- */
+/** Vote-count gap to the furthest participant; reconnects preserve that progress. */
 export function cardsBehind(votes: Vote[], participantId: string): number {
   const counts = new Map<string, number>();
   for (const v of votes) counts.set(v.participantId, (counts.get(v.participantId) ?? 0) + 1);

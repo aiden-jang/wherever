@@ -139,13 +139,7 @@ export function vibeReadingLine(reading: VibeReading, groupSize: number): string
   return `${option.label} is ahead, ${reading.votes} of ${reading.total}.`;
 }
 
-/**
- * What a vibe did to the deck, in words. Picking one silently rewrites the filters and the deck looks
- * like any other, so without this the choice reads as decoration.
- *
- * Derived from the vibe's own filters, never written by hand, so a vibe whose numbers change cannot
- * end up described as something it no longer does.
- */
+/** Derive descriptions from the actual filters so copy stays aligned with the selected vibe. */
 export function vibeEffect(vibe: Vibe, base: SessionFilters): string[] {
   const { filters: wanted } = vibeOption(vibe);
   const out: string[] = [];

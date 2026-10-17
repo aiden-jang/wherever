@@ -39,14 +39,7 @@
   --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 
-  /* Spring easing, sampled from a damped harmonic oscillator rather than eyeballed as a bezier.
-     A cubic-bezier physically cannot overshoot and come back, so "springy" UI built from one is
-     always a fast-out curve pretending. linear() can, because it's a lookup table.
-
-     Both are normalized, so duration stays a separate decision. --ease-spring overshoots 1.1% and
-     is the default for anything arriving; --ease-bounce overshoots 12% and is for the payoff.
-     Living in @theme means Tailwind also generates ease-spring / ease-bounce utilities for any
-     class that actually appears in the markup, so the same curve is reachable from both sides. */
+  /* Sampled spring curves permit overshoot; duration remains independent of the easing. */
   --ease-spring: linear(
     0,
     0.038,
@@ -170,18 +163,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/*
- * The bits of screen the phone owns: the notch, and the home indicator along the bottom.
- *
- * This is a `display: standalone` PWA, so installed there is no browser chrome holding content off
- * those edges - anything pinned to one sits under it. `viewport-fit=cover` in the document head is
- * what makes these report a real number; without it they are all zero and every rule below is a
- * no-op that looks like it works.
- *
- * Named rather than written inline, because the two that matter are used from several components and
- * `max()` against a floor is the part that is easy to forget: a bare inset is 0 on a desktop and on
- * every phone without a notch, which would take the padding away from everybody else.
- */
+/* Standalone phones need safe-area insets plus minimum padding on devices whose insets are zero. */
 @utility pad-safe-bottom {
   padding-bottom: max(var(--pad, 0px), env(safe-area-inset-bottom));
 }
@@ -423,15 +405,7 @@ summary,
   -webkit-touch-callout: none;
 }
 
-/*
- * The cross-fade the browser runs between routes. See `useViewTransition`.
- *
- * Shorter than the default 250ms and eased on the app's own spring, or the transition reads as the
- * page being slow rather than as one screen becoming another.
- *
- * Under reduced motion the hook does not start a transition at all, so there is nothing here to
- * disable: a snapshot cross-fade is precisely the unrequested movement that setting asks about.
- */
+/* Reduced-motion navigation skips the browser view transition entirely. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 180ms;

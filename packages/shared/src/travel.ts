@@ -1,10 +1,4 @@
-/*
- * Roughly how long it takes to get there, because "3.1 mi" is not a unit anybody argues in.
- *
- * An estimate, and honestly one: `distanceMeters` is straight-line from the search point, so real
- * streets are longer. The detour factor below is the usual correction for a city grid. No routing
- * API is involved and none is worth paying for to decide where six people eat.
- */
+// Straight-line distance with a detour factor is an estimate, not a routed journey.
 
 /** Streets are not straight. The usual correction for a grid. */
 const DETOUR = 1.3;
@@ -33,13 +27,6 @@ export function travelLabel(distanceMeters: number): string | null {
   return travel && `≈ ${travel.minutes} min ${travel.mode}`;
 }
 
-/*
- * The raw distance, in one unit system.
- *
- * One system throughout: feet below a tenth of a mile, miles above it. Switching at a kilometre --
- * "750m" under, "0.6 mi" over -- measures two cards a block apart in different units, for an
- * audience that reads miles.
- */
 export function distanceLabel(distanceMeters: number): string | null {
   if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return null;
   const miles = distanceMeters / 1609.34;

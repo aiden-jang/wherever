@@ -1,16 +1,6 @@
 import type { Restaurant } from "./types.js";
 
-/*
- * Deck order, deliberately meaningless.
- *
- * The source hands places back best-first, so the top of every deck is the same handful of
- * safe, highly-rated places and the interesting ones are behind a dozen swipes nobody makes.
- * The "chaotic" vibe promises everything is on the table; this is the only thing that delivers it,
- * since widening filters the group had already left wide changes nothing.
- *
- * Seeded rather than random: the deck is built once and cached, but a fixed seed means a bug in
- * ordering can be reproduced from the session code alone.
- */
+// Seeded shuffle avoids provider-ranking bias and reproduces the same session deck.
 
 /** mulberry32: small, fast, and good enough for shuffling dinner. */
 function rng(seed: string): () => number {

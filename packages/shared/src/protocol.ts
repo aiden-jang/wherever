@@ -52,14 +52,8 @@ export interface DecideNowMessage {
   type: "decide_now";
 }
 
-/**
- * Host runs the round again, either way.
- *
- * `new` fetches places the group has not seen, which costs a Places search and counts against the
- * per-session cap. `same` re-deals the deck already in hand: free, uncapped, and the honest answer
- * to "we picked wrong", where the group wants another go at the list rather than a different list.
- * Optional and defaulting to `new`, so a client on the previous bundle still means what it used to.
- */
+/** New places consumes a capped search; the same deck can be replayed without a fetch.
+ * Omitted mode means new for clients using the older protocol. */
 export interface AgainMessage {
   type: "again";
   deck?: "new" | "same";
@@ -186,13 +180,7 @@ export interface MatchMessage {
   round?: number;
 }
 
-/*
- * Round ended with no winner.
- *
- * `vetoedCount` separates the two ways that happens, which read completely differently: nobody wanted
- * anything, or people wanted things and every one got vetoed. "Nobody liked anything" is simply false
- * in the second case, and that is the case where somebody most wants to know what happened.
- */
+// Distinguish no positive votes from positive choices that were all vetoed.
 export interface NoMatchMessage {
   type: "no_match";
   vetoedCount?: number;
@@ -246,14 +234,7 @@ export interface ReactionMessage {
   kind?: "veto" | "super";
 }
 
-/**
- * How the group is feeling, as tallies and nothing else.
- *
- * Deliberately not a map of participant to vibe. Admitting to "fancy" in a group of five is a mildly
- * embarrassing thing, and an app that names you gets one honest round followed by four rounds of people
- * picking what they think everyone else wants. The server never sends the map, so no client can leak it,
- * which is the same rule swipes already follow.
- */
+/** Publish aggregate vibe counts only; individual choices remain private. */
 export interface VibesMessage {
   type: "vibes";
   counts: Partial<Record<Vibe, number>>;

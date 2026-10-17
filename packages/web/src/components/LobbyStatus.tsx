@@ -43,13 +43,6 @@ export function DemoBanner({ reason }: { reason: DemoReason }) {
   );
 }
 
-/**
- * The rules, for whoever arrived from a shared link.
- *
- * The veto gets a line rather than a fourth card: "majority rules" is no longer the whole truth, and
- * somebody who never learns the exception either never spends theirs or watches their pick vanish
- * with no idea why. Three beats is the joke, and four columns do not fit a phone.
- */
 export function HowItWorks() {
   const steps = [
     { emoji: "👆", label: "Everyone swipes" },

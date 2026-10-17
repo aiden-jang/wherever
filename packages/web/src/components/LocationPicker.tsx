@@ -4,13 +4,7 @@ import { geocode } from "../api.js";
 import { FieldLabel, Chevron } from "./FilterControls.js";
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
-/*
- * The whole "where" control: "Near me" beside a zip/town search, with the NYC shortcuts behind a
- * fold so the form is not a wall of chips. Geocoding runs on submit through the Worker and writes the
- * centre into `filters.lat/lng`.
- *
- * Lives inside the outer create `<form>`, so Enter is caught here and must not submit that one.
- */
+// This sits inside the create form; submitting location must not submit the outer form.
 export function LocationPicker({
   filters,
   onChange,

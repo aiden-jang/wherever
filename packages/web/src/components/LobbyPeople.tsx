@@ -6,13 +6,7 @@ import { useLine } from "../useLine.js";
  * holds no state of its own, which is why it can live away from the screen that runs the round.
  */
 
-/*
- * The only thing here that moves when somebody else does.
- *
- * The avatars sit still and `finishedCount` ticks only when a whole deck is done, which can be minutes
- * apart. Votes cast changes on every swipe by anyone, so it is the one continuous sign you are not
- * swiping alone. Keyed on the number so the pulse restarts each time one lands.
- */
+// Restart the pulse on each changed vote count, including incomplete decks.
 export function LiveVotes({ count }: { count: number }) {
   // Before anybody has voted this is the one line on the screen, and "No votes yet." was the only
   // place in the app that answered a wait with a label instead of a sentence.

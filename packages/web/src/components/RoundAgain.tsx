@@ -1,12 +1,5 @@
 import { useNavigate } from "react-router-dom";
 
-/*
- * What the room can do once it has an answer.
- *
- * Two ways for the host to disagree with the result, because there are two things that can be
- * wrong: the list, or the vote. New places costs a Places fetch and is capped; the same list is
- * free, so re-running a close vote is not rationed. Everyone else gets the door.
- */
 export function RoundAgain({
   isHost,
   onAgain,

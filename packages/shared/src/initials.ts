@@ -1,11 +1,3 @@
-/*
- * The one or two letters an avatar circle shows for somebody.
- *
- * There were two copies of this, already drifted apart -- one fell back to "?" for an empty name and
- * the other rendered an empty circle -- and neither returned initials. Both took the first two
- * characters of the whole string, so "Aiden Jang" came out as "AI" rather than "AJ".
- */
-
 /** First user-perceived character, so an emoji or an accented letter is not cut in half. */
 function firstGrapheme(word: string): string {
   const Seg = (

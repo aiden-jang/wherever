@@ -177,13 +177,7 @@ export function mapGooglePlace(
     website: p.websiteUri ?? null,
     phone: p.nationalPhoneNumber ?? null,
     openNow: p.currentOpeningHours?.openNow ?? null,
-    /*
-     * Swap Google's en-dash for our hyphen, and nothing else.
-     *
-     * `weekdayDescriptions` arrives as "Monday: 8:00 AM - 11:00 PM" and is rendered verbatim, so an
-     * upstream en-dash ends up sitting next to our own typography. A time range reads the same either
-     * way, and it is the one character that makes a page look machine-set.
-     */
+
     hours:
       p.currentOpeningHours?.weekdayDescriptions?.map((line) => line.replace(/\s[–—]\s/g, " - ")) ?? null,
     businessStatus: p.businessStatus ?? null,

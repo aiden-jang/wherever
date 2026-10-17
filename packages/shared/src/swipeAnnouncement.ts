@@ -1,14 +1,5 @@
 import type { SwipeDirection } from "./types.js";
 
-/*
- * What just happened, for the live region.
- *
- * Voting was silent. The card is well labelled and the arrow keys work, but pressing one swapped the
- * card underneath with no announcement, so a screen-reader user got no confirmation the vote landed,
- * no idea what was now in front of them, and no sense of how far through the deck they were. Every
- * other realtime moment in this app already announces itself; this was the one that did not.
- */
-
 export interface SwipeAnnouncement {
   direction: SwipeDirection;
   isSuper: boolean;

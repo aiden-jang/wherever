@@ -161,13 +161,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     setAnnouncement,
   );
   const allToasts = [...toasts, ...hostToasts, ...deckToasts, ...behindToasts, ...nudgeToasts];
-  /*
-   * The server's refusals, on the screens that had nowhere to put them.
-   *
-   * `error` is rendered as a line of text on the create/lobby screen only. Everywhere else it was
-   * set and never shown: hitting the round limit on "run it back" pressed a button and watched
-   * nothing happen, with no reason given.
-   */
+  // Refusals outside the create/lobby form still need visible feedback.
   const errorToasts = useOneShotToast(error, setAnnouncement, error ? `error-${errorSeq}` : null);
   const screenToasts = [...allToasts, ...errorToasts];
   const chrome = { announcement, toasts: screenToasts, reactions, roster: session?.participants ?? [], demo };

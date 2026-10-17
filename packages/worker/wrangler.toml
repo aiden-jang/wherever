@@ -17,8 +17,7 @@ RESTAURANT_SOURCE = "google"
 SEARCH_MONTHLY_CAP = "950"
 PHOTO_MONTHLY_CAP = "950"
 
-# Product events, written fire-and-forget from the session room. One dataset across every app,
-# with the app name in index1 and blob1, so a single query can compare them.
+# Shared product-events dataset; the app name is recorded in index1 and blob1.
 [[analytics_engine_datasets]]
 binding = "EVENTS"
 dataset = "aidenjang_events"
@@ -62,17 +61,13 @@ binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = true
 
-# custom_domain, because this hostname has no DNS record of its own — Cloudflare creates and
-# manages one pointing here. A plain route cannot work without a record to attach to.
-# If a deploy ever fails with 100117 ("already has externally managed DNS records"), something
-# else owns the hostname: delete that record first rather than switching to a route.
+# Cloudflare manages this custom domain’s DNS. An existing externally managed record must be removed before attaching it.
 [[routes]]
 pattern = "wherever.aidenjang.com"
 custom_domain = true
 
 
-# Workers Logs — native, free-tier error/log observability. Tail live with `wrangler tail`;
-# browse + query in the dashboard (Workers & Pages → the worker → Logs).
+# Worker logs are available through `wrangler tail` and the Cloudflare dashboard.
 [observability]
 enabled = true
 head_sampling_rate = 1

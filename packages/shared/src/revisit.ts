@@ -1,24 +1,7 @@
 import type { VisitedPlace } from "./types.js";
 
-/*
- * Whether a place the group has been to should come back.
- *
- * It never did. Every restaurant the group picked was filtered out of every future deck for good, so a
- * group that actually uses this app slowly eats its own options and ends up at "that's everywhere
- * nearby, picked clean". `visitedAt` was recorded from the start and never read, which is the tell:
- * the intent was always a cooldown and it was implemented as a tombstone.
- *
- * The two reasons to exclude a place are different and were being conflated. "We went last week" is
- * about timing. "Never again" is about the place. Only the second should be permanent.
- */
+// Recent visits have a cooldown; explicit exclusions remain permanent.
 
-/**
- * How long a place stays out of the deck after the group goes.
- *
- * Long enough that a favourite does not come round while somebody is still full of it, short enough
- * that it comes back at all. A group deciding once a week holds about a dozen exclusions at a time,
- * which a normal search radius absorbs without noticing.
- */
 export const REVISIT_AFTER_DAYS = 90;
 
 const DAY_MS = 86_400_000;

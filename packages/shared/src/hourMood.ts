@@ -1,12 +1,4 @@
-/*
- * The background follows the clock, because this app is only ever opened at one kind of moment and
- * that moment looks different at 6pm than at 1am.
- *
- * Two rules hold it together. The dinner window keeps the brand's warm orange-and-pink, because that
- * is the palette on the landing page and prime time is the wrong hour to stop looking like yourself.
- * And opacity stays inside a narrow band: the aurora sits behind every screen, so anything brighter
- * starts eating text contrast.
- */
+// Keep the dinner palette recognizable and decorative opacity low enough for text contrast.
 
 export interface Mood {
   id: "morning" | "afternoon" | "golden" | "evening" | "late" | "small-hours";

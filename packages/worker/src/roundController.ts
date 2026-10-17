@@ -111,13 +111,7 @@ export class RoundController {
     const att = ws.deserializeAttachment() as SocketAttachment | null;
     if (!att) return;
 
-    /*
-     * The vote has to be for a card that was actually dealt.
-     *
-     * "Finished the deck" counts distinct restaurant ids voted on, so without this a client could send
-     * `deckSize` invented ids and be finished without seeing a card. Every one of those ids also becomes
-     * a key in the vote map, which is Durable Object storage.
-     */
+    // Reject undealt IDs before counting progress or adding entries to the stored vote map.
     const deck = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
     if (!deck.some((r) => r.id === restaurantId)) return;
 

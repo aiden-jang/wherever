@@ -42,13 +42,6 @@ export function filterSummaryChips(filters: SessionFilters): string[] {
   return chips;
 }
 
-/**
- * The rules, as a sentence you can tap rather than a screen of controls.
- *
- * Everyone sees the summary; only the host can open it. The chips are the point: they say what the deck
- * will be in a way you read in one glance and mostly agree with, which is the honest shape for settings
- * that are almost always already fine.
- */
 export function FilterSummary({
   filters,
   editable = false,

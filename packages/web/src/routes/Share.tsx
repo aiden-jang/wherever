@@ -2,17 +2,7 @@ import { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { sessionCodeFromShare } from "@wherever/shared";
 
-/**
- * Where the OS drops a share aimed at the installed app.
- *
- * The manifest registers this as a `share_target`, so once the PWA is installed Wherever appears in
- * the phone's own share sheet. The case that matters: somebody posts an invite link in a group chat,
- * you long-press it, share it to Wherever, and land in the session. Without this the link opens a
- * browser tab beside the app you already installed.
- *
- * The rule about what counts as a code lives in `sessionCodeFromShare`, with the tests: the cost of
- * being loose here is dropping somebody into a stranger's dinner because they shared a review.
- */
+/** Manifest share-target entry. Accept only invite URLs recognized by sessionCodeFromShare. */
 export default function Share() {
   const [params] = useSearchParams();
   const navigate = useNavigate();

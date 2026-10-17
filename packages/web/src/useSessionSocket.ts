@@ -3,13 +3,7 @@ import { flushSync } from "react-dom";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 import { initialSessionState, sessionReducer } from "./sessionState.js";
 
-/**
- * A stable id per session code, so a reconnect keeps the same identity and votes.
- *
- * Must not throw: this runs inside `onopen` to build the join message, and where a browser blocks site
- * data even touching sessionStorage raises - then the join is never sent and the app sits on
- * "connecting" forever. The in-memory fallback holds identity across reconnects, just not a refresh.
- */
+/** Preserve identity across reconnects. Blocked storage falls back to memory so joining still works. */
 const fallbackClientIds = new Map<string, string>();
 
 function clientIdFor(code: string): string {
@@ -130,16 +124,7 @@ export function useSessionSocket(code: string, displayName: string) {
 
     connect();
 
-    /*
-     * Come back when the phone does.
-     *
-     * Six attempts on a five-second cap is about twenty-two seconds, which is a pocket, a lift, or
-     * most of what a restaurant's wifi does to a phone. Giving up there is far too early.
-     *
-     * Both signals, because neither is enough alone: `online` never fires if the network was not
-     * technically lost, and a backgrounded tab is often throttled out of its own retries. Attempts reset,
-     * because this is a new chance rather than a seventh go at the old one.
-     */
+    // Visibility and network recovery each restart retries; neither signal is sufficient alone.
     const retryNow = () => {
       if (disposed) return;
       if (document.hidden) return;

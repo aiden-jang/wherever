@@ -1,15 +1,4 @@
-/*
- * Find class names the stylesheet never defines.
- *
- * There is a gap no other check covers: TypeScript does not read CSS, eslint does not read CSS, and
- * an undefined class is legal HTML that renders as nothing. It is the same silent-failure shape as
- * `var(--undeclared)`, which is why check-css-vars.mjs exists, except nothing here even has a
- * fallback to land on.
- *
- * The check needs the built CSS rather than index.css, because most classes here are Tailwind
- * utilities that only exist once Tailwind has seen them used. A token missing from the build output
- * is a token that produces no CSS anywhere. So it runs after the build, in verify and in CI.
- */
+// Check referenced classes against the built CSS, including generated utilities.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 

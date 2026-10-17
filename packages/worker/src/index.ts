@@ -17,16 +17,7 @@ const CREATE_WINDOW_MS = 60_000;
 
 const app = new Hono<{ Bindings: Env }>();
 
-/*
- * Per-user responses must never be stored.
- *
- * A GET with no `Cache-Control` is heuristically cacheable, so the browser invents a freshness
- * lifetime and keeps it. That shipped in accounts: sign out, press back, and the browser answers the
- * session check from its own cache so you look signed in until a refresh. It cuts both ways - a
- * cached signed-out answer keeps telling a freshly signed-in person they are signed out.
- *
- * Conditional on purpose. A route that already chose its own caching knows something this does not.
- */
+// Default caller-dependent responses to no-store; preserve a route's explicit cache policy.
 app.use("*", async (c, next) => {
   await next();
   // Vite's hashed bundles cannot change under a given name, so a year and `immutable`. Workers

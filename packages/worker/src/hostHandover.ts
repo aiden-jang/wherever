@@ -1,14 +1,7 @@
 import type { ClientMap, SocketAttachment } from "./roomState.js";
 import type { Env } from "./env.js";
 
-/*
- * Who runs the room when the person running it closes their laptop.
- *
- * Host is cached in three places — the `hostId` record, the `clientMap` that survives a refresh, and
- * each live socket's attachment — so a handover has to move all three or a reconnect picks up the
- * old answer. That, plus the grace window that stops a refresh from demoting anybody, is the whole
- * of this file. None of it needs the env or the database, only the object's own state.
- */
+// Handover must update hostId, the persisted clientMap, and live socket attachments together.
 
 /*
  * Long enough to cover a refresh or a tunnel, short enough that a real departure is not a wait.

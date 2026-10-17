@@ -1,16 +1,6 @@
 import { useEffect } from "react";
 
-/**
- * Keeps the screen awake while a round is live.
- *
- * A group sits around a table with the app open, waiting for whoever is still reading the menu, and
- * every phone in the room dims and locks. Waking it up means unlocking, finding the app, and by then
- * the round has moved. This is the whole feature.
- *
- * Re-requested on `visibilitychange`, which is not optional: the browser drops the lock whenever the
- * tab is hidden and does not give it back on its own, so without this the lock survives exactly one
- * glance at a notification.
- */
+/** Reacquire on visibility changes because browsers release wake locks while hidden. */
 export function useWakeLock(active: boolean) {
   useEffect(() => {
     const api = (

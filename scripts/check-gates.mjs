@@ -1,11 +1,4 @@
-/*
- * The gate on the gates, run first by `pnpm run verify`.
- *
- * Two ways a check stops checking without anybody noticing. It drifts out of CI, so a local run is
- * green on a smaller set than the build; or it is invoked as `pnpm <name>` where pnpm has a command
- * of its own, and pnpm's runs instead — `pnpm deploy` publishes a workspace package to a directory
- * and never touches wrangler, which is a thing a README can tell you to do for months.
- */
+// Check that verification and CI run the same real scripts with unambiguous command names.
 import { globSync, readFileSync } from "node:fs";
 
 /*
@@ -90,13 +83,7 @@ for (const name of ciSteps) {
   if (!verifySteps.has(name)) problems.push(`ci.yml runs \`${name}\` and verify does not`);
 }
 
-/*
- * Every place a reader or a runner is told to invoke one of ours.
- *
- * Prose is not an instruction, only a fenced block is: DEPLOY.md warns that bare `pnpm deploy` is a
- * pnpm builtin and will fail, which is the correct thing to write and would otherwise be reported as
- * the very mistake it is warning about. Scripts and workflows are scanned whole, because those run.
- */
+// Scan fenced documentation commands, but scan complete executable scripts and workflows.
 const fencedOnly = (markdown) => [...markdown.matchAll(/```[\s\S]*?```/g)].map((m) => m[0]).join("\n");
 const invocations = [
   ...Object.entries(scripts).map(([k, v]) => [`package.json ${k}`, v]),

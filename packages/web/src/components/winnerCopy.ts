@@ -11,14 +11,7 @@ export function seedFrom(id: string): number {
 }
 
 /** The tally is useful evidence; this is the human version of what it means. */
-/*
- * One person is not a tie, however many places finished level.
- *
- * Alone, every place you liked scores exactly one, so a tie is guaranteed the moment you like two.
- * Keep the tie copy out of this case. "Dead tie. Of course it is." and "6 places finished level"
- * are jokes about a committee that was never in the room, and this is the first thing most
- * people see, because opening it alone to find out what it is is how everybody starts.
- */
+// A single participant can tie their own choices; omit jokes about a committee in that case.
 export function consensusLine(rightSwipes: number, totalParticipants: number, seed: number): string {
   if (totalParticipants <= 1) return line("solo", seed);
   if (rightSwipes === totalParticipants) return "Unanimous. Put it in the group chat.";

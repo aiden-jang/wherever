@@ -1,22 +1,4 @@
-/*
- * A ceiling on comments, run by `pnpm run verify`, because a cleanup pass is a moment and drift is
- * permanent.
- *
- * The ceiling is high, and it is where this repo already stands rather than a target it has been
- * cut to. Re-measure it when a release deletes code rather than prose, which raises the share
- * without a word being added; anything else that pushes it up is prose, and should trip.
- * The comments here are mostly design rules with the bug that prompted them attached: why the veto
- * needs a crowd, why a deck fetch happens before the status flips, why the reaction layer needs a
- * z-index. None of that is recoverable from the code. Set at the measured number so prose added to
- * code that already exists trips it, while a new module documented at this rate does not.
- *
- * A share of the code rather than a line count. A count charges a new module for its own header, so
- * it blocks a genuine explanation exactly as hard as it blocks padding.
- *
- * The gates get their own, higher share. They are small files where one header is a fifth of the
- * file, and holding them to the same number would mean explaining less about the things that decide
- * whether a build passes.
- */
+// Check comment budgets, repeated explanations, and comments stranded by moves.
 import { globSync, readFileSync } from "node:fs";
 
 const SRC_CEILING = 0.192;
@@ -76,11 +58,7 @@ for (const file of [...src, ...own]) {
   let afterDeclaration = false;
   for (let i = 1; i < lines.length - 2; i++) {
     if (/^\}\)?;?$/.test(lines[i])) afterDeclaration = true;
-    /*
-     * A doc block with nothing under it but a closing brace. `/**` exists to describe the next
-     * declaration, so one describing a brace documents a prop or a field that has been removed.
-     * Ungated: the first interface in a file is where this happens.
-     */
+    // A doc block followed only by a closing delimiter has lost its subject.
     if (/\*\/\s*$/.test(lines[i])) {
       let open = i;
       while (open >= 0 && !lines[open].includes("/*")) open--;

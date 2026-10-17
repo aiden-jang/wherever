@@ -1,10 +1,4 @@
-/*
- * Whether to ask somebody to install the app.
- *
- * Asking on arrival is the thing everybody hates, and it is also the worst moment to ask: nobody
- * installs an app they have not used yet. So the only time this is allowed to appear is after a
- * round has actually decided something, when there is a reason to say out loud.
- */
+// Offer installation only after a completed round, when the visitor has used the app.
 
 export interface InstallNudgeState {
   /** The browser offered a real install prompt. Safari never does, so this is often false. */

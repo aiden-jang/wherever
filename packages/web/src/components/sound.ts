@@ -1,11 +1,4 @@
-/*
- * UI sound, synthesized rather than sampled: a dozen oscillator envelopes are a few hundred bytes
- * where the same palette as audio files would be a few hundred kilobytes to serve and wait for.
- *
- * Every cue comes from a C major pentatonic scale, which has no semitones in it. Cues overlap here - a
- * match lands while somebody is mid-swipe - and a scale with no minor seconds cannot clash whatever
- * combination happens to sound at once.
- */
+// Pentatonic cues can overlap without semitone clashes; synthesis avoids audio-file downloads.
 
 const MUTE_KEY = "wherever.muted.v1";
 

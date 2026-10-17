@@ -10,15 +10,7 @@ import type { AmenityKey, PriceTier, RestaurantSort, SessionFilters } from "./ty
  * Emojis the group can throw at each other mid-round. Kept to a fixed set and validated at the
  * boundary so a reaction can never carry arbitrary text.
  */
-/**
- * What a session starts as before the host touches anything.
- *
- * Lives here rather than in the web app because these are product rules, not UI state, and the one
- * that matters most is a promise: votes are anonymous unless the host opts in. The client shipped
- * `revealVoters: true` for months while the toggle beside it read "Off. Votes stay anonymous", so
- * every real session revealed who had finished. The server was always right — it omits identities
- * when the flag is falsy — but a default nobody could unit-test is a default that drifts.
- */
+/** Votes remain anonymous unless the host explicitly enables voter disclosure. */
 export const DEFAULT_FILTERS: SessionFilters = {
   radiusMeters: 8000, // 5 mi
   maxPriceTier: 4,

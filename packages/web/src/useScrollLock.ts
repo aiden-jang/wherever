@@ -1,13 +1,6 @@
 import { useEffect } from "react";
 
-/**
- * Lock page scroll while a modal/sheet is open, so only the modal's own content scrolls and the
- * background stays put.
- *
- * `overflow: hidden` on <body> is NOT enough — the scroll root is often <html>, and iOS Safari
- * ignores overflow locks entirely. The reliable technique on every platform is to pin <body> in
- * place at the current scroll offset (position: fixed) and restore the exact position on unmount.
- */
+/** Pin the body and restore its offset; overflow locks alone are insufficient on iOS Safari. */
 export function useScrollLock(): void {
   useEffect(() => {
     const scrollY = window.scrollY;

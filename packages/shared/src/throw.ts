@@ -1,12 +1,6 @@
 import type { SwipeDirection } from "./types.js";
 
-/*
- * Whether a drag counted as a vote, and how hard it was thrown.
- *
- * Distance alone decided this, so a fast flick that did not travel 110px simply did nothing: you
- * threw the card and it sat there. Velocity is the other half of the gesture, and on a phone it is
- * most of it, because a quick flick covers less ground than a slow drag of the same intent.
- */
+// A short fast flick can express the same vote as a longer slow drag.
 
 /** Past this, it is a vote however slowly it got there. */
 export const THROW_DISTANCE = 110;

@@ -1,13 +1,6 @@
 import type { Restaurant } from "@wherever/shared";
 
-/*
- * Amenities are carried here because the vibes ask for them: "quick" requires takeout and "fancy"
- * requires reservable. Without them every amenity filter matches nothing, and a demo deck that goes
- * empty the moment somebody picks a vibe is worse than one that ignores the filter.
- *
- * Phone and website for the same reason: the result screen's two links render only when the winner
- * has them, so a deck without them hides the buttons on every demo and dev run.
- */
+// Demo places need amenities and contact fields to exercise filters and winner actions.
 export const MOCK_DECK: Restaurant[] = [
   {
     id: "mock-1",

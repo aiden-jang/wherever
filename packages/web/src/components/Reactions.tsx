@@ -26,16 +26,7 @@ export function ReactionBar({ onReact }: { onReact: (emoji: string) => void }) {
   );
 }
 
-/*
- * Overlay of reactions floating up. Positioned within a `relative` container.
- *
- * A veto and a super-like arrive on this same channel but are not chatter: one takes a place away
- * from everybody and the other weighs the tally. They land in the middle at twice the size behind a
- * tint of their own colour, so they cannot be mistaken for somebody tapping a laughing face.
- *
- * Chatter rises in a lane belonging to whoever sent it and carries their name, so a reaction reads
- * as a person in the room rather than as weather. System events have no sender and get neither.
- */
+// System veto/super-like signals have no sender; participant reactions retain their names and lanes.
 export function FloatingReactions({
   reactions,
   roster = [],

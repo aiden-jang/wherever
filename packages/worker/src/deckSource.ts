@@ -171,7 +171,8 @@ export async function nextRoundDeck(
   // joiner on a null winner being told nobody liked anything.
   try {
     deck = await fetchFreshDeck(request);
-  } catch {
+  } catch (error) {
+    console.error("restaurant_deck_failed", error);
     return { error: "couldn't load more spots right now. give it a moment and try again." };
   }
   if (deck.length === 0) return { error: spentLine(wider) };

@@ -70,4 +70,10 @@ waiting or loosening dinner filters will not resolve them. A successful search
 with no matching restaurants is a separate outcome. The health route checks the
 Worker, not whether Google will accept a live search.
 
+`restaurant_deck_failed` records the caught exception for a failed start or new
+round, including failures outside the Google HTTP response. The room keeps its
+retryable state and the exception stays out of the client message. A successful
+direct test with a key does not confirm that the deployed Worker has the same
+key configured or that the rest of its deck-loading path succeeds.
+
 Follow [migration guidance](packages/worker/migrations/README.md) when changing the schema.

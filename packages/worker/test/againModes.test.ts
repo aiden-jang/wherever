@@ -1,6 +1,6 @@
 import { exports as workers, env } from "cloudflare:workers";
 import { runInDurableObject } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 import { RoundController } from "../src/roundController.js";
 import type { Env } from "../src/env.js";
@@ -56,6 +56,38 @@ async function decide(h: Awaited<ReturnType<typeof host>>, deck: { id: string }[
 }
 
 describe("running it back", () => {
+  it("logs a failed deck load, keeps the lobby and lets the host retry", async () => {
+    const h = await host();
+    const bindings = env as unknown as Env;
+    const stub = bindings.SESSION_ROOM.get(bindings.SESSION_ROOM.idFromName(h.code));
+    try {
+      await runInDurableObject(stub, async (_room: SessionRoom, state) => {
+        const controller = new RoundController(state, bindings);
+        const socket = state.getWebSockets()[0]!;
+        const failure = new Error("deck_load_test_failure");
+        const load = vi.spyOn(controller, "deckFor").mockRejectedValueOnce(failure);
+        const log = vi.spyOn(console, "error").mockImplementation(() => {});
+        try {
+          await controller.handleStartRound(socket);
+          expect(await state.storage.get("meta")).toMatchObject({ status: "lobby" });
+          expect(await state.storage.get("deck")).toBeUndefined();
+          expect(log).toHaveBeenCalledWith("restaurant_deck_failed", failure);
+          await controller.handleStartRound(socket);
+          expect(await state.storage.get("meta")).toMatchObject({ status: "swiping" });
+        } finally {
+          load.mockRestore();
+          log.mockRestore();
+        }
+      });
+      const error = await h.waitFor("error");
+      expect(error.message).toBe("couldn't load restaurants right now. give it a moment and try again.");
+      expect(error.message).not.toContain("deck_load_test_failure");
+      expect((await h.waitFor("deck")).restaurants.length).toBeGreaterThan(0);
+    } finally {
+      h.close();
+    }
+  });
+
   it("starts only one round when replay requests overlap", async () => {
     const h = await host();
     h.send({ type: "start_round" });

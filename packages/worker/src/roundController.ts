@@ -77,7 +77,8 @@ export class RoundController {
     let deck: Restaurant[];
     try {
       deck = await this.deckFor(meta);
-    } catch {
+    } catch (error) {
+      console.error("restaurant_deck_failed", error);
       return this.send(ws, {
         type: "error",
         message: "couldn't load restaurants right now. give it a moment and try again.",

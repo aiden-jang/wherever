@@ -34,9 +34,13 @@ sample restaurants. Local `.dev.vars.example` selects `mock` explicitly.
 serve labeled samples. Live searches require `GOOGLE_PLACES_API_KEY` as a Worker
 secret. Location lookup also requires the provider's Geocoding API.
 
-The key's Google Cloud project must have Places API (New) enabled and an active
-linked billing account. Keep API restrictions on the required services; website
-referrer restrictions do not fit requests made by a server-side Worker.
+Standard keys require Places API (New) and a linked billing account. Maps Demo
+Keys have separate no-billing access and feature limits, including no
+user-submitted photos or reviews; missing billing alone does not diagnose a Demo
+Key failure. Check the provider rejection before upgrading a project. See
+[Demo Key capabilities](https://developers.google.com/maps/demo-key).
+Keep API restrictions on the required services; website referrer restrictions do
+not fit requests made by a server-side Worker.
 
 `SEARCH_MONTHLY_CAP` and `PHOTO_MONTHLY_CAP` configure monthly search/photo
 reservations. Geocoding is rate-limited and cached separately. Provider quotas and

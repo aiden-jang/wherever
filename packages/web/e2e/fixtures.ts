@@ -1,5 +1,6 @@
 import { test as base, expect, type Page } from "@playwright/test";
 import { createRequire } from "node:module";
+import { readFile } from "node:fs/promises";
 
 const require = createRequire(import.meta.url);
 export const test = base.extend({
@@ -22,7 +23,8 @@ export async function audit(page: Page) {
         .map((animation) => animation.finished.catch(() => undefined)),
     ),
   );
-  await page.addScriptTag({ path: require.resolve("axe-core/axe.min.js") });
+  // Run the test helper through automation while page scripts remain subject to the app CSP.
+  await page.evaluate(await readFile(require.resolve("axe-core/axe.min.js"), "utf8"));
   const violations = await page.evaluate(async () => {
     const axe = (
       window as unknown as { axe: { run: (options: unknown) => Promise<{ violations: unknown[] }> } }

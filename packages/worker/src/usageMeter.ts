@@ -1,51 +1,67 @@
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "./env.js";
 
-export type UsageKind = "search" | "photo";
+export type UsageKind = "search" | "photo" | "geocode";
 
 interface UsageState {
-  /** "YYYY-MM" (UTC) the counts belong to; a change resets them. */
+  /** Google's billing month, YYYY-MM in America/Los_Angeles. */
   month: string;
   search: number;
   photo: number;
+  geocode: number;
 }
 
-// Deployment vars override the monthly reservation limit.
-const DEFAULT_CAP = 950;
+const MAX_CAP = 950;
 
-/* Monthly reservations bound Nearby Search and Place Photo calls, then serve fallbacks. Geocoding has a separate per-IP limit and cache; provider quotas remain an external backstop. */
+function monthlyCap(value: string | undefined): number {
+  if (value === undefined) return MAX_CAP;
+  if (!/^\d+$/.test(value.trim())) return 0;
+  const cap = Number(value);
+  return Number.isSafeInteger(cap) ? Math.min(cap, MAX_CAP) : 0;
+}
+
+/* Reserve before contacting Google. Failed attempts also consume budget; cached responses do not. */
 export class UsageMeter extends DurableObject<Env> {
   private caps(): Record<UsageKind, number> {
     return {
-      search: Number(this.env.SEARCH_MONTHLY_CAP) || DEFAULT_CAP,
-      photo: Number(this.env.PHOTO_MONTHLY_CAP) || DEFAULT_CAP,
+      search: monthlyCap(this.env.SEARCH_MONTHLY_CAP),
+      photo: monthlyCap(this.env.PHOTO_MONTHLY_CAP),
+      geocode: monthlyCap(this.env.GEOCODE_MONTHLY_CAP),
     };
   }
 
   private static currentMonth(): string {
-    const d = new Date();
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(new Date());
+    return ["year", "month"].map((type) => parts.find((part) => part.type === type)!.value).join("-");
   }
 
   /** Load this month's counts, treating a stale (previous-month) record as zero. */
-  private async load(): Promise<UsageState> {
+  private async load(
+    storage: DurableObjectStorage | DurableObjectTransaction = this.ctx.storage,
+  ): Promise<UsageState> {
     const month = UsageMeter.currentMonth();
-    const stored = await this.ctx.storage.get<UsageState>("usage");
-    if (!stored || stored.month !== month) return { month, search: 0, photo: 0 };
-    return stored;
+    const stored = await storage.get<UsageState>("usage");
+    if (!stored || stored.month !== month) return { month, search: 0, photo: 0, geocode: 0 };
+    // Preserve existing search/photo reservations when adding the geocoding counter.
+    return { ...stored, geocode: stored.geocode ?? 0 };
   }
 
   /**
    * Atomically reserve one call of `kind` for the current month. Returns false once the cap is
-   * reached (caller must then skip the Google request). The DO's single-threaded execution makes
-   * the read-modify-write race-free.
+   * reached (caller must then skip the Google request). Commit before granting a reservation.
    */
   async tryConsume(kind: UsageKind): Promise<boolean> {
-    const state = await this.load();
-    if (state[kind] >= this.caps()[kind]) return false;
-    state[kind] += 1;
-    await this.ctx.storage.put("usage", state);
-    return true;
+    return this.ctx.storage.transaction(async (storage) => {
+      const state = await this.load(storage);
+      if (state[kind] >= this.caps()[kind]) return false;
+      state[kind] += 1;
+      await storage.put("usage", state);
+      return true;
+    });
   }
 
   /** Current month's usage and caps, for the /api/usage view. */

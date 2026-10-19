@@ -6,7 +6,7 @@ import type { UsageMeter } from "./usageMeter.js";
 export interface Env {
   SESSION_ROOM: DurableObjectNamespace<SessionRoom>;
   RATE_LIMITER: DurableObjectNamespace<RateLimiter>;
-  /** Global monthly reservation counter for Nearby Search and Place Photos. */
+  /** Global monthly reservations for searches, photos, and geocoding. */
   USAGE_METER: DurableObjectNamespace<UsageMeter>;
   DB: D1Database;
   /** Monthly cap on Google Nearby Search calls before the app stops calling Google. Default 950. */
@@ -15,6 +15,8 @@ export interface Env {
   HOST_GRACE_MS?: string;
   /** Monthly cap on Google Place Photo fetches before the app serves fallbacks. Default 950. */
   PHOTO_MONTHLY_CAP?: string;
+  /** Monthly cap on Google Geocoding calls. All caps may lower, never raise, the 950 ceiling. */
+  GEOCODE_MONTHLY_CAP?: string;
   /** Which RestaurantSource to use: "google" (default in prod) or "mock". */
   RESTAURANT_SOURCE?: string;
   /** Server-side key restricted to Places API (New) and Geocoding API. */

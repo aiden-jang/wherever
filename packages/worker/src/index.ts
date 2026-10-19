@@ -113,6 +113,11 @@ app.get("/api/geocode", async (c) => {
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
+  const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
+  if (!(await meter.tryConsume("geocode"))) {
+    return c.json({ error: "Monthly location search budget reached." }, 429);
+  }
+
   const upstream = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${key}`;
   const res = await fetch(upstream);
   if (!res.ok) {

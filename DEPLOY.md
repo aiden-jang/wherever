@@ -42,10 +42,24 @@ Key failure. Check the provider rejection before upgrading a project. See
 Keep API restrictions on the required services; website referrer restrictions do
 not fit requests made by a server-side Worker.
 
-`SEARCH_MONTHLY_CAP` and `PHOTO_MONTHLY_CAP` configure monthly search/photo
-reservations. Geocoding is rate-limited and cached separately. Provider quotas and
-billing settings should account for the actual requested fields, other consumers
-of the key, and local development. A local usage meter is separate from production.
+`SEARCH_MONTHLY_CAP`, `PHOTO_MONTHLY_CAP`, and `GEOCODE_MONTHLY_CAP` each default to
+950 monthly requests. Configuration can lower a cap, including zero to stop that
+request kind, but cannot raise it above 950. Invalid values disable that kind.
+The global usage meter commits each reservation atomically before contacting
+Google, counts failed attempts, and refuses requests if the meter is unavailable.
+Cache hits do not spend another reservation. Exhausted searches serve labeled
+samples; exhausted photos and location lookups return 429 without calling Google.
+
+Counters reset at midnight Pacific time on the first of the month, matching
+[Google's free-usage reset](https://developers.google.com/maps/billing-and-pricing/overview).
+Existing search/photo counts survive deployments. Older stored records gain a
+geocoding counter without resetting those counts. The month is reported as YYYY-MM.
+
+These limits cover this Worker's requests, not other uses of the same key or
+billing account. Local development has a separate usage meter. Restrict the key
+to the required APIs and set provider quotas as a second backstop. Billing alerts
+do not stop requests. Keep billing enabled for real photos; a Demo Key cannot
+provide them even when the application has photo reservations remaining.
 
 Photo URLs are relative by default. `PUBLIC_API_BASE` is an optional alternate
 photo origin; leave it empty for normal same-origin operation.
@@ -58,8 +72,8 @@ Workers Logs is enabled. From the root:
 pnpm --filter @wherever/worker exec wrangler tail
 ```
 
-`GET /api/health` reports the configured source. `GET /api/usage` reports search and
-photo reservations and caps. The daily scheduled handler prunes old D1 session rows
+`GET /api/health` reports the configured source. `GET /api/usage` reports search,
+photo, and geocoding reservations and caps. The daily scheduled handler prunes old D1 session rows
 and visited records; room storage has its own Durable Object lifetime.
 
 If starting a round reports that restaurants could not load, check Workers Logs

@@ -23,6 +23,7 @@ export default defineConfig(async () => {
             HOST_GRACE_MS: "50",
             SEARCH_MONTHLY_CAP: "5",
             PHOTO_MONTHLY_CAP: "3",
+            GEOCODE_MONTHLY_CAP: "2",
             GOOGLE_PLACES_API_KEY: "",
           },
         },

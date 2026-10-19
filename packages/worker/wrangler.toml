@@ -16,6 +16,7 @@ RESTAURANT_SOURCE = "google"
 # Monthly application reservations for search/photo calls. Provider quotas and billing are separate.
 SEARCH_MONTHLY_CAP = "950"
 PHOTO_MONTHLY_CAP = "950"
+GEOCODE_MONTHLY_CAP = "950"
 
 # Shared product-events dataset; the app name is recorded in index1 and blob1.
 [[analytics_engine_datasets]]

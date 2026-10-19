@@ -7,6 +7,10 @@ import { MOCK_DECK } from "./mockDeck.js";
 // functional. NYC, matching the neighborhood set.
 const DEFAULT_CENTER = { lat: 40.7128, lng: -74.006 };
 
+function diagnosticCode(value: unknown): string | undefined {
+  return typeof value === "string" && /^[A-Z][A-Z_0-9]{0,99}$/.test(value) ? value : undefined;
+}
+
 /**
  * Resolve the search center: a picked neighborhood wins, then the host's shared location, then
  * the default. Exported for unit testing.
@@ -162,8 +166,20 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
         },
       }),
     });
-    // A provider failure is distinct from a valid empty result; the host can retry.
-    if (!res.ok) throw new Error("places_fetch_failed"); // distinct from "no results" so the caller can offer a retry
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as {
+        error?: { status?: unknown; details?: { reason?: unknown }[] };
+      } | null;
+      // Provider messages can contain credentials or request data; record only diagnostic codes.
+      console.error("places_search_failed", {
+        httpStatus: res.status,
+        status: diagnosticCode(data?.error?.status),
+        reasons: Array.isArray(data?.error?.details)
+          ? data.error.details.flatMap((detail) => diagnosticCode(detail?.reason) ?? [])
+          : [],
+      });
+      throw new Error("places_fetch_failed");
+    }
 
     const data = (await res.json()) as { places?: GooglePlace[] };
     const places = (data.places ?? []).filter((p) => p.id && p.displayName?.text);

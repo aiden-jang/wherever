@@ -34,6 +34,10 @@ sample restaurants. Local `.dev.vars.example` selects `mock` explicitly.
 serve labeled samples. Live searches require `GOOGLE_PLACES_API_KEY` as a Worker
 secret. Location lookup also requires the provider's Geocoding API.
 
+The key's Google Cloud project must have Places API (New) enabled and an active
+linked billing account. Keep API restrictions on the required services; website
+referrer restrictions do not fit requests made by a server-side Worker.
+
 `SEARCH_MONTHLY_CAP` and `PHOTO_MONTHLY_CAP` configure monthly search/photo
 reservations. Geocoding is rate-limited and cached separately. Provider quotas and
 billing settings should account for the actual requested fields, other consumers
@@ -53,5 +57,13 @@ pnpm --filter @wherever/worker exec wrangler tail
 `GET /api/health` reports the configured source. `GET /api/usage` reports search and
 photo reservations and caps. The daily scheduled handler prunes old D1 session rows
 and visited records; room storage has its own Durable Object lifetime.
+
+If starting a round reports that restaurants could not load, check Workers Logs
+for `places_search_failed`. It records the HTTP status and Google rejection codes,
+not credentials, locations, or raw provider messages. `BILLING_DISABLED`,
+`SERVICE_DISABLED`, and key-restriction errors need a provider configuration fix;
+waiting or loosening dinner filters will not resolve them. A successful search
+with no matching restaurants is a separate outcome. The health route checks the
+Worker, not whether Google will accept a live search.
 
 Follow [migration guidance](packages/worker/migrations/README.md) when changing the schema.

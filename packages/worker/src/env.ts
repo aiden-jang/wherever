@@ -17,7 +17,7 @@ export interface Env {
   PHOTO_MONTHLY_CAP?: string;
   /** Which RestaurantSource to use: "google" (default in prod) or "mock". */
   RESTAURANT_SOURCE?: string;
-  /** Google Places API (New) key. Restrict it to the Places API + your domain. */
+  /** Server-side key restricted to Places API (New) and Geocoding API. */
   GOOGLE_PLACES_API_KEY?: string;
   /**
    * Absolute origin to prefix photo-proxy URLs with. Unset: the SPA and the API share one

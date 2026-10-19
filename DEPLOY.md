@@ -66,14 +66,14 @@ Worker calls Google server-side; website referrer restrictions do not apply, and
 an IP allowlist requires stable outbound addresses that this deployment does not
 provide. Keep the key secret; API restrictions do not bind it to this Worker.
 
-Google's project quotas provide a stricter daily backstop: Nearby Search,
-GetPhotoMedia, and Geocoding v3 are each limited to 30 requests per day. That
-allows at most 930 requests of each kind in a 31-day month. Unused Places methods
-and Geocoding v4 methods have daily quotas of zero. The daily limits can stop
-live searches, photos, or location lookups before the application's monthly
-counter reaches 950. Increasing a daily limit changes the free-usage protection.
-Other projects added to the billing account can consume the same free allowances;
-these settings are not a spending limit for the whole billing account.
+Google's project quotas allow 950 requests per day each for Nearby Search,
+GetPhotoMedia, and Geocoding v3, so the full monthly allowance can be used in one
+day. The application enforces the 950 monthly limit; Google's daily quotas do not
+enforce a monthly total. Requests outside the Worker bypass its monthly counter
+and could incur charges. Unused Places methods and Geocoding v4 methods have
+daily quotas of zero. Other projects added to the billing account can consume
+the same free allowances; these settings are not a spending limit for the whole
+billing account.
 
 Photo URLs are relative by default. `PUBLIC_API_BASE` is an optional alternate
 photo origin; leave it empty for normal same-origin operation.

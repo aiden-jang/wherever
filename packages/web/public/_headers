@@ -1,0 +1,5 @@
+
+# Private routes report fixed categories through the first-party aggregate endpoint.
+/*
+  Content-Security-Policy: script-src 'self'; object-src 'none'; base-uri 'self'
+  Referrer-Policy: no-referrer

@@ -1,3 +1,5 @@
+import { usePageAnalytics } from "./usePageAnalytics.js";
+import { pageForPath } from "../../../analytics/schema.js";
 import { AppUpdate } from "./AppUpdate.js";
 import type { CSSProperties } from "react";
 import { MotionConfig } from "framer-motion";
@@ -15,6 +17,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <BrowserRouter>
+        <AnalyticsPage />
         <div className="grain min-h-full flex flex-col">
           <div
             className="aurora"
@@ -79,4 +82,10 @@ export default function App() {
 function LandingUpdate() {
   const { pathname } = useLocation();
   return <AppUpdate safe={pathname === "/"} />;
+}
+
+function AnalyticsPage() {
+  const { pathname } = useLocation();
+  usePageAnalytics(pageForPath(pathname), pathname);
+  return null;
 }

@@ -90,3 +90,5 @@ its address, and a map QR code. It uses no restaurant photo or extra provider ca
 and includes no participant names or individual votes. **Send the plan** remains
 the text/link share action. Image creation and delivery live in
 `packages/web/src/lib/dinnerImage.ts` and `SavePlanImage.tsx`.
+
+Aggregate traffic and feature-event coverage, privacy boundaries and queries: [Analytics](docs/ANALYTICS.md).

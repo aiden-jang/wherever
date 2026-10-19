@@ -4,6 +4,7 @@ import type { UsageMeter } from "./usageMeter.js";
 
 /** Bindings declared in wrangler.toml, surfaced to the Worker and DO. */
 export interface Env {
+  EVENT_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
   SESSION_ROOM: DurableObjectNamespace<SessionRoom>;
   RATE_LIMITER: DurableObjectNamespace<RateLimiter>;
   /** Global monthly reservations for searches, photos, and geocoding. */

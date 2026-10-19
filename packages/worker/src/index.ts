@@ -1,3 +1,4 @@
+import { handleAnalytics } from "../../../analytics/worker.js";
 import { Hono } from "hono";
 import { lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
@@ -39,6 +40,8 @@ app.onError((err, c) => {
   console.error("Unhandled error:", err);
   return c.json({ error: "Something broke on our end. Not your fault." }, 500);
 });
+
+app.all("/api/analytics", (c) => handleAnalytics(c.req.raw, c.env));
 
 app.get("/api/health", (c) => c.json({ ok: true, source: c.env.RESTAURANT_SOURCE ?? "mock" }));
 

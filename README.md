@@ -92,3 +92,6 @@ the text/link share action. Image creation and delivery live in
 `packages/web/src/lib/dinnerImage.ts` and `SavePlanImage.tsx`.
 
 Aggregate traffic and feature-event coverage, privacy boundaries and queries: [Analytics](docs/ANALYTICS.md).
+
+CI uploads the verified client build for deployment. The release job downloads that same
+workflow artifact and publishes it without rebuilding the client; local deployment still builds first.

@@ -56,8 +56,7 @@ const stepsIn = (text) =>
     .filter((n) => !PLUMBING.has(n));
 
 /*
- * The deploy job is deliberately not compared. It builds again on the way out, and anything else it
- * grows is a release step rather than a gate.
+ * Deployment consumes the verified build; its release commands are not verification gates.
  */
 const deployAt = ci.indexOf("\n  deploy:");
 const gateJobs = deployAt === -1 ? ci : ci.slice(0, deployAt);
@@ -68,6 +67,9 @@ const verifySteps = new Set(verifySequence);
 if (JSON.stringify(ciSequence) !== JSON.stringify(verifySequence))
   problems.push("CI and verify must run the same gates in the same order");
 
+for (const name of stepsIn(scripts["verify:core"] ?? "")) {
+  if (!scripts[name]) problems.push(`verify:core runs \`pnpm run ${name}\`, which is not a script`);
+}
 for (const name of verifySteps) {
   if (!scripts[name]) problems.push(`verify runs \`pnpm run ${name}\`, which is not a script`);
 }

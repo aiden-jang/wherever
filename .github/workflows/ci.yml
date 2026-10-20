@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -21,21 +25,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run gates
-      - run: pnpm run security:check
-      - run: pnpm run check:migrations
-      - run: pnpm run size
-      - run: pnpm run comments
-      - run: pnpm run css-vars
-      - run: pnpm run check:docs
-      - run: pnpm run knip
-      - run: pnpm run typecheck
-      - run: pnpm run lint
-      - run: pnpm run format:check
-      - run: pnpm run build
-      # Emitted CSS is needed to validate Tailwind class usage.
-      - run: pnpm run dead-classes
-      - run: pnpm run test
+      - run: pnpm run verify:core
       - run: pnpm --filter @wherever/web exec playwright install --with-deps chromium webkit
       - run: pnpm run e2e
       - name: Retain browser and Worker diagnostics
@@ -47,6 +37,14 @@ jobs:
             packages/web/test-results/
             .wrangler/e2e-logs/
           include-hidden-files: true
+          retention-days: 7
+      - uses: actions/upload-artifact@v7
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: production-assets
+          path: packages/web/dist/
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 7
 
   # Merge-to-main delivery depends on the complete check job.
@@ -68,8 +66,12 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Validation ran in check; this fresh runner builds assets and applies migrations before shipping.
+      - uses: actions/download-artifact@v8
+        with:
+          name: production-assets
+          path: packages/web/dist/
+      # Release the verified assets after applying migrations.
       - name: Deploy Worker and assets to Cloudflare
-        run: pnpm run deploy:only
+        run: pnpm run deploy:assets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

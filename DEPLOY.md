@@ -5,10 +5,11 @@ There is no separate Pages deployment or cross-origin production API.
 
 ## Normal delivery
 
-Merging to `main` starts CI. The complete check job, including browser journeys,
-must succeed before the delivery job runs `pnpm run deploy:only`. The Worker
-script builds web assets, applies pending remote D1 migrations, then ships code
-and assets together. A failure stops the chain.
+Pushing to `main` starts CI. The complete check job, including browser journeys,
+must succeed before delivery downloads the verified web assets and runs
+`pnpm run deploy:assets`. The Worker applies pending remote D1 migrations, then
+ships code and assets together without rebuilding the client. A failure stops
+the chain.
 
 The repository secret `CLOUDFLARE_API_TOKEN` needs Workers Scripts and D1 permissions.
 The configured custom domain and D1 binding live in `packages/worker/wrangler.toml`.
@@ -22,7 +23,8 @@ From the repository root, after authentication and browser setup:
 pnpm run deploy
 ```
 
-The root command runs full verification before invoking the same delivery script.
+The root command runs full verification, then builds the client and applies remote
+migrations before delivery.
 Use `run`; the bare package-manager command of that name has different behavior.
 Remote migrations and delivery modify production and should be performed deliberately.
 

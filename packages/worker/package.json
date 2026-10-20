@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "pnpm --filter @wherever/web build && wrangler d1 migrations apply wherever --remote && wrangler deploy",
+    "deploy": "pnpm --filter @wherever/web build && pnpm run deploy:assets",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply wherever --local",
-    "check:migrations": "node scripts/check-migrations.mjs"
+    "check:migrations": "node scripts/check-migrations.mjs",
+    "deploy:assets": "wrangler d1 migrations apply wherever --remote && wrangler deploy"
   },
   "dependencies": {
     "@wherever/shared": "workspace:*",

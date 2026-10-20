@@ -85,6 +85,19 @@ describe("provider budget enforcement", () => {
     expect(upstream).toHaveBeenCalledTimes(caps[kind]);
   });
 
+  it.each([photoPath, geocodePath])(
+    "keeps rejected provider response bodies out of logs for %s",
+    async (path) => {
+      const log = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response("private-api-key private-location private-provider-message", { status: 403 }),
+      );
+      expect((await request(path())).status).toBe(502);
+      expect(log).toHaveBeenCalled();
+      expect(JSON.stringify(log.mock.calls)).not.toContain("private-");
+    },
+  );
+
   it.each([
     ["photo", photoPath, () => new Response("photo", { headers: { "Content-Type": "image/jpeg" } })],
     [

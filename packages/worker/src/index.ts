@@ -124,8 +124,7 @@ app.get("/api/geocode", async (c) => {
   const upstream = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${key}`;
   const res = await fetch(upstream);
   if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    console.warn(`geocode upstream ${res.status}: ${detail.slice(0, 300)}`);
+    console.warn("geocode upstream", res.status);
     return c.json({ error: "Location search failed." }, 502);
   }
   const data = (await res.json().catch(() => null)) as {
@@ -185,10 +184,8 @@ app.get("/api/photo", async (c) => {
   const upstream = `https://places.googleapis.com/v1/${ref}/media?maxWidthPx=${width}&key=${key}`;
   const res = await fetch(upstream);
   if (!res.ok) {
-    // Surface why Google rejected the photo (403 = key/restriction/billing, 404 = stale ref,
-    // etc.) instead of a bare 502. Shows in `wrangler tail` and Workers Logs.
-    const detail = await res.text().catch(() => "");
-    console.warn(`photo proxy upstream ${res.status}: ${detail.slice(0, 300)}`);
+    // Status identifies provider failures without retaining location or credential-bearing bodies.
+    console.warn("photo proxy upstream", res.status);
     return c.json({ error: "Photo unavailable." }, 502);
   }
 

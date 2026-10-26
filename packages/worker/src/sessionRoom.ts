@@ -6,7 +6,6 @@ import { and, eq } from "drizzle-orm";
 import { visitedPlaces } from "./db/schema.js";
 import {
   cardsBehind,
-  clientMessageSchema,
   finishedParticipantIds,
   vetoedRestaurantIds,
   type DecisionResult,
@@ -14,6 +13,7 @@ import {
   type SessionFilters,
   type Vibe,
 } from "@wherever/shared";
+import { clientMessageSchema } from "@wherever/shared/schemas";
 import type { Env } from "./env.js";
 
 import { readVotes } from "./roomState.js";

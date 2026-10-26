@@ -63,12 +63,14 @@ to the required APIs and set provider quotas as a second backstop. Billing alert
 do not stop requests. Keep billing enabled for real photos; a Demo Key cannot
 provide them even when the application has photo reservations remaining.
 
-The production key is restricted to Places API (New) and Geocoding API. The
-Worker calls Google server-side; website referrer restrictions do not apply, and
+The recorded production setup restricts the key to Places API (New) and Geocoding API.
+Recheck these settings in Google Cloud when changing credentials; repository tests
+cannot inspect the key's current restrictions or project quotas. The Worker calls
+Google server-side; website referrer restrictions do not apply, and
 an IP allowlist requires stable outbound addresses that this deployment does not
 provide. Keep the key secret; API restrictions do not bind it to this Worker.
 
-Google's project quotas allow 950 requests per day each for Nearby Search,
+The recorded project quotas allow 950 requests per day each for Nearby Search,
 GetPhotoMedia, and Geocoding v3, so the full monthly allowance can be used in one
 day. The application enforces the 950 monthly limit; Google's daily quotas do not
 enforce a monthly total. Requests outside the Worker bypass its monthly counter
@@ -99,6 +101,10 @@ not credentials, locations, or raw provider messages. `BILLING_DISABLED`,
 waiting or loosening dinner filters will not resolve them. A successful search
 with no matching restaurants is a separate outcome. The health route checks the
 Worker, not whether Google will accept a live search.
+
+`geocode_failed` records a bounded provider rejection code, without the search
+query, key, or raw provider message. A true zero-result response returns 404;
+provider refusal or malformed provider data returns 502 so the client offers retry.
 
 `restaurant_deck_failed` records the caught exception for a failed start or new
 round, including failures outside the Google HTTP response. The room keeps its

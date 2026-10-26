@@ -3,19 +3,36 @@ import { DEFAULT_FILTERS } from "@wherever/shared";
 
 export { DEFAULT_FILTERS };
 
-// Same origin everywhere now: the Worker serves this app and the API. The override only exists
-// for pointing a local web build at a deployed Worker.
+// The Worker serves the app and API on one origin; local builds may override it.
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+
+async function request(path: string, init: RequestInit, signal?: AbortSignal): Promise<Response> {
+  const deadline = AbortSignal.timeout(15_000);
+  try {
+    return await fetch(`${API_BASE}${path}`, {
+      ...init,
+      signal: signal ? AbortSignal.any([signal, deadline]) : deadline,
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error("Couldn’t reach Wherever. Check your connection and try again.");
+  }
+}
 
 export async function createSession(
   displayName: string,
   filters: SessionFilters = DEFAULT_FILTERS,
+  signal?: AbortSignal,
 ): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/sessions`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ displayName, filters }),
-  });
+  const res = await request(
+    "/api/sessions",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ displayName, filters }),
+    },
+    signal,
+  );
   if (!res.ok) {
     // Surface the server's specific reason (rate limit, bad setup) instead of a generic one.
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -42,15 +59,21 @@ export function getLocation(): Promise<{ lat: number; lng: number } | null> {
 }
 
 /**
- * Geocode a manually-entered zip/town to a search center via the Worker (which holds the Google
- * key). Returns null on a bad/empty query or no match, so the caller can show a friendly message
- * without a throw. `label` is Google's formatted address, for display.
+ * Resolve a zip/town through the Worker, which holds the provider key. Short queries
+ * return null; rejected searches throw the server's reason for retry feedback.
+ * `label` is the provider's formatted address.
  */
-export async function geocode(query: string): Promise<{ lat: number; lng: number; label: string } | null> {
+export async function geocode(
+  query: string,
+  signal?: AbortSignal,
+): Promise<{ lat: number; lng: number; label: string } | null> {
   const q = query.trim();
   if (q.length < 2) return null;
-  const res = await fetch(`${API_BASE}/api/geocode?q=${encodeURIComponent(q)}`);
-  if (!res.ok) return null;
+  const res = await request(`/api/geocode?q=${encodeURIComponent(q)}`, {}, signal);
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Location search is unavailable. Try again shortly.");
+  }
   return (await res.json().catch(() => null)) as {
     lat: number;
     lng: number;

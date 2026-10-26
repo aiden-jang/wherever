@@ -2,7 +2,8 @@ import { handleAnalytics } from "../../../analytics/worker.js";
 import { Hono } from "hono";
 import { lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { createSessionSchema, type SessionFilters } from "@wherever/shared";
+import type { SessionFilters } from "@wherever/shared";
+import { createSessionSchema } from "@wherever/shared/schemas";
 import { sessions, visitedPlaces } from "./db/schema.js";
 import { generateSessionCode } from "./code.js";
 import { isValidPhotoRef } from "./googlePlace.js";
@@ -45,8 +46,7 @@ app.all("/api/analytics", (c) => handleAnalytics(c.req.raw, c.env));
 
 app.get("/api/health", (c) => c.json({ ok: true, source: c.env.RESTAURANT_SOURCE ?? "mock" }));
 
-// This month's Google usage vs. the caps that stop the app from calling Google. Handy for keeping
-// inspecting reservation headroom.
+// Reservations include failed provider calls, so these are call limits rather than billed usage.
 app.get("/api/usage", async (c) => {
   const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
   return c.json(await meter.stats());
@@ -137,8 +137,21 @@ app.get("/api/geocode", async (c) => {
 
   const top = data?.results?.[0];
   const loc = top?.geometry?.location;
-  if (data?.status !== "OK" || !loc) {
+  if (data?.status === "ZERO_RESULTS") {
     return c.json({ error: "Couldn't find that place." }, 404);
+  }
+  if (data?.status !== "OK" || !loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) {
+    const codes = [
+      "REQUEST_DENIED",
+      "OVER_QUERY_LIMIT",
+      "OVER_DAILY_LIMIT",
+      "INVALID_REQUEST",
+      "UNKNOWN_ERROR",
+    ];
+    console.warn("geocode_failed", {
+      status: codes.includes(data?.status ?? "") ? data?.status : "INVALID_RESPONSE",
+    });
+    return c.json({ error: "Location search is unavailable. Try again shortly." }, 502);
   }
 
   const out = c.json({ lat: loc.lat, lng: loc.lng, label: top?.formatted_address ?? q });

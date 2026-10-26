@@ -15,6 +15,10 @@ swipe on one common deck, and turn the result into a dinner plan.
   controls keep the group moving; voter identities stay hidden by default.
 - Review the winner, ranked backups, directions, and visited history. Replay the same
   deck or deal new places from the reserve, then widen the search when needed.
+- Send the dinner plan as text or save a ticket image with the address and map QR.
+  The image uses no restaurant photo, participant names, individual votes, or extra provider call.
+- Unavailable location searches preserve your query. Failed sharing leaves selectable
+  text and an immediate retry; camera startup failures offer manual code entry.
 - Install the PWA for shortcuts, invite sharing, a pending-card badge, and wake lock
   where the browser supports them. The cached interface can reopen offline;
   creating rooms and live voting require the network.
@@ -73,25 +77,17 @@ See [quality checks](docs/quality.md) for individual commands and review limits.
 | `docs/`            | Architecture, quality guidance, review evidence, and decision records           |
 
 One Worker serves the built interface, `/api` routes, and WebSockets on the same origin.
-Merge-to-main delivery follows the complete CI check job.
+Pushes to main run the complete CI check job. Deployment reuses that job's verified
+client build, applies pending migrations, and publishes without rebuilding the client.
 
 - [Architecture](docs/architecture.md)
 - [Contributing](CONTRIBUTING.md)
 - [Repository conventions](CONVENTIONS.md)
 - [Design decisions](DECISIONS.md)
 - [Hosting and configuration](DEPLOY.md)
+- [Analytics and privacy boundaries](docs/ANALYTICS.md)
+- [Visitor walkthrough](docs/visitor-review.md)
 
 ## License
 
 [MIT](LICENSE) © Aiden Jang. Bundled font packages carry their own licenses.
-
-After a match, **Save plan image** downloads a dinner ticket with the chosen place,
-its address, and a map QR code. It uses no restaurant photo or extra provider call,
-and includes no participant names or individual votes. **Send the plan** remains
-the text/link share action. Image creation and delivery live in
-`packages/web/src/lib/dinnerImage.ts` and `SavePlanImage.tsx`.
-
-Aggregate traffic and feature-event coverage, privacy boundaries and queries: [Analytics](docs/ANALYTICS.md).
-
-CI uploads the verified client build for deployment. The release job downloads that same
-workflow artifact and publishes it without rebuilding the client; local deployment still builds first.

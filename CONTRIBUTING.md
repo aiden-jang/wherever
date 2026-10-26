@@ -30,11 +30,13 @@ Use Conventional Commits without a scope: `type: concise description`.
 For example, `fix: preserve selected location during delayed searches`.
 
 Explain the user-visible change, relevant architecture choices, and validation.
-Use the pull-request template. Keep README and docs aligned with current behavior;
+For contributions through a pull request, use its template. Keep README and docs aligned with current behavior;
 comments explain constraints rather than recounting the refactor.
 
-Main requires an up-to-date pull request with passing CI and resolved conversations.
-No external reviewer approval is required for this personal repository.
+The owner commits verified changes directly to main. Its ruleset keeps history
+linear and blocks force pushes and deletion; it does not require a pull request.
+CI verifies every main push before automatic delivery. Other contributors can
+open a pull request with the same checks and relevant evidence.
 Use [private security reporting](.github/SECURITY.md) for suspected vulnerabilities.
 
 ## Database changes

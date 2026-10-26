@@ -21,10 +21,12 @@ function CreateForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);
+  const createRequest = useRef<AbortController | null>(null);
   useLayoutEffect(() => {
     alive.current = true;
     return () => {
       alive.current = false;
+      createRequest.current?.abort();
     };
   }, []);
 
@@ -50,10 +52,16 @@ function CreateForm() {
       // (area) or searched a zip/town (lat/lng already in filters), that explicit center wins and we
       // must NOT overlay the device location on top of it. Don't re-invoke geolocation here either.
       const usingExplicitCenter = Boolean(filters.area) || (filters.lat != null && filters.lng != null);
-      const code = await createSession(name.trim(), {
-        ...filters,
-        ...(usingExplicitCenter ? {} : (loc ?? {})),
-      });
+      const controller = new AbortController();
+      createRequest.current = controller;
+      const code = await createSession(
+        name.trim(),
+        {
+          ...filters,
+          ...(usingExplicitCenter ? {} : (loc ?? {})),
+        },
+        controller.signal,
+      );
       if (alive.current) go(`/s/${code}`);
     } catch (err) {
       if (!alive.current) return;

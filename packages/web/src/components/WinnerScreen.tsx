@@ -1,4 +1,5 @@
 import { SavePlanImage } from "./SavePlanImage.js";
+import { CopyFallback } from "./CopyFallback.js";
 import { type CSSProperties, useEffect, useState } from "react";
 
 import { useShareAction } from "../useShareAction.js";
@@ -72,17 +73,15 @@ export function WinnerScreen({
     return () => clearTimeout(t);
   }, []);
 
-  const sharePlan = async () => {
-    const url = mapsUrl(restaurant);
-    const text = planText(
-      restaurant,
-      rightSwipes,
-      totalParticipants,
-      reasons.map((reason) => reason.label),
-      alternatives[0]?.restaurant,
-    );
-    await share({ title: restaurant.name, text, url });
-  };
+  const text = planText(
+    restaurant,
+    rightSwipes,
+    totalParticipants,
+    reasons.map((reason) => reason.label),
+    alternatives[0]?.restaurant,
+  );
+  const url = mapsUrl(restaurant);
+  const sharePlan = () => share({ title: restaurant.name, text, url });
   const copyAddress = () =>
     restaurant.address
       ? copy({ text: `${restaurant.name}\n${restaurant.address}` }, false)
@@ -307,7 +306,7 @@ export function WinnerScreen({
             <button
               type="button"
               onClick={() => void sharePlan()}
-              disabled={shareResult !== null}
+              disabled={shareResult === "sharing"}
               aria-label={
                 shareResult === "sharing"
                   ? "Opening dinner plan sharing"
@@ -331,6 +330,9 @@ export function WinnerScreen({
                       ? "Couldn’t share"
                       : "Send the plan"}
             </button>
+            {shareResult === "failed" && (
+              <CopyFallback label="Dinner plan to copy" text={`${text}\n${url}`} />
+            )}
             <SavePlanImage key={restaurant.id} restaurant={restaurant} />
             <PlaceLinks restaurant={restaurant} />
             {installOffer && (

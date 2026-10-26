@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
-import { flushSync } from "react-dom";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 import { initialSessionState, sessionReducer } from "./sessionState.js";
+import { withViewTransition } from "./viewTransition.js";
 
 /** Preserve identity across reconnects. Blocked storage falls back to memory so joining still works. */
 const fallbackClientIds = new Map<string, string>();
@@ -23,17 +23,6 @@ function clientIdFor(code: string): string {
     }
     return id;
   }
-}
-
-/**
- * A state update inside a view transition, where the browser has one. Not the router's: this swap is
- * a websocket message arriving, so nothing else would start one. Skipped under reduced motion.
- */
-function withTransition(update: () => void) {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
-  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!doc.startViewTransition || still) return update();
-  doc.startViewTransition(() => flushSync(update));
 }
 
 export function useSessionSocket(code: string, displayName: string) {
@@ -74,7 +63,7 @@ export function useSessionSocket(code: string, displayName: string) {
       const update = () => {
         if (!disposed) dispatch({ type: "received", message: msg, reactionId });
       };
-      if (msg.type === "match") withTransition(update);
+      if (msg.type === "match") withViewTransition(update);
       else update();
       if (reactionId) {
         const timer = setTimeout(() => {

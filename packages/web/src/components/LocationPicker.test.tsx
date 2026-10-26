@@ -9,6 +9,33 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 describe("location search", () => {
+  it("distinguishes an unavailable search from a place with no matches", async () => {
+    vi.mocked(geocode).mockRejectedValue(new Error("Location search is unavailable. Try again shortly."));
+    render(<LocationPicker filters={DEFAULT_FILTERS} onChange={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText("Zip or town"), { target: { value: "Denver" } });
+    fireEvent.click(screen.getByRole("button", { name: "Go" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Location search is unavailable");
+  });
+
+  it("keeps a newly typed query when the previous lookup finishes", async () => {
+    let resolve!: (hit: { lat: number; lng: number; label: string }) => void;
+    vi.mocked(geocode).mockReturnValue(
+      new Promise((done) => {
+        resolve = done;
+      }),
+    );
+    const onChange = vi.fn();
+    render(<LocationPicker filters={DEFAULT_FILTERS} onChange={onChange} />);
+    const field = screen.getByPlaceholderText("Zip or town");
+    fireEvent.change(field, { target: { value: "Denver" } });
+    fireEvent.click(screen.getByRole("button", { name: "Go" }));
+    fireEvent.change(field, { target: { value: "Boulder" } });
+    await act(async () => resolve({ lat: 39.7, lng: -104.9, label: "Denver" }));
+    expect(onChange).not.toHaveBeenCalled();
+    expect((field as HTMLInputElement).value).toBe("Boulder");
+    expect(screen.getByRole("button", { name: "Go" }).hasAttribute("disabled")).toBe(false);
+  });
+
   it("retains dinner filters changed while a location lookup is pending", async () => {
     let resolve!: (hit: { lat: number; lng: number; label: string }) => void;
     vi.mocked(geocode).mockReturnValue(

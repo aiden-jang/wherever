@@ -146,27 +146,59 @@ test("a failed create stays in one recoverable dialog and preserves the name", a
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("closing a pending create does not navigate when its response arrives", async ({ page }) => {
+test("closing creation cancels its pending request and ignores a late response", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = window.fetch;
+    window.fetch = (input, init) => {
+      if (String(input).endsWith("/api/sessions"))
+        init?.signal?.addEventListener("abort", () => {
+          document.documentElement.dataset.createRequestAborted = "true";
+        });
+      return original(input, init);
+    };
+  });
   let release!: () => void;
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/api/sessions", async (route) => {
-    await held;
-    await route.fulfill({ status: 201, json: { code: "ABCDEF" } });
+  let responded!: () => void;
+  let routeStarted = false;
+  const lateResponse = new Promise<void>((resolve) => {
+    responded = resolve;
   });
-  await page.goto("/");
-  await page.getByRole("button", { name: "Start a session", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Start a session" });
-  await dialog.getByRole("textbox", { name: "Your name" }).fill("Sam");
-  await dialog.getByRole("button", { name: "Deal the cards" }).click();
-  await expect(dialog.getByRole("button", { name: "Shuffling the deck..." })).toBeDisabled();
-  await dialog.getByRole("button", { name: "Close", exact: true }).click();
-  const response = page.waitForResponse("**/api/sessions");
-  release();
-  await response;
-  await expect(page.getByRole("heading", { name: /Big appetites/ })).toBeVisible();
-  await expect(page).toHaveURL(/\/$/);
+  let started!: () => void;
+  const requestStarted = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  await page.route("**/api/sessions", async (route) => {
+    routeStarted = true;
+    started();
+    await held;
+    try {
+      await route.fulfill({ status: 201, json: { code: "ABCDEF" } });
+    } finally {
+      responded();
+    }
+  });
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Start a session", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Start a session" });
+    await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
+    await dialog.getByRole("button", { name: "Deal the cards" }).click();
+    await requestStarted;
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    // A routed WebKit request reports requestfailed only after the route is released.
+    await expect(page.locator("html")).toHaveAttribute("data-create-request-aborted", "true");
+    release();
+    await lateResponse;
+    await expect(page.getByRole("heading", { name: /Big appetites/ })).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+  } finally {
+    release();
+    if (routeStarted) await lateResponse;
+  }
 });
 
 test("special votes can be undone and restaurant details suspend keyboard voting", async ({ page }) => {

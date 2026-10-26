@@ -21,17 +21,20 @@ export function LocationPicker({
   const latest = useRef({ filters, onChange });
   const request = useRef(0);
   const searching = useRef(false);
+  const controller = useRef<AbortController | null>(null);
   useLayoutEffect(() => {
     latest.current = { filters, onChange };
   }, [filters, onChange]);
   useLayoutEffect(
     () => () => {
       request.current += 1;
+      controller.current?.abort();
     },
     [],
   );
   function select(next: SessionFilters) {
     request.current += 1;
+    controller.current?.abort();
     searching.current = false;
     setBusy(false);
     setErr("");
@@ -55,22 +58,31 @@ export function LocationPicker({
     const version = ++request.current;
     setBusy(true);
     setErr("");
-    const hit = await geocode(query).catch(() => null);
-    if (version !== request.current) return;
-    searching.current = false;
-    setBusy(false);
-    if (!hit) {
-      setErr('Couldn\'t find that. Try a zip, or "Town, State".');
-      return;
+    controller.current = new AbortController();
+    try {
+      const hit = await geocode(query, controller.current.signal);
+      if (version !== request.current) return;
+      if (!hit) {
+        setErr('Couldn\'t find that. Try a zip, or "Town, State".');
+        return;
+      }
+      latest.current.onChange({
+        ...latest.current.filters,
+        lat: hit.lat,
+        lng: hit.lng,
+        locationLabel: hit.label,
+        area: undefined,
+      });
+      setQ("");
+    } catch (error) {
+      if (version === request.current)
+        setErr(error instanceof Error ? error.message : "Location search is unavailable. Try again shortly.");
+    } finally {
+      if (version === request.current) {
+        searching.current = false;
+        setBusy(false);
+      }
     }
-    latest.current.onChange({
-      ...latest.current.filters,
-      lat: hit.lat,
-      lng: hit.lng,
-      locationLabel: hit.label,
-      area: undefined,
-    });
-    setQ("");
   }
 
   return (
@@ -109,7 +121,14 @@ export function LocationPicker({
             <input
               type="text"
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => {
+                request.current += 1;
+                controller.current?.abort();
+                searching.current = false;
+                setBusy(false);
+                setErr("");
+                setQ(e.target.value);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault(); // don't submit the outer create form
@@ -129,6 +148,7 @@ export function LocationPicker({
                 type="button"
                 onClick={runSearch}
                 disabled={busy}
+                aria-label={busy ? "Searching location" : undefined}
                 className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50 transition"
               >
                 {busy ? "..." : "Go"}

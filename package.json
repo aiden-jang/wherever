@@ -5,7 +5,7 @@
   "description": "Group restaurant picking by swipe. Less group chat, more eating.",
   "license": "MIT",
   "engines": {
-    "node": "^22.22.2 || ^24.13.0 || >=26.0.0"
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -34,10 +34,10 @@
     "verify:core": "pnpm run gates && pnpm run security:check && pnpm run check:migrations && pnpm run size && pnpm run comments && pnpm run css-vars && pnpm run check:docs && pnpm run knip && pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run build && pnpm run dead-classes && pnpm run test"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.71.2",
-    "@typescript-eslint/parser": "^8.71.2",
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
+    "@typescript-eslint/parser": "^8.72.1",
     "eslint": "^8.57.1",
-    "knip": "^6.41.0",
+    "knip": "^6.43.0",
     "prettier": "^3.9.10",
     "typescript": "^5.9.3"
   },

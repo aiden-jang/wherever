@@ -29,7 +29,7 @@ export function useShareAction(key: string) {
       if (!current()) return;
       busy.current = false;
       setStatus(next);
-      if (next) timer.current = setTimeout(() => setStatus(null), 2200);
+      if (next && next !== "failed") timer.current = setTimeout(() => setStatus(null), 2200);
     };
     setStatus("sharing");
     if (native && typeof navigator.share === "function") {

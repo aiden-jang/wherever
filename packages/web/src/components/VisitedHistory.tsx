@@ -1,5 +1,6 @@
 import { useShareAction } from "../useShareAction.js";
 import type { VisitedPlace } from "@wherever/shared";
+import { CopyFallback } from "./CopyFallback.js";
 export function VisitedHistory({
   visited,
   onNeverAgain,
@@ -12,9 +13,9 @@ export function VisitedHistory({
   const ordered = [...visited].sort(
     (a, b) => new Date(b.visitedAt).getTime() - new Date(a.visitedAt).getTime(),
   );
+  const text = `Already tried:\n${ordered.map((place) => `• ${place.name}`).join("\n")}`;
   const shareHistory = async () => {
-    if (shareStatus) return;
-    const text = `Already tried:\n${ordered.map((place) => `• ${place.name}`).join("\n")}`;
+    if (shareStatus === "sharing") return;
     await share({ title: "Wherever past picks", text });
   };
   return (
@@ -24,7 +25,7 @@ export function VisitedHistory({
         <button
           type="button"
           onClick={() => void shareHistory()}
-          disabled={shareStatus !== null}
+          disabled={shareStatus === "sharing"}
           className="text-xs font-semibold text-muted transition hover:text-acid hover:underline disabled:cursor-default disabled:opacity-70"
         >
           {shareStatus === "sharing"
@@ -38,6 +39,7 @@ export function VisitedHistory({
                   : "Share list"}
         </button>
       </div>
+      {shareStatus === "failed" && <CopyFallback label="Past picks to copy" text={text} />}
       <div className="mt-2 flex flex-wrap gap-2">
         {ordered.map((v) => (
           <span

@@ -61,7 +61,9 @@ replays do not consume the new-search cap. Missing setup and exhausted budgets
 carry distinct sample-data reasons.
 
 The usage meter reserves search/photo calls before their upstream requests.
-Geocoding is separately rate-limited and edge-cached. These are call limits, not
+Geocoding uses the same atomic reservation meter, plus its own per-IP rate limit
+and edge cache. Provider rejection returns a retryable service error; only a real
+zero-result response is reported as a missing place. These are call limits, not
 provider billing guarantees.
 
 ## Client composition and lifetime
@@ -76,16 +78,29 @@ state stays with the deck, gestures with the active card, and round rules with
 their own controls. Results separate winner presentation, copy generation, and
 visited history.
 
-Location results apply to the latest non-location filters; an explicit new location
-invalidates an older lookup. Sharing uses one guarded feedback hook for invites,
-plans, addresses, and history. Failure is visible and native cancellation returns
-to idle. Focus traps cycle reachable dialog controls and restore the trigger.
+Location results apply to the latest non-location filters; editing the query or
+choosing a location cancels and invalidates an older lookup. Creation and location
+requests have deadlines and are aborted when their form closes. Sharing uses one
+guarded feedback hook for invites, plans, addresses, and history. Failure persists
+with selectable text and retry; native cancellation returns to idle. Focus traps
+cycle reachable dialog controls and restore the trigger.
+
+The view-transition helper contains presentation failures without dropping a route
+change or received decision. QR scanning releases camera tracks on close, failure,
+or a successful scan. Wake locks release on hide or cleanup; late requests also
+release their resources after their owner closes.
+Server validation is imported through `@wherever/shared/schemas` so browser imports
+of pure rules do not initialize or ship the validation library.
 
 ## Build and verification
 
 The Worker serves hashed web assets and the SPA fallback. API and socket traffic
-stay on the network. CI checks the same ordered pipeline as `verify`, then a
-separate dependent job builds assets and applies migrations before delivery.
+stay on the network. The service worker only refreshes its offline HTML from the
+public homepage; room and share-target navigation cannot replace that shell.
+Cached fingerprinted bundles need no background fetch, while stable assets revalidate.
+
+CI checks the same ordered pipeline as `verify`, then a dependent delivery job
+downloads the verified client artifact and applies migrations before publishing.
 
 See [quality checks](quality.md), [design decisions](../DECISIONS.md), and the
 [ADR directory](adr/0001-durable-objects.md).

@@ -10,8 +10,21 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.resetAllMocks();
+  vi.useRealTimers();
 });
 describe("share feedback", () => {
+  it("keeps failure visible until another attempt succeeds", async () => {
+    vi.useFakeTimers();
+    writeText.mockRejectedValueOnce(new Error("denied")).mockResolvedValue(undefined);
+    const hook = renderHook(() => useShareAction("room"));
+    await act(() => hook.result.current.share({ text: "invite" }, false));
+    act(() => vi.advanceTimersByTime(5000));
+    expect(hook.result.current.status).toBe("failed");
+    await act(() => hook.result.current.share({ text: "invite" }, false));
+    expect(hook.result.current.status).toBe("copied");
+    expect(writeText).toHaveBeenCalledTimes(2);
+  });
+
   it("reports clipboard failure so a press never silently disappears", async () => {
     writeText.mockRejectedValue(new Error("denied"));
     const hook = renderHook(() => useShareAction("room"));

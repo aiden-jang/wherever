@@ -14,6 +14,10 @@ export function ScanQr({ onCode, onClose }: ScanQrProps) {
     let stream: MediaStream | null = null;
     let stop = false;
     let timer = 0;
+    const release = () => {
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+    };
 
     async function run() {
       try {
@@ -23,60 +27,66 @@ export function ScanQr({ onCode, onClose }: ScanQrProps) {
           video: { facingMode: "environment" },
           audio: false,
         });
-      } catch {
-        setFault("No camera, or permission was refused. Type the code instead.");
-        return;
-      }
-      /* Either bail-out has to stop the tracks. Returning without doing so leaves the camera on, with
+        /* Either bail-out has to stop the tracks. Returning without doing so leaves the camera on, with
          the indicator light lit, until the tab is closed. */
-      const el = video.current;
-      if (stop || !el) {
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      el.srcObject = stream;
-      await el.play().catch(() => {});
-
-      const Detector = (
-        window as unknown as {
-          BarcodeDetector: new (o: { formats: string[] }) => {
-            detect: (s: CanvasImageSource) => Promise<{ rawValue: string }[]>;
-          };
+        const el = video.current;
+        if (stop || !el) {
+          release();
+          return;
         }
-      ).BarcodeDetector;
-      const detector = new Detector({ formats: ["qr_code"] });
+        el.srcObject = stream;
+        await el.play();
+        if (stop) return;
 
-      /* Polled on a timer rather than every animation frame. A QR does not move, and detection at
-         60fps is battery spent on the same answer sixty times a second. */
-      const tick = async () => {
-        if (stop || !video.current) return;
-        try {
-          const found = await detector.detect(video.current);
-          const hit = found[0]?.rawValue;
-          if (hit) {
-            onCode(hit);
-            return;
+        const Detector = (
+          window as unknown as {
+            BarcodeDetector: new (o: { formats: string[] }) => {
+              detect: (s: CanvasImageSource) => Promise<{ rawValue: string }[]>;
+            };
           }
-        } catch {
-          /* A frame that cannot be decoded is the normal case, not a failure. */
-        }
-        timer = window.setTimeout(() => void tick(), 250);
-      };
-      void tick();
+        ).BarcodeDetector;
+        const detector = new Detector({ formats: ["qr_code"] });
+
+        /* Polled on a timer rather than every animation frame. A QR does not move, and detection at
+         60fps is battery spent on the same answer sixty times a second. */
+        const tick = async () => {
+          if (stop || !video.current) return;
+          try {
+            const found = await detector.detect(video.current);
+            if (stop) return;
+            const hit = found[0]?.rawValue;
+            if (hit) {
+              stop = true;
+              release();
+              onCode(hit);
+              return;
+            }
+          } catch {
+            /* A frame that cannot be decoded is the normal case, not a failure. */
+          }
+          if (!stop) timer = window.setTimeout(() => void tick(), 250);
+        };
+        void tick();
+      } catch {
+        release();
+        if (!stop) setFault("Couldn’t start the camera scanner. Type the code instead.");
+      }
     }
 
     void run();
     return () => {
       stop = true;
       window.clearTimeout(timer);
-      stream?.getTracks().forEach((t) => t.stop());
+      release();
     };
   }, [onCode]);
 
   return (
     <div className="flex flex-col gap-3">
       {fault ? (
-        <p className="text-muted text-sm">{fault}</p>
+        <p role="alert" className="text-muted text-sm">
+          {fault}
+        </p>
       ) : (
         <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-black">
           {/* Muted and inline, or iOS refuses to play it without a gesture and shows a black box. */}

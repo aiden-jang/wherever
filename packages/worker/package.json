@@ -16,14 +16,14 @@
   "dependencies": {
     "@wherever/shared": "workspace:*",
     "drizzle-orm": "^0.45.4",
-    "hono": "^4.13.13"
+    "hono": "^4.13.14"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "^1.4.2",
-    "@cloudflare/workers-types": "^5.20261014.1",
+    "@cloudflare/vitest-plugin": "^1.4.8",
+    "@cloudflare/workers-types": "^5.20261026.1",
     "drizzle-kit": "^0.31.11",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11",
-    "wrangler": "^4.151.0"
+    "vitest": "^4.1.12",
+    "wrangler": "^4.153.0"
   }
 }

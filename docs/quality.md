@@ -42,6 +42,9 @@ enabled. It refuses to reuse a development server. API/browser fixtures never
 require live provider keys.
 An interrupted-upload regression checks that client cancellation leaves the Worker,
 existing room, and new session creation usable.
+Creation cancellation and location retry run in both browser engines. The Chromium
+service-worker journey checks the real cache and reopens the public shell offline;
+the WebKit project skips that test because its service-worker control is not established here.
 
 Failures retain a screenshot and trace in the web package's ignored test-output
 directory. Wrangler logs are saved in `.wrangler/e2e-logs/` at the repository root.
@@ -73,6 +76,8 @@ are ignored; retain selected images alongside a dated review record.
 The capture tool uses browser-only socket/API fixtures with production assets;
 these captures are visual evidence rather than backend integration evidence.
 Keep a small selection with an honest review record in `docs/ui-qa/`.
+The [October 26 review](ui-qa/october-26/README.md) includes recovery states.
+Use the [visitor walkthrough](visitor-review.md) for a separate observed usability session.
 
 ## Limits
 

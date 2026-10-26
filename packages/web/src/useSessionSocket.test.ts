@@ -53,6 +53,32 @@ afterEach(() => {
 });
 
 describe("session socket ownership", () => {
+  it("keeps a received result when the browser refuses its transition", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: () => {
+        throw new Error("Snapshot unavailable");
+      },
+    });
+    try {
+      const hook = renderHook(() => useSessionSocket("ABCDEF", "Alex"));
+      expect(() =>
+        act(() =>
+          newest().message({
+            type: "match",
+            restaurant: { id: "pizza", name: "Pizza" },
+            rightSwipes: 1,
+            totalParticipants: 1,
+          }),
+        ),
+      ).not.toThrow();
+      expect(hook.result.current.match).toMatchObject({ kind: "match", restaurant: { id: "pizza" } });
+    } finally {
+      Reflect.deleteProperty(document, "startViewTransition");
+    }
+  });
+
   it("clears the previous session and queued commands when the code changes", () => {
     const hook = renderHook(({ code }) => useSessionSocket(code, "Alex"), {
       initialProps: { code: "ABCDEF" },

@@ -28,6 +28,28 @@ async function exhaust(kind: "search" | "photo" | "geocode") {
 afterEach(() => vi.restoreAllMocks());
 
 describe("provider budget enforcement", () => {
+  it.each(["REQUEST_DENIED", "OVER_QUERY_LIMIT", "UNKNOWN_ERROR", "PRIVATE-REJECTION"])(
+    "treats geocoding status %s as unavailable rather than an unknown town",
+    async (status) => {
+      const log = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        Response.json({ status, error_message: "private-location private-key", results: [] }),
+      );
+      const response = await request(geocodePath());
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({ error: "Location search is unavailable. Try again shortly." });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("private-");
+      expect(JSON.stringify(log.mock.calls)).not.toContain("PRIVATE-REJECTION");
+    },
+  );
+
+  it("keeps an actual zero-result geocode distinct from a provider failure", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ status: "ZERO_RESULTS", results: [] }));
+    const response = await request(geocodePath());
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Couldn't find that place." });
+  });
+
   it("uses labeled sample restaurants without contacting Google after the search cap", async () => {
     await exhaust("search");
     const upstream = vi.spyOn(globalThis, "fetch");

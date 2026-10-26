@@ -11,18 +11,22 @@ const cases = [
   "create",
   "join",
   "create-error",
+  "location-error",
+  "qr-error",
   "name",
   "lobby",
+  "invite-error",
   "filters",
   "swiping",
   "details",
   "empty-deck",
   "winner",
+  "winner-share-error",
   "directions",
   "no-match",
   "missing",
 ];
-const widths = [320, 390, 768, 1440];
+const widths = [320, 390, 430, 768, 1440];
 const filters = {
   radiusMeters: 4800,
   maxPriceTier: 4,
@@ -68,21 +72,42 @@ async function setup(page, name) {
     ({ named }) => {
       localStorage.setItem("wherever:muted", "1");
       if (named) sessionStorage.setItem("displayName", "Alex with a long name");
+      Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText: () => Promise.reject(new Error("Fixture clipboard unavailable")) },
+      });
     },
     { named: !["name", "landing", "create", "join", "create-error"].includes(name) },
   );
+  if (name === "qr-error")
+    await page.addInitScript(() => {
+      window.BarcodeDetector = class {
+        static async getSupportedFormats() {
+          return ["qr_code"];
+        }
+      };
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: { getUserMedia: () => Promise.reject(new Error("Fixture camera unavailable")) },
+      });
+    });
   await page.route("**/api/**", (route) =>
     route.fulfill({
       status: 503,
       json: { error: "Couldn’t start the session right now. Try again in a moment." },
     }),
   );
+  if (name === "location-error")
+    await page.route("**/api/geocode?*", (route) =>
+      route.fulfill({ status: 503, json: { error: "Location search is unavailable. Try again shortly." } }),
+    );
   await page.routeWebSocket("**/ws/*", (socket) => {
     socket.onMessage((raw) => {
       if (JSON.parse(String(raw)).type !== "join") return;
       const send = (message) => socket.send(JSON.stringify(message));
       if (name === "missing") return send({ type: "error", message: "That session does not exist." });
-      const status = ["winner", "directions", "no-match"].includes(name)
+      const status = ["winner", "winner-share-error", "directions", "no-match"].includes(name)
         ? "decided"
         : ["swiping", "details", "empty-deck"].includes(name)
           ? "swiping"
@@ -130,9 +155,9 @@ async function setup(page, name) {
       }
     });
   });
-  const atHome = ["landing", "create", "join", "create-error"].includes(name);
+  const atHome = ["landing", "create", "join", "create-error", "location-error", "qr-error"].includes(name);
   await page.goto(new URL(atHome ? "/" : "/s/ABCDEF", base).href);
-  if (["create", "create-error"].includes(name)) {
+  if (["create", "create-error", "location-error"].includes(name)) {
     await page.getByRole("button", { name: "Start a session", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Start a session" });
     await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
@@ -140,8 +165,27 @@ async function setup(page, name) {
       await dialog.getByRole("button", { name: "Deal the cards" }).click();
       await dialog.getByRole("alert").waitFor();
     }
+    if (name === "location-error") {
+      await dialog.getByRole("textbox", { name: "Zip or town" }).fill("Denver");
+      await dialog.getByRole("button", { name: "Go", exact: true }).click();
+      await dialog.getByRole("alert").waitFor();
+    }
   }
-  if (name === "join") await page.getByRole("button", { name: "Join with a code" }).click();
+  if (["join", "qr-error"].includes(name)) {
+    await page.getByRole("button", { name: "Join with a code" }).click();
+    if (name === "qr-error") {
+      await page.getByRole("button", { name: "Or point your camera at their code" }).click();
+      await page.getByRole("alert").waitFor();
+    }
+  }
+  if (name === "invite-error") {
+    await page.getByRole("button", { name: "Copy link", exact: true }).click();
+    await page.getByRole("textbox", { name: "Invite link to copy" }).waitFor();
+  }
+  if (name === "winner-share-error") {
+    await page.getByRole("button", { name: "Share dinner plan" }).click();
+    await page.getByRole("textbox", { name: "Dinner plan to copy" }).waitFor();
+  }
   if (name === "filters") {
     await page.getByRole("button", { name: /Edit dinner filters/ }).click();
     await page.getByRole("button", { name: /House rules/ }).click();
@@ -162,7 +206,7 @@ async function setup(page, name) {
           ? "Nothing survived the filters."
           : name === "no-match"
             ? "Everything got vetoed."
-            : ["winner", "directions"].includes(name)
+            : ["winner", "winner-share-error", "directions"].includes(name)
               ? /Dinner is handled/
               : ["swiping", "details"].includes(name)
                 ? "Swiping. Vote on tonight's places."

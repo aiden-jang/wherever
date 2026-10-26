@@ -2,6 +2,7 @@ import type { ClientMessage, SessionFilters } from "@wherever/shared";
 import { useShareAction } from "../useShareAction.js";
 import { FilterSummary } from "./FilterSummary.js";
 import { JoinQr } from "./JoinQr.js";
+import { CopyFallback } from "./CopyFallback.js";
 export function RoomInvite({
   code,
   filters,
@@ -40,14 +41,14 @@ export function RoomInvite({
         <button
           type="button"
           onClick={() => void shareInvite()}
-          disabled={inviteStatus !== null}
+          disabled={inviteStatus === "sharing"}
           aria-live="polite"
           className="rounded-full border border-white/15 px-5 py-2 text-sm font-medium hover:bg-white/5 active:scale-95 transition disabled:cursor-default disabled:opacity-60"
         >
           {inviteStatus === "sharing"
             ? "Opening…"
             : inviteStatus === "shared"
-              ? "Invite sent"
+              ? "Invite shared"
               : inviteStatus === "copied"
                 ? "Link copied"
                 : inviteStatus === "failed"
@@ -57,15 +58,16 @@ export function RoomInvite({
         <button
           type="button"
           onClick={() => void copyInviteLink()}
-          disabled={inviteStatus !== null}
+          disabled={inviteStatus === "sharing"}
           className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-muted hover:border-white/20 hover:text-cream transition disabled:cursor-default disabled:opacity-60"
         >
           Copy link
         </button>
       </div>
+      {codeStatus === "failed" && <CopyFallback label="Session code to copy" text={code} />}
+      {inviteStatus === "failed" && <CopyFallback label="Invite link to copy" text={location.href} />}
       <JoinQr code={code} url={location.href} />
-      {/* The rules live here now, not in the create modal: the group can see them, and somebody is
-            waiting for people to join anyway. Host-only to change, since they are one shared deck. */}
+      {/* Everyone sees the shared deck's filters; only its host can change them. */}
       {filters && (
         <FilterSummary
           filters={filters}

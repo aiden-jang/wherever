@@ -71,12 +71,12 @@ WHEREVER_UI_URL=http://127.0.0.1:4173 pnpm --filter @wherever/web run capture:ui
 
 Use `WHEREVER_UI_OUTPUT` to choose the output directory and `WHEREVER_UI_CASE` to
 review one fixture state. Only local preview origins are accepted. Default captures
-are ignored; retain selected images alongside a dated review record.
+are ignored; summarize relevant findings and unavailable checks in the change description.
 
 The capture tool uses browser-only socket/API fixtures with production assets;
 these captures are visual evidence rather than backend integration evidence.
-Keep a small selection with an honest review record in `docs/ui-qa/`.
-The [October 26 review](ui-qa/october-26/README.md) includes recovery states.
+Keep generated capture sets local or in temporary CI artifacts. Curated README
+images live in `docs/screenshots/`; earlier review records remain in Git history.
 Use the [visitor walkthrough](visitor-review.md) for a separate observed usability session.
 
 ## Limits
@@ -86,3 +86,11 @@ camera/QR performance, installed-app wake lock/recovery, spoken screen-reader
 output, or actual device performance. Mock/sample runs do not verify the live
 provider's current response shape, key permissions, billing, or deployment.
 Physical-device and live-service review must state their own evidence.
+
+## Review artifacts
+
+Keep generated screenshot sets, videos, traces and run reports in ignored
+`test-results/` output or a temporary local directory. CI artifacts should expire.
+Commit authored design references and a small curated set of README images only;
+keep runtime and installation assets separate. Earlier audit records remain in Git
+history. Use synthetic data and remove private information from shared evidence.

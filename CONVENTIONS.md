@@ -56,3 +56,5 @@ when old persisted data is still accepted.
 Do not put live test totals, file lengths, or gate totals in docs. Let checks print
 current measurements. Recorded visual reviews describe their own revision and
 must state what browser emulation cannot establish.
+
+Keep generated review output out of Git; follow the [artifact policy](docs/quality.md#review-artifacts).

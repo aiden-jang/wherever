@@ -38,16 +38,16 @@ test("create, vote, decide, and run the same deck again", async ({ page }) => {
   expect(bytes.subarray(1, 4).toString()).toBe("PNG");
   expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([1080, 1350]);
   if (process.env.UI_QA_CAPTURE) {
-    await mkdir("../../docs/ui-review", { recursive: true });
-    await copyFile(imagePath!, "../../docs/ui-review/dinner-plan.png");
+    await mkdir("../../test-results/visual-review", { recursive: true });
+    await copyFile(imagePath!, "../../test-results/visual-review/dinner-plan.png");
     await page.screenshot({
-      path: "../../docs/ui-review/winner-mobile.png",
+      path: "../../test-results/visual-review/winner-mobile.png",
       fullPage: true,
       animations: "disabled",
     });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.screenshot({
-      path: "../../docs/ui-review/winner-desktop.png",
+      path: "../../test-results/visual-review/winner-desktop.png",
       fullPage: true,
       animations: "disabled",
     });

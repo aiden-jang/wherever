@@ -20,5 +20,6 @@ packages/worker/.wrangler/
 test-results/
 playwright-report/
 
-# Full reproducible capture sets; review notes retain selected evidence.
-docs/ui-qa/captures/
+# Generated review output; authored references and curated README images stay tracked.
+/docs/ui-qa/
+/docs/ui-review/

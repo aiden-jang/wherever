@@ -26,7 +26,7 @@ swipe on one common deck, and turn the result into a dinner plan.
 Google Places supplies live restaurant data. The sample source works without a key,
 and a spent search budget falls back to clearly labeled sample restaurants.
 
-![Wherever’s dinner-voting interface](docs/ui-qa/october-14/landing-1440.png)
+![Wherever’s dinner-voting interface](docs/screenshots/landing-desktop.png)
 
 ## Run locally
 

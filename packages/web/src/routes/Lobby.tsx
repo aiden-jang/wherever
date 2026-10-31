@@ -241,7 +241,10 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
       <div className="w-full mt-10">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display text-xl font-bold">At the table</h2>
+          <div className="flex items-center gap-3">
+            <PlateState art="table" small />
+            <h2 className="font-display text-xl font-bold">At the table</h2>
+          </div>
           <span className="text-sm text-muted">
             {count} {count === 1 ? "person" : "people"}
           </span>
@@ -277,7 +280,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         ) : (
           <div className="lobby-wait flex flex-col items-center gap-2 text-center text-muted">
             <div className="flex items-center gap-2">
-              <PlateState small />
+              <PlateState art="waiting" small />
               <span className="font-medium">
                 {session
                   ? "You’re in. Waiting on the host."

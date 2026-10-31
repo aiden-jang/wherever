@@ -36,7 +36,7 @@ export function DinnerTicket({
     >
       <div className="ticket-top">
         <span>TONIGHT’S PLAN</span>
-        <span aria-hidden>✳</span>
+        <img src="/art/ticket.svg" alt="" width={26} height={26} />
       </div>
       <RestaurantPhoto
         imageUrl={restaurant.imageUrl}

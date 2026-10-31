@@ -15,6 +15,9 @@ swipe on one common deck, and turn the result into a dinner plan.
   controls keep the group moving; voter identities stay hidden by default.
 - Review the winner, ranked backups, directions, and visited history. Replay the same
   deck or deal new places from the reserve, then widen the search when needed.
+- Small table, menu and map illustrations mark the lobby, waiting and no-match states;
+  a plate stamp accompanies the dinner ticket. These are decorative, locally bundled
+  artwork; restaurant photos and voting facts remain separate.
 - Send the dinner plan as text or save a ticket image with the address and map QR.
   The image uses no restaurant photo, participant names, individual votes, or extra provider call.
 - Unavailable location searches preserve your query. Failed sharing leaves selectable

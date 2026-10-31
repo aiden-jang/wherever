@@ -3,6 +3,7 @@ import type { SessionFilters, VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../sessionState.js";
 import { VisitedHistory } from "./VisitedHistory.js";
 import { WinnerScreen } from "./WinnerScreen.js";
+import { PlateState } from "./PlateState.js";
 export function MatchScreen({
   match,
   visited,
@@ -29,7 +30,7 @@ export function MatchScreen({
     const allVetoed = match.vetoedCount > 0;
     return (
       <div className="text-center max-w-sm mx-auto">
-        <div className="text-glyph">{allVetoed ? "🚫" : "🤷"}</div>
+        <PlateState art="search" />
         <h1 className="mt-4 font-display text-state font-bold">
           {allVetoed ? "Everything got vetoed." : "Nobody liked anything."}
         </h1>

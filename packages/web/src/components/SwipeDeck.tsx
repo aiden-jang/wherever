@@ -7,6 +7,7 @@ import { CARD_SIZE, DECK_LAYOUT } from "./cardStyle.js";
 import { CardFace } from "./CardFace.js";
 import { VoteControls } from "./VoteControls.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
+import { PlateState } from "./PlateState.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 import { swipeAnnouncement, undoAnnouncement, revisitNote } from "@wherever/shared";
@@ -244,7 +245,7 @@ export function SwipeDeck({
     return (
       <div className={DECK_LAYOUT}>
         <div className="text-center max-w-sm mx-auto mt-10">
-          <div className="text-5xl">🧾</div>
+          <PlateState art="waiting" />
           <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
           <p className="mt-2 text-muted">{waitingLine}</p>
           {choices.length > 0 && (

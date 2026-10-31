@@ -3,6 +3,20 @@
 @import "./dinner.css";
 @import "./flow.css";
 
+.meal-artwork {
+  display: block;
+  width: 160px;
+  height: 100px;
+  margin-inline: auto;
+  object-fit: contain;
+}
+.meal-artwork-small {
+  width: 80px;
+  height: 50px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
 /* Design tokens (Tailwind v4 @theme -> utility classes like bg-ink, text-ember). */
 @theme {
   --color-ink: #181b17;

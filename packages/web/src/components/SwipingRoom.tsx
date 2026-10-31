@@ -148,7 +148,7 @@ export function SwipingRoom({
         </>
       ) : deck ? (
         <div className="text-center max-w-sm">
-          <PlateState />
+          <PlateState art="search" />
           <h1 className="mt-4 font-display text-state font-bold">Nothing survived the filters.</h1>
           <p className="mt-2 text-muted">
             Your standards met this neighborhood and won. Try again with a wider radius or fewer filters.

@@ -1,11 +1,25 @@
-export function PlateState({ small = false }: { small?: boolean }) {
+export function PlateState({
+  small = false,
+  art,
+}: {
+  small?: boolean;
+  art?: "table" | "waiting" | "search";
+}) {
   return (
     <img
-      className={small ? "plate-state plate-state-small" : "plate-state"}
-      src="/icon.svg"
+      className={
+        art
+          ? small
+            ? "meal-artwork meal-artwork-small"
+            : "meal-artwork"
+          : small
+            ? "plate-state plate-state-small"
+            : "plate-state"
+      }
+      src={art ? `/art/${art}.svg` : "/icon.svg"}
       alt=""
-      width={small ? 44 : 72}
-      height={small ? 44 : 72}
+      width={art ? (small ? 80 : 160) : small ? 44 : 72}
+      height={art ? (small ? 50 : 100) : small ? 44 : 72}
     />
   );
 }

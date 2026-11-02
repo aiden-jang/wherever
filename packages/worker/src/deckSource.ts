@@ -19,6 +19,7 @@ import { createRestaurantSource, isDemoSource, MockRestaurantSource } from "./re
 import { visitedPlaces } from "./db/schema.js";
 import type { Env } from "./env.js";
 import type { SessionMeta } from "./roomState.js";
+import { assertRoomLive, ExpiredRoomError, putLive, SESSION_TTL_MS } from "./sessionRetention.js";
 
 /* Deck sourcing combines the provider, monthly search budget, vibe filters, and visited history. It does not own sockets. */
 
@@ -42,7 +43,18 @@ export async function recordVisit(env: Env, code: string, restaurantId: string, 
     .where(and(eq(visitedPlaces.sessionCode, code), eq(visitedPlaces.restaurantId, restaurantId)))
     .get();
   if (existing) return;
-  await db.insert(visitedPlaces).values({ id: crypto.randomUUID(), sessionCode: code, restaurantId, name });
+  await env.DB.prepare(
+    "INSERT INTO visited_places(id,session_code,restaurant_id,name) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM sessions WHERE code=? AND created_at>?)",
+  )
+    .bind(
+      crypto.randomUUID(),
+      code,
+      restaurantId,
+      name,
+      code,
+      Math.floor((Date.now() - SESSION_TTL_MS) / 1000),
+    )
+    .run();
 }
 
 /** Whether the current deck is the sample fallback served because the live-data budget is spent. */
@@ -108,35 +120,41 @@ export async function fetchFreshDeck({
   if (reading.vibe) {
     // Describe the change before making it: applyVibe overwrites the very filters it is measured
     // against, and this is the only place both halves exist.
-    await storage.put("vibeEffect", vibeEffectLine(reading.vibe, meta.filters));
+    await putLive(storage, { vibeEffect: vibeEffectLine(reading.vibe, meta.filters) });
     meta.filters = applyVibe(meta.filters, reading.vibe);
-    await storage.put("meta", meta);
+    await putLive(storage, { meta });
   } else {
     await storage.delete("vibeEffect");
   }
 
+  await assertRoomLive(storage);
   const all = await source.fetchDeck(meta.filters);
   /* Everywhere the group has been, minus the ones whose cooldown expired. Excluding them forever meant
      a group that actually used the app shrank its own deck one dinner at a time. See revisit.ts. */
   const blocked = blockedIds(await visitedFor(env, meta.code));
   /* Every card this session has already been dealt, not just the deck in hand. The reserve means a
      later fetch would otherwise offer round one's places back as new ones. */
-  const seen = new Set((await storage.get<string[]>("seenIds")) ?? []);
-  const filtered = all.filter((r) => !blocked.has(r.id) && !exclude.has(r.id) && !seen.has(r.id));
-  // Seeded on the code so the same session always deals the same chaos, which is debuggable.
-  const ordered = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
-  const deck = ordered.slice(0, ROUND_SIZE);
-  await storage.put("deck", deck);
-  await storage.put("reserve", ordered.slice(ROUND_SIZE));
-  await rememberDealt(storage, deck);
-  await storage.put("demoMode", demo ?? null);
-  return deck;
+  return storage.transaction(async (transaction) => {
+    await assertRoomLive(transaction);
+    const seen = new Set((await transaction.get<string[]>("seenIds")) ?? []);
+    const filtered = all.filter((r) => !blocked.has(r.id) && !exclude.has(r.id) && !seen.has(r.id));
+    const ordered = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
+    const deck = ordered.slice(0, ROUND_SIZE);
+    for (const restaurant of deck) seen.add(restaurant.id);
+    await transaction.put({
+      deck,
+      reserve: ordered.slice(ROUND_SIZE),
+      seenIds: [...seen],
+      demoMode: demo ?? null,
+    });
+    return deck;
+  });
 }
 
 async function rememberDealt(storage: DurableObjectStorage, deck: Restaurant[]): Promise<void> {
   const seen = new Set((await storage.get<string[]>("seenIds")) ?? []);
   for (const r of deck) seen.add(r.id);
-  await storage.put("seenIds", [...seen]);
+  await putLive(storage, { seenIds: [...seen] });
 }
 
 const spentLine = (meters: number) =>
@@ -164,7 +182,7 @@ export async function nextRoundDeck(
   /* Kept even when the wider search also comes up empty, so the next attempt steps further out
      instead of paying again for the radius that just failed. The caller broadcasts either way. */
   request.meta.filters = { ...request.meta.filters, radiusMeters: wider };
-  await request.storage.put("meta", request.meta);
+  await putLive(request.storage, { meta: request.meta });
 
   let deck: Restaurant[];
   // Fetch BEFORE the caller tears down the current result, or a picked-clean area leaves a late
@@ -172,6 +190,7 @@ export async function nextRoundDeck(
   try {
     deck = await fetchFreshDeck(request);
   } catch (error) {
+    if (error instanceof ExpiredRoomError) throw error;
     console.error("restaurant_deck_failed", error);
     return { error: "couldn't load more spots right now. give it a moment and try again." };
   }
@@ -186,8 +205,7 @@ export async function dealFromReserve(storage: DurableObjectStorage): Promise<Re
   // A round of one or two is worse than saying the area is spent, so a thin reserve is not dealt.
   if (reserve.length < MIN_ROUND) return null;
   const deck = reserve.slice(0, ROUND_SIZE);
-  await storage.put("deck", deck);
-  await storage.put("reserve", reserve.slice(ROUND_SIZE));
+  await putLive(storage, { deck, reserve: reserve.slice(ROUND_SIZE) });
   await rememberDealt(storage, deck);
   return deck;
 }

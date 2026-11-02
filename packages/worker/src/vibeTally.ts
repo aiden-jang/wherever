@@ -1,6 +1,7 @@
 import type { Vibe } from "@wherever/shared";
 import type { SocketAttachment } from "./roomState.js";
 import { sendTo } from "./roomSockets.js";
+import { putLive } from "./sessionRetention.js";
 
 /* Only aggregate vibe counts leave storage; a participant receives their own choice for reconnects. */
 
@@ -26,7 +27,7 @@ export async function setVibe(
   const vibes = await readVibes(storage);
   if (vibe) vibes[participantId] = vibe;
   else delete vibes[participantId];
-  await storage.put("vibes", vibes);
+  await putLive(storage, { vibes });
   return vibes;
 }
 

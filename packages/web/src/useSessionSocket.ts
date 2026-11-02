@@ -31,10 +31,12 @@ export function useSessionSocket(code: string, displayName: string) {
   // Messages sent while the socket is mid-reconnect are buffered here and flushed on reopen, so a
   // vote cast during a blip isn't silently dropped (which would stall the round for everyone).
   const outboxRef = useRef<ClientMessage[]>([]);
+  const terminalRef = useRef(false);
 
   useLayoutEffect(() => {
     dispatch({ type: "reset" });
     outboxRef.current = [];
+    terminalRef.current = false;
   }, [code, displayName]);
 
   useEffect(() => {
@@ -99,8 +101,18 @@ export function useSessionSocket(code: string, displayName: string) {
       ws.onmessage = (event) => {
         if (ws === wsRef.current) handleMessage(event);
       };
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (disposed || ws !== wsRef.current) return;
+        if (event.code === 1008) {
+          terminalRef.current = true;
+          outboxRef.current = [];
+          dispatch({
+            type: "received",
+            message: { type: "error", message: event.reason || "This room has expired. Start a new plan." },
+          });
+          dispatch({ type: "connection", status: "closed" });
+          return;
+        }
         // Auto-reconnect with capped exponential backoff; the DO restores our
         // identity + votes from the stable clientId on rejoin.
         if (attempts >= MAX_ATTEMPTS) return dispatch({ type: "connection", status: "closed" });
@@ -115,7 +127,7 @@ export function useSessionSocket(code: string, displayName: string) {
 
     // Visibility and network recovery each restart retries; neither signal is sufficient alone.
     const retryNow = () => {
-      if (disposed) return;
+      if (disposed || terminalRef.current) return;
       if (document.hidden) return;
       const open = wsRef.current?.readyState;
       if (open === WebSocket.OPEN || open === WebSocket.CONNECTING) return;
@@ -139,6 +151,7 @@ export function useSessionSocket(code: string, displayName: string) {
   }, [code, displayName]);
 
   const send = useCallback((message: ClientMessage) => {
+    if (terminalRef.current) return;
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(message));

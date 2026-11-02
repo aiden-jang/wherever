@@ -1,10 +1,11 @@
 import { handleAnalytics } from "../../../analytics/worker.js";
 import { Hono } from "hono";
-import { lt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { SessionFilters } from "@wherever/shared";
 import { createSessionSchema } from "@wherever/shared/schemas";
-import { sessions, visitedPlaces } from "./db/schema.js";
+import { sessions } from "./db/schema.js";
+import { pruneOldSessions } from "./sessionRetention.js";
 import { generateSessionCode } from "./code.js";
 import { isValidPhotoRef } from "./googlePlace.js";
 import type { Env } from "./env.js";
@@ -71,6 +72,7 @@ app.post("/api/sessions", async (c) => {
   const code = generateSessionCode();
   const id = crypto.randomUUID();
   const filters: SessionFilters = parsed.data.filters;
+  const createdAt = new Date(Math.floor(Date.now() / 1000) * 1000);
 
   await db.insert(sessions).values({
     id,
@@ -78,11 +80,17 @@ app.post("/api/sessions", async (c) => {
     status: "lobby",
     voteMode: "majority",
     filters: JSON.stringify(filters),
+    createdAt,
   });
 
   // Seed the Durable Object that will own this session's realtime state.
   const room = c.env.SESSION_ROOM.get(c.env.SESSION_ROOM.idFromName(code));
-  await room.initialize({ code, status: "lobby", voteMode: "majority", filters });
+  if (
+    !(await room.initialize({ code, status: "lobby", voteMode: "majority", filters }, createdAt.getTime()))
+  ) {
+    await db.delete(sessions).where(eq(sessions.id, id));
+    return c.json({ error: "Could not reserve a new room. Please try again." }, 503);
+  }
 
   return c.json({ code }, 201);
 });
@@ -223,18 +231,6 @@ app.get("/ws/:code", (c) => {
 // Anything that is not the API is the SPA: real files, with index.html as the fallback so client
 // routes resolve. Registered last so it can never shadow a route above it.
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
-
-// Sessions (and their visited-history) are ephemeral — one dinner decision. Prune anything past the
-// TTL on a daily cron so D1 doesn't grow without bound. There's no FK cascade, so both tables are
-// swept by age. 7 days keeps a shared result link valid for about a week.
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-async function pruneOldSessions(env: Env): Promise<void> {
-  const cutoff = new Date(Date.now() - SESSION_TTL_MS);
-  const db = drizzle(env.DB);
-  await db.delete(sessions).where(lt(sessions.createdAt, cutoff));
-  await db.delete(visitedPlaces).where(lt(visitedPlaces.visitedAt, cutoff));
-}
 
 export default {
   fetch: app.fetch,

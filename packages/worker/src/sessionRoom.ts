@@ -5,6 +5,14 @@ import { drizzle } from "drizzle-orm/d1";
 import { and, eq } from "drizzle-orm";
 import { visitedPlaces } from "./db/schema.js";
 import {
+  ExpiredRoomError,
+  EXPIRED_ROOM_REASON,
+  SESSION_TTL_MS,
+  expireRoom,
+  legacyRoomDeadline,
+  putLive,
+} from "./sessionRetention.js";
+import {
   cardsBehind,
   finishedParticipantIds,
   vetoedRestaurantIds,
@@ -33,21 +41,64 @@ export class SessionRoom extends DurableObject<Env> {
   private rounds = new RoundController(this.ctx, this.env);
 
   /** RPC: the Worker calls this right after creating the session row. */
-  async initialize(meta: SessionMeta): Promise<void> {
+  async initialize(meta: SessionMeta, createdAt = Date.now()): Promise<boolean> {
     const existing = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!existing) await this.ctx.storage.put("meta", meta);
+    if (existing) {
+      await this.expire();
+      return false;
+    }
+    if (await this.ctx.storage.get<boolean>("expired")) return false;
+    await this.ctx.storage.put({ meta, expiresAt: createdAt + SESSION_TTL_MS });
+    await rescheduleAlarm(this.ctx);
+    return true;
+  }
+
+  private async expired(): Promise<boolean> {
+    if (await this.ctx.storage.get<boolean>("expired")) return true;
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (!meta) return false;
+    let deadline = await this.ctx.storage.get<number>("expiresAt");
+    if (deadline === undefined) {
+      deadline = await legacyRoomDeadline(this.env, meta.code);
+      await this.ctx.storage.put("expiresAt", deadline);
+      await rescheduleAlarm(this.ctx);
+    }
+    if (deadline > Date.now()) return false;
+    await this.expire();
+    return true;
+  }
+
+  /** RPC used by expiry alarms and the legacy-room sweep. */
+  async expire(indexedCode?: string): Promise<void> {
+    await expireRoom(this.ctx, this.env, indexedCode);
   }
 
   override async fetch(request: Request): Promise<Response> {
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected a WebSocket upgrade.", { status: 426 });
     }
+    const isExpired = await this.expired();
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server);
+    if (isExpired) server.close(1008, EXPIRED_ROOM_REASON);
     return new Response(null, { status: 101, webSocket: client });
   }
 
   override async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
+    await this.live(() => this.receive(ws, raw));
+  }
+
+  private async live(run: () => Promise<void>): Promise<void> {
+    if (await this.expired()) return;
+    try {
+      await run();
+    } catch (error) {
+      if (!(error instanceof ExpiredRoomError)) throw error;
+      await this.expire();
+    }
+  }
+
+  private async receive(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
     if (typeof raw !== "string") return;
 
     let parsed: unknown;
@@ -117,7 +168,7 @@ export class SessionRoom extends DurableObject<Env> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "lobby") return;
     meta.filters = filters;
-    await this.ctx.storage.put("meta", meta);
+    await putLive(this.ctx.storage, { meta });
     await this.broadcastState();
   }
 
@@ -153,7 +204,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (Date.now() - last < NUDGE_COOLDOWN_MS) {
       return this.send(ws, { type: "error", message: "Give them a moment. You just did that." });
     }
-    await this.ctx.storage.put("lastNudge", Date.now());
+    await putLive(this.ctx.storage, { lastNudge: Date.now() });
 
     const deck = await this.rounds.deckFor(meta);
     const votes = await readVotes(this.ctx.storage);
@@ -180,6 +231,10 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {
+    await this.live(() => this.closed(ws));
+  }
+
+  private async closed(ws: WebSocket): Promise<void> {
     await beginHostGraceIfNeeded(this.ctx, this.env, ws);
     await this.broadcastState(ws);
     // A departure drops the participant count — re-check completion (excluding the closing socket,
@@ -192,6 +247,10 @@ export class SessionRoom extends DurableObject<Env> {
   /** Run whichever deadlines have passed - hand off host, decide the round, or both - then reschedule
    *  anything still pending. */
   override async alarm(): Promise<void> {
+    await this.live(() => this.tick());
+  }
+
+  private async tick(): Promise<void> {
     const now = Date.now();
     let hostChanged = false;
 
@@ -285,8 +344,7 @@ export class SessionRoom extends DurableObject<Env> {
       if (!currentHostId) {
         const restored = { ...entry, isHost: true };
         map[clientId] = restored;
-        await this.ctx.storage.put("hostId", entry.participantId);
-        await this.ctx.storage.put("clientMap", map);
+        await putLive(this.ctx.storage, { hostId: entry.participantId, clientMap: map });
         return restored;
       }
       return entry;
@@ -295,12 +353,12 @@ export class SessionRoom extends DurableObject<Env> {
     const participantId = crypto.randomUUID();
     const hostId = await this.ctx.storage.get<string>("hostId");
     const isHost = !hostId;
-    if (isHost) await this.ctx.storage.put("hostId", participantId);
+    if (isHost) await putLive(this.ctx.storage, { hostId: participantId });
 
     const identity = { participantId, isHost };
     if (clientId) {
       map[clientId] = identity;
-      await this.ctx.storage.put("clientMap", map);
+      await putLive(this.ctx.storage, { clientMap: map });
     }
     return identity;
   }

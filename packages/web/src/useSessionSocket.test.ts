@@ -9,7 +9,7 @@ class Socket {
   static instances: Socket[] = [];
   readyState = Socket.CONNECTING;
   onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((event: { code: number; reason: string }) => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
   sent: unknown[] = [];
   constructor(readonly url: string) {
@@ -18,9 +18,9 @@ class Socket {
   send(raw: string) {
     this.sent.push(JSON.parse(raw));
   }
-  close() {
+  close(code = 1000, reason = "") {
     this.readyState = 3;
-    this.onclose?.();
+    this.onclose?.({ code, reason });
   }
   open() {
     this.readyState = Socket.OPEN;
@@ -123,5 +123,27 @@ describe("session socket ownership", () => {
     expect(() => act(() => newest().onmessage?.({ data: "bad-json" }))).not.toThrow();
     act(() => newest().message({ type: "session_state", session: session("ABCDEF") }));
     expect(hook.result.current.session?.code).toBe("ABCDEF");
+  });
+
+  it("stops reconnecting and discards queued actions when a room expires", () => {
+    vi.useFakeTimers();
+    const hook = renderHook(({ code }) => useSessionSocket(code, "Alex"), {
+      initialProps: { code: "ABCDEF" },
+    });
+    act(() => newest().open());
+    act(() => newest().close(1008, "This room has expired. Start a new plan."));
+    act(() => hook.result.current.send({ type: "start_round" }));
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+      document.dispatchEvent(new Event("visibilitychange"));
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(Socket.instances).toHaveLength(1);
+    expect(hook.result.current.status).toBe("closed");
+    expect(hook.result.current.error).toContain("expired");
+    hook.rerender({ code: "GHJKLM" });
+    act(() => newest().open());
+    expect(newest().sent).toHaveLength(1);
+    expect(newest().sent[0]).toMatchObject({ type: "join", code: "GHJKLM" });
   });
 });

@@ -17,6 +17,7 @@ import { rescheduleAlarm } from "./hostHandover.js";
 import { vibeCounts } from "./vibeTally.js";
 import { attachmentsOn, broadcastSessionState, broadcastTo, resultMessage, sendTo } from "./roomSockets.js";
 import { getOrCreateDeck, nextRoundDeck, readDemoMode, recordVisit, visitedFor } from "./deckSource.js";
+import { ExpiredRoomError, putLive } from "./sessionRetention.js";
 
 const MAX_AGAIN_ROUNDS = 20;
 
@@ -32,7 +33,7 @@ export class RoundController {
     const secs = meta.filters.roundSeconds ?? 0;
     if (secs > 0) {
       const deadline = Date.now() + secs * 1000;
-      await this.ctx.storage.put("roundEndsAt", deadline);
+      await putLive(this.ctx.storage, { roundEndsAt: deadline });
       await rescheduleAlarm(this.ctx);
       return deadline;
     }
@@ -78,6 +79,7 @@ export class RoundController {
     try {
       deck = await this.deckFor(meta);
     } catch (error) {
+      if (error instanceof ExpiredRoomError) throw error;
       console.error("restaurant_deck_failed", error);
       return this.send(ws, {
         type: "error",
@@ -86,7 +88,7 @@ export class RoundController {
     }
 
     meta.status = "swiping";
-    await this.ctx.storage.put("meta", meta);
+    await putLive(this.ctx.storage, { meta });
     const roundEndsAt = await this.setRoundDeadline(meta);
     const vibeEffect = await this.ctx.storage.get<string>("vibeEffect");
     this.broadcast({
@@ -142,7 +144,7 @@ export class RoundController {
       ...(superLike ? { super: true } : {}),
       ...(vetoing ? { veto: true } : {}),
     };
-    await this.ctx.storage.put("votes", votes);
+    await putLive(this.ctx.storage, { votes });
 
     /*
      * The star goes back to the presser alone: everyone swipes at their own pace, so on another
@@ -172,7 +174,7 @@ export class RoundController {
     const key = `${att.participantId}:${restaurantId}`;
     if (!votes[key]) return;
     delete votes[key];
-    await this.ctx.storage.put("votes", votes);
+    await putLive(this.ctx.storage, { votes });
     await this.evaluate(meta);
   }
 
@@ -204,7 +206,7 @@ export class RoundController {
       return this.send(ws, { type: "error", message: "That place is no longer a finalist." });
     }
 
-    await this.ctx.storage.put("winner", promoted);
+    await putLive(this.ctx.storage, { winner: promoted });
     await recordVisit(this.env, meta.code, promoted.restaurant.id, promoted.restaurant.name);
     const votes = await readVotes(this.ctx.storage);
     const round = ((await this.ctx.storage.get<number>("againRounds")) ?? 0) + 1;
@@ -253,7 +255,7 @@ export class RoundController {
     if (meta.status !== "swiping") return; // already decided; do nothing
     meta.status = "decided";
     writeEvent(this.env, "session_decided", "", "", this.connectedParticipants().length);
-    await this.ctx.storage.put("meta", meta);
+    await putLive(this.ctx.storage, { meta });
     // Round's over — drop any pending countdown so its alarm can't fire on a decided round.
     await this.ctx.storage.delete("roundEndsAt");
     await rescheduleAlarm(this.ctx);
@@ -261,7 +263,7 @@ export class RoundController {
     const deck = await this.deckFor(meta);
     const votes = await readVotes(this.ctx.storage);
     const result = decideWinner(deck, votes);
-    await this.ctx.storage.put("winner", result);
+    await putLive(this.ctx.storage, { winner: result });
 
     // The chosen place joins the group's history so it drops out of next time.
     if (result) {
@@ -309,9 +311,9 @@ export class RoundController {
 
     await this.ctx.storage.delete("votes");
     await this.ctx.storage.delete("winner");
-    if (paid) await this.ctx.storage.put("againRounds", rounds + 1);
+    if (paid) await putLive(this.ctx.storage, { againRounds: rounds + 1 });
     meta.status = "swiping";
-    await this.ctx.storage.put("meta", meta);
+    await putLive(this.ctx.storage, { meta });
     const roundEndsAt = await this.setRoundDeadline(meta);
     const vibeEffect = await this.ctx.storage.get<string>("vibeEffect");
     this.broadcast({

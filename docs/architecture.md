@@ -40,13 +40,20 @@ that participant's choice. Completion, the host, or the round alarm can decide.
 The pure decision core ranks non-vetoed places and retains backups.
 
 A host disconnect begins a grace deadline. Reassignment updates stored identities
-and live attachments; the alarm schedules the earlier host/round deadline. Roster
+and live attachments; the alarm schedules the earliest host, round, or room expiry deadline. Roster
 and vote projections disclose only the fields allowed by the room's rules.
 
 D1 holds session records and visited history; live metadata, votes, winner, decks,
-reserves, and identity maps are in Durable Object storage. Pruning D1 does not
-itself delete room storage. Neither table totals nor cached client data authorize
-room operations.
+reserves, and identity maps are in Durable Object storage. New rooms expire seven
+days after creation. Expiry clears both stores, closes sockets, and leaves only a
+non-personal expired-code marker so late provider replies and reconnects cannot
+restore the room. Writes check expiry inside storage transactions.
+
+The daily sweep expires up to 20 indexed legacy rooms per run and retries failed
+cleanup. Legacy objects whose D1 rows were already pruned cannot be enumerated;
+they are erased on their next access. This is not a claim that historical orphan
+objects have already been physically purged. Neither table totals nor cached
+client data authorize room operations.
 
 ## Restaurant data
 

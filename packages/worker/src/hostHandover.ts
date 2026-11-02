@@ -1,5 +1,6 @@
 import type { ClientMap, SocketAttachment } from "./roomState.js";
 import type { Env } from "./env.js";
+import { putLive } from "./sessionRetention.js";
 
 // Handover must update hostId, the persisted clientMap, and live socket attachments together.
 
@@ -24,16 +25,16 @@ export function hasLiveSocketFor(
 }
 
 /**
- * One alarm per Durable Object, and two timers need it: the host-reassign grace window and the round
- * countdown. Set it to whichever deadline is nearer, or clear it when neither is pending. Callers set
- * `hostGraceUntil` / `roundEndsAt` and then call this.
+ * Host handover, the round countdown and room expiry share the object's single alarm.
  */
 export async function rescheduleAlarm(ctx: DurableObjectState): Promise<void> {
   const times: number[] = [];
   const grace = await ctx.storage.get<number>("hostGraceUntil");
   const roundEnd = await ctx.storage.get<number>("roundEndsAt");
+  const expires = await ctx.storage.get<number>("expiresAt");
   if (grace) times.push(grace);
   if (roundEnd) times.push(roundEnd);
+  if (expires) times.push(expires);
   if (times.length === 0) {
     await ctx.storage.deleteAlarm();
     return;
@@ -56,7 +57,7 @@ export async function beginHostGraceIfNeeded(
   if (hostId !== att.participantId) return;
   // Still present on another socket (second tab)? They're not gone at all.
   if (hasLiveSocketFor(ctx, att.participantId, closing)) return;
-  await ctx.storage.put("hostGraceUntil", Date.now() + hostGraceMs(env));
+  await putLive(ctx.storage, { hostGraceUntil: Date.now() + hostGraceMs(env) });
   await rescheduleAlarm(ctx);
 }
 
@@ -79,12 +80,11 @@ export async function reassignHostAway(ctx: DurableObjectState, oldHostId: strin
 
   if (!newHostId) {
     await ctx.storage.delete("hostId");
-    await ctx.storage.put("clientMap", map);
+    await putLive(ctx.storage, { clientMap: map });
     return;
   }
 
-  await ctx.storage.put("hostId", newHostId);
-  await ctx.storage.put("clientMap", map);
+  await putLive(ctx.storage, { hostId: newHostId, clientMap: map });
   for (const socket of ctx.getWebSockets()) {
     const att = socket.deserializeAttachment() as SocketAttachment | null;
     if (att?.participantId === newHostId && !att.isHost) {

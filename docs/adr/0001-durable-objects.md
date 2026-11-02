@@ -31,5 +31,6 @@ guards remain part of correctness; single-threaded JavaScript alone does not
 make asynchronous handlers mutually exclusive.
 
 The runtime and deployment are Cloudflare-specific. Integration tests use the
-real Worker runtime and migrations. Pruning D1 does not remove Durable Object
-storage, and physical-device behavior needs separate review.
+real Worker runtime and migrations. Room expiry coordinates Durable Object and D1
+cleanup; deleting a D1 row alone would retain private room state. Legacy orphan
+objects are cleared on access. Physical-device behavior needs separate review.

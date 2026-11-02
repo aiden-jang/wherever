@@ -106,6 +106,7 @@ export function useSessionSocket(code: string, displayName: string) {
         if (event.code === 1008) {
           terminalRef.current = true;
           outboxRef.current = [];
+          dispatch({ type: "reset" });
           dispatch({
             type: "received",
             message: { type: "error", message: event.reason || "This room has expired. Start a new plan." },

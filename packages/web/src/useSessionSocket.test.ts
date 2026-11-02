@@ -131,6 +131,8 @@ describe("session socket ownership", () => {
       initialProps: { code: "ABCDEF" },
     });
     act(() => newest().open());
+    act(() => newest().message({ type: "session_state", session: session("ABCDEF") }));
+    expect(hook.result.current.session?.code).toBe("ABCDEF");
     act(() => newest().close(1008, "This room has expired. Start a new plan."));
     act(() => hook.result.current.send({ type: "start_round" }));
     act(() => {
@@ -140,6 +142,7 @@ describe("session socket ownership", () => {
     });
     expect(Socket.instances).toHaveLength(1);
     expect(hook.result.current.status).toBe("closed");
+    expect(hook.result.current.session).toBeNull();
     expect(hook.result.current.error).toContain("expired");
     hook.rerender({ code: "GHJKLM" });
     act(() => newest().open());

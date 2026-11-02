@@ -1,4 +1,19 @@
-import { test, expect } from "./fixtures.js";
+import { test, expect, createRoom } from "./fixtures.js";
+
+test("an expired open room clears its controls and offers a new plan", async ({ page }) => {
+  let expire!: () => void;
+  await page.routeWebSocket("**/ws/*", (socket) => {
+    socket.connectToServer();
+    expire = () => socket.close({ code: 1008, reason: "This room has expired. Start a new plan." });
+  });
+  await createRoom(page, "Synthetic owner");
+  await expect(page.getByRole("button", { name: "Start swiping", exact: true })).toBeVisible();
+  expire();
+  await expect(page.getByRole("heading", { name: "This code leads nowhere." })).toBeVisible();
+  await expect(page.getByText("This room has expired. Start a new plan.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start swiping", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Start a fresh session" })).toBeVisible();
+});
 
 test("an unavailable location search keeps the query and can be retried", async ({ page }) => {
   let available = false;

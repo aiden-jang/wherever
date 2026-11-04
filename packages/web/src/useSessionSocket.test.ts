@@ -118,6 +118,45 @@ describe("session socket ownership", () => {
     expect(newest().sent).toEqual([joined, { type: "swipe", restaurantId: "pizza", direction: "right" }]);
   });
 
+  it("keeps a vote when sending throws during a disconnect", () => {
+    vi.useFakeTimers();
+    const hook = renderHook(() => useSessionSocket("ABCDEF", "Alex"));
+    act(() => newest().open());
+    vi.spyOn(newest(), "send").mockImplementationOnce(() => {
+      throw new Error("Connection lost");
+    });
+    const vote = { type: "swipe", restaurantId: "pizza", direction: "right" } as const;
+    expect(() => act(() => hook.result.current.send(vote))).not.toThrow();
+    expect(hook.result.current.status).toBe("connecting");
+    act(() => vi.advanceTimersByTime(1000));
+    act(() => newest().open());
+    expect(newest().sent).toEqual([expect.objectContaining({ type: "join" }), vote]);
+  });
+
+  it("keeps the unsent tail when reconnecting fails halfway through the queued votes", () => {
+    vi.useFakeTimers();
+    const hook = renderHook(() => useSessionSocket("ABCDEF", "Alex"));
+    const votes = ["pizza", "tacos", "ramen"].map(
+      (restaurantId) => ({ type: "swipe", restaurantId, direction: "right" }) as const,
+    );
+    act(() => newest().open());
+    act(() => newest().close());
+    act(() => votes.forEach((vote) => hook.result.current.send(vote)));
+    act(() => vi.advanceTimersByTime(1000));
+    const interrupted = newest();
+    const send = interrupted.send.bind(interrupted);
+    let calls = 0;
+    vi.spyOn(interrupted, "send").mockImplementation((raw) => {
+      if (++calls === 3) throw new Error("Connection lost");
+      send(raw);
+    });
+    expect(() => act(() => interrupted.open())).not.toThrow();
+    expect(interrupted.sent).toEqual([expect.objectContaining({ type: "join" }), votes[0]]);
+    act(() => vi.advanceTimersByTime(1000));
+    act(() => newest().open());
+    expect(newest().sent).toEqual([expect.objectContaining({ type: "join" }), ...votes.slice(1)]);
+  });
+
   it("ignores invalid JSON without breaking the next valid message", () => {
     const hook = renderHook(() => useSessionSocket("ABCDEF", "Alex"));
     expect(() => act(() => newest().onmessage?.({ data: "bad-json" }))).not.toThrow();

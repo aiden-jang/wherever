@@ -84,19 +84,27 @@ export function useSessionSocket(code: string, displayName: string) {
         if (disposed || ws !== wsRef.current) return;
         attempts = 0;
         dispatch({ type: "connection", status: "open" });
-        ws.send(
-          JSON.stringify({
-            type: "join",
-            code,
-            displayName,
-            clientId: clientIdFor(code),
-          }),
-        );
-        // Flush anything queued while we were reconnecting (votes are idempotent server-side, so
-        // re-sending is safe).
         const queued = outboxRef.current;
         outboxRef.current = [];
-        for (const m of queued) ws.send(JSON.stringify(m));
+        let sent = 0;
+        try {
+          ws.send(
+            JSON.stringify({
+              type: "join",
+              code,
+              displayName,
+              clientId: clientIdFor(code),
+            }),
+          );
+          // Rejoin first, then retain any unsent tail if the connection fails during recovery.
+          for (const message of queued) {
+            ws.send(JSON.stringify(message));
+            sent += 1;
+          }
+        } catch {
+          outboxRef.current = [...queued.slice(sent), ...outboxRef.current];
+          ws.close();
+        }
       };
       ws.onmessage = (event) => {
         if (ws === wsRef.current) handleMessage(event);
@@ -155,7 +163,12 @@ export function useSessionSocket(code: string, displayName: string) {
     if (terminalRef.current) return;
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(message));
+      try {
+        ws.send(JSON.stringify(message));
+      } catch {
+        outboxRef.current.push(message);
+        ws.close();
+      }
     } else {
       // Not open (reconnecting): queue and flush on reopen instead of throwing/dropping.
       outboxRef.current.push(message);

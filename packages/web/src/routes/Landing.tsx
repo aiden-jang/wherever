@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTransitionNavigate } from "../useViewTransition.js";
+import { FieldLabel } from "../components/FilterControls.js";
 import { LocationPicker } from "../components/LocationPicker";
 import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
 import type { SessionFilters } from "@wherever/shared";
@@ -72,16 +73,19 @@ function CreateForm() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      <input
-        className={inputClass}
-        aria-label="Your name"
-        placeholder="Your name"
-        value={name}
-        maxLength={24}
-        autoComplete="name"
-        onChange={(e) => setName(e.target.value)}
-        autoFocus
-      />
+      <label className="flex flex-col gap-2">
+        <FieldLabel>Your name</FieldLabel>
+        <input
+          className={inputClass}
+          aria-label="Your name"
+          placeholder="Your name"
+          value={name}
+          maxLength={24}
+          autoComplete="name"
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+        />
+      </label>
       {/* Location only. Everything else is set in the lobby, where the group can see it and where
           somebody is waiting for people to join anyway. */}
       <LocationPicker filters={filters} onChange={setFilters} />
@@ -142,30 +146,36 @@ function JoinForm() {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <input
-        className={inputClass}
-        aria-label="Your name"
-        placeholder="Your name"
-        value={name}
-        maxLength={24}
-        autoComplete="name"
-        onChange={(e) => setName(e.target.value)}
-        autoFocus
-      />
+      <label className="flex flex-col gap-2">
+        <FieldLabel>Your name</FieldLabel>
+        <input
+          className={inputClass}
+          aria-label="Your name"
+          placeholder="Your name"
+          value={name}
+          maxLength={24}
+          autoComplete="name"
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+        />
+      </label>
       {/* No maxLength: a pasted invite link has to arrive whole for the parser to find the code in it. */}
-      <input
-        className={`${inputClass} tracking-[0.4em] uppercase`}
-        aria-label="Session code"
-        placeholder="CODE"
-        // Not a field any password manager or address book has a value for.
-        autoComplete="off"
-        value={code}
-        inputMode="text"
-        autoCapitalize="characters"
-        autoCorrect="off"
-        spellCheck={false}
-        onChange={(e) => setCode(sessionCodeFrom(e.target.value))}
-      />
+      <label className="flex flex-col gap-2">
+        <FieldLabel>Session code</FieldLabel>
+        <input
+          className={`${inputClass} tracking-[0.4em] uppercase`}
+          aria-label="Session code"
+          placeholder="CODE"
+          // Not a field any password manager or address book has a value for.
+          autoComplete="off"
+          value={code}
+          inputMode="text"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          onChange={(e) => setCode(sessionCodeFrom(e.target.value))}
+        />
+      </label>
       <button
         type="submit"
         disabled={!name.trim() || !isCompleteCode(code)}

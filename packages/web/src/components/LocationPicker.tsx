@@ -13,6 +13,9 @@ export function LocationPicker({
   onChange: (f: SessionFilters) => void;
 }) {
   const [q, setQ] = useState("");
+  const [editing, setEditing] = useState(false);
+  const searchField = useRef<HTMLInputElement>(null);
+  const changeButton = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   // Start expanded only if a neighborhood is already chosen, so the active pick is visible.
@@ -38,6 +41,7 @@ export function LocationPicker({
     searching.current = false;
     setBusy(false);
     setErr("");
+    setEditing(false);
     onChange(next);
   }
 
@@ -74,6 +78,8 @@ export function LocationPicker({
         area: undefined,
       });
       setQ("");
+      setEditing(false);
+      requestAnimationFrame(() => changeButton.current?.focus());
     } catch (error) {
       if (version === request.current)
         setErr(error instanceof Error ? error.message : "Location search is unavailable. Try again shortly.");
@@ -89,7 +95,7 @@ export function LocationPicker({
     <div className="flex flex-col gap-2">
       <FieldLabel>Where, geographically</FieldLabel>
 
-      {filters.locationLabel ? (
+      {filters.locationLabel && (
         // A searched place is active: show it as a chip with a way back to "Near me".
         <div className="flex items-center gap-2">
           <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-acid bg-acid/10 px-3 py-2 text-sm text-cream">
@@ -98,13 +104,18 @@ export function LocationPicker({
           </span>
           <button
             type="button"
-            onClick={useNearMe}
+            ref={changeButton}
+            onClick={() => {
+              setEditing(true);
+              requestAnimationFrame(() => searchField.current?.focus());
+            }}
             className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm text-muted hover:bg-white/5"
           >
             Change
           </button>
         </div>
-      ) : (
+      )}
+      {(!filters.locationLabel || editing) && (
         // Keep the search field wide enough inside narrow filter panels.
         <div className="flex flex-col gap-2">
           <button
@@ -119,6 +130,7 @@ export function LocationPicker({
           </button>
           <div className="flex gap-2">
             <input
+              ref={searchField}
               type="text"
               value={q}
               onChange={(e) => {
@@ -155,6 +167,24 @@ export function LocationPicker({
               </button>
             )}
           </div>
+          {filters.locationLabel && (
+            <button
+              type="button"
+              className="min-h-11 text-sm text-muted underline underline-offset-4"
+              onClick={() => {
+                request.current += 1;
+                controller.current?.abort();
+                searching.current = false;
+                setBusy(false);
+                setErr("");
+                setQ("");
+                setEditing(false);
+                changeButton.current?.focus();
+              }}
+            >
+              Cancel location change
+            </button>
+          )}
         </div>
       )}
       {err && (

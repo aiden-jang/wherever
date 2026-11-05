@@ -5,26 +5,29 @@ import { useState } from "react";
 export function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
   const [name, setName] = useState("");
   return (
-    <main className="flex-1 flex items-center justify-center px-6">
+    <main id="main-content" tabIndex={-1} className="table-room grid place-items-center">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (name.trim()) onSubmit(name.trim());
         }}
-        className="w-full max-w-sm text-center"
+        className="table-panel w-full max-w-sm"
       >
         <h1 className="font-display text-3xl font-bold">And you are?</h1>
         <p className="mt-2 text-muted">The group needs a name to overrule.</p>
-        <input
-          className="mt-6 w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors"
-          aria-label="Your name"
-          placeholder="Your name"
-          autoComplete="name"
-          value={name}
-          maxLength={24}
-          autoFocus
-          onChange={(e) => setName(e.target.value)}
-        />
+        <label className="mt-6 grid gap-2 text-sm font-semibold">
+          Your name
+          <input
+            className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors"
+            aria-label="Your name"
+            placeholder="Your name"
+            autoComplete="name"
+            value={name}
+            maxLength={24}
+            autoFocus
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
         <button
           type="submit"
           disabled={!name.trim()}

@@ -209,8 +209,8 @@ async function setup(page, name) {
             : ["winner", "winner-share-error", "directions"].includes(name)
               ? /Dinner is handled/
               : ["swiping", "details"].includes(name)
-                ? "Swiping. Vote on tonight's places."
-                : /Waiting to start/;
+                ? "Pick your dinner"
+                : "Dinner room";
   const ready = page.getByRole("heading", { name: heading });
   await ready.waitFor();
   await page.evaluate(() => document.fonts.ready);

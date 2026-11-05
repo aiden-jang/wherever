@@ -1,3 +1,4 @@
+import { PlateState } from "../components/PlateState.js";
 import { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { sessionCodeFromShare } from "@wherever/shared";
@@ -16,20 +17,20 @@ export default function Share() {
   if (joinable) return null;
 
   return (
-    <main className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-glyph" aria-hidden="true">
-        🤷
-      </p>
-      <h1 className="font-display text-state font-bold">That wasn’t a session link.</h1>
-      <p className="text-muted">
-        Wherever can open an invite you were sent. Anything else, start from the top.
-      </p>
-      <Link
-        to="/"
-        className="rounded-full bg-ember px-6 py-3 font-semibold text-ink transition hover:brightness-110"
-      >
-        Start a session
-      </Link>
+    <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
+      <div className="table-panel max-w-sm">
+        <PlateState />
+        <h1 className="font-display text-state font-bold">That wasn’t a session link.</h1>
+        <p className="mt-3 text-muted">
+          Wherever can open an invite you were sent. Anything else, start from the top.
+        </p>
+        <Link
+          to="/"
+          className="mt-6 inline-block rounded-xl bg-ember px-6 py-3 font-semibold text-ink transition hover:brightness-110"
+        >
+          Start a session
+        </Link>
+      </div>
     </main>
   );
 }

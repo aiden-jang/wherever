@@ -28,10 +28,10 @@ test("an interrupted upload leaves the Worker and live room usable", async ({ pa
   });
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: /Waiting to start/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dinner room" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start swiping", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Start swiping", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Swiping. Vote on tonight's places." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pick your dinner" })).toBeVisible();
   expect((await request.get("/api/health")).status()).toBe(200);
   await createRoom(page, "New session after cancellation");
   expect(page.url()).not.toBe(roomURL);

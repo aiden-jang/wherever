@@ -58,6 +58,11 @@ and apply production D1 migrations before each case.
 
 ## Interface review
 
+Table card keeps the restaurant and voting controls on one paper surface. Wide rooms
+pair the active card with room progress, the invite with the roster, and the winner
+with backups and round actions. Narrow screens put the current task first. The
+winner’s directions and sharing actions sit beside the pick at every width.
+
 Review phone, tablet, and desktop widths, long names and addresses, the create/join
 forms, lobby filters, active and exhausted decks, details, result/backups/history,
 and failures. Include keyboard focus, enlarged text, reduced motion, and stronger

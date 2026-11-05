@@ -27,8 +27,8 @@ export class ErrorBoundary extends Component<Props, State> {
   override render(): ReactNode {
     if (!this.state.crashed) return this.props.children;
     return (
-      <main className="flex-1 flex items-center justify-center px-6 text-center">
-        <div className="max-w-sm">
+      <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
+        <div className="table-panel max-w-sm">
           <PlateState />
           <h1 className="mt-4 font-display text-state font-bold">Well, that broke.</h1>
           <p className="mt-3 text-muted">

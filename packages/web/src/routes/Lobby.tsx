@@ -170,8 +170,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   // An error before any session state means a bad or expired code.
   if (error && !session && !match) {
     return (
-      <main className="flex-1 flex items-center justify-center px-6 text-center">
-        <div className="max-w-sm">
+      <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
+        <div className="table-panel max-w-sm">
           <PlateState />
           <h1 className="mt-4 font-display text-state font-bold">This code leads nowhere.</h1>
           <p className="mt-3 text-muted">{error}</p>
@@ -189,7 +189,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   // The match outcome wins over everything else once it arrives.
   if (match) {
     return (
-      <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
+      <main id="main-content" tabIndex={-1} className="table-room">
         <RoomChrome {...chrome} />
         <Suspense fallback={<p className="text-muted">Counting…</p>}>
           <MatchScreen
@@ -218,83 +218,86 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     return <SwipingRoom state={state} chrome={chrome} onAnnounce={setAnnouncement} isHost={isHost} />;
 
   return (
-    <main className="lobby-screen flex-1 flex flex-col items-center px-6 pb-16 w-full max-w-md mx-auto">
-      {/* Same reason as the swiping screen: the code is the loudest thing here, but it is a button. */}
-      <h1 className="sr-only">Session {code}. Waiting to start.</h1>
+    <main id="main-content" tabIndex={-1} className="table-room">
+      <h1 className="table-title">Dinner room</h1>
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <LiveRegion message={announcement} />
       <Toasts toasts={allToasts} />
-      <RoomInvite code={code} filters={session?.filters} isHost={isHost} send={send} />
-
-      {/* Above the participant list, because it is the thing to do while waiting for people to arrive.
-          Below the join code, because getting everyone in still comes first. */}
-      <div className="w-full">
-        <VibeDial
-          counts={vibeCounts}
-          mine={myVibe}
-          groupSize={session?.participants.length ?? 0}
-          onPick={(vibe) => send({ type: "set_vibe", vibe })}
-        />
-      </div>
-
-      <HowItWorks />
-
-      <div className="w-full mt-10">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <PlateState art="table" small />
-            <h2 className="font-display text-xl font-bold">At the table</h2>
+      <div className="table-layout table-lobby">
+        <div className="min-w-0">
+          <RoomInvite code={code} filters={session?.filters} isHost={isHost} send={send} />
+          <div className="mt-4">
+            {isHost && (
+              <p className="mb-3 text-center text-sm text-muted">Everyone here? Start when you’re ready.</p>
+            )}
+            {isHost ? (
+              <button
+                onClick={() => {
+                  setStarting(true);
+                  send({ type: "start_round" });
+                }}
+                disabled={starting}
+                className="w-full rounded-xl bg-ember px-8 py-3 text-lg font-semibold text-ink transition-transform disabled:opacity-60 enabled:hover:scale-[1.02]"
+              >
+                {starting ? "Finding places…" : "Start swiping"}
+              </button>
+            ) : (
+              <div className="lobby-wait flex flex-col items-center gap-2 text-center text-muted">
+                <div className="flex items-center gap-2">
+                  <PlateState art="waiting" small />
+                  <span className="font-medium">
+                    {session
+                      ? "You’re in. Waiting on the host."
+                      : status === "closed"
+                        ? "The session is unavailable."
+                        : "Connecting to the session…"}
+                  </span>
+                </div>
+                <p className="text-sm">Gentle peer pressure is an option.</p>
+              </div>
+            )}
           </div>
-          <span className="text-sm text-muted">
-            {count} {count === 1 ? "person" : "people"}
-          </span>
-        </div>
-        <div className="flex flex-col gap-2">
-          {session?.participants.length ? (
-            session.participants.map((p) => <ParticipantChip key={p.id} p={p} />)
-          ) : (
-            <p className="text-muted text-sm">
-              {status === "connecting"
-                ? "Finding your people..."
-                : "Just you so far. That code won't share itself."}
+
+          {error && (
+            <p role="alert" className="mt-4 text-sm text-flare">
+              {error}
             </p>
           )}
         </div>
-      </div>
-
-      <div className="w-full mt-10">
-        {isHost && (
-          <p className="mb-3 text-center text-sm text-muted">Everyone here? Start when you’re ready.</p>
-        )}
-        {isHost ? (
-          <button
-            onClick={() => {
-              setStarting(true);
-              send({ type: "start_round" });
-            }}
-            disabled={starting}
-            className="w-full rounded-full bg-ember px-8 py-4 text-lg font-semibold text-ink transition-transform disabled:opacity-60 enabled:hover:scale-[1.02]"
-          >
-            {starting ? "Finding places..." : "Start swiping"}
-          </button>
-        ) : (
-          <div className="lobby-wait flex flex-col items-center gap-2 text-center text-muted">
-            <div className="flex items-center gap-2">
-              <PlateState art="waiting" small />
-              <span className="font-medium">
-                {session
-                  ? "You’re in. Waiting on the host."
-                  : status === "closed"
-                    ? "The session is unavailable."
-                    : "Connecting to the session…"}
-              </span>
+        <div className="table-rail">
+          <div className="min-w-0">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="font-display text-xl font-bold">At the table</h2>
+                <p className="text-sm text-muted">
+                  {count} {count === 1 ? "person" : "people"}
+                </p>
+              </div>
+              <PlateState art="table" small />
             </div>
-            <p className="text-sm">Gentle peer pressure is an option.</p>
+            <div className="flex flex-col gap-2">
+              {session?.participants.length ? (
+                session.participants.map((p) => <ParticipantChip key={p.id} p={p} />)
+              ) : (
+                <p className="text-muted text-sm">
+                  {status === "connecting"
+                    ? "Finding your people…"
+                    : "Just you so far. That code won't share itself."}
+                </p>
+              )}
+            </div>
           </div>
-        )}
+        </div>
+        <div className="min-w-0">
+          <VibeDial
+            counts={vibeCounts}
+            mine={myVibe}
+            groupSize={count}
+            onPick={(vibe) => send({ type: "set_vibe", vibe })}
+          />
+          <HowItWorks />
+        </div>
       </div>
-
-      {error && <p className="mt-6 text-sm text-flare">{error}</p>}
     </main>
   );
 }

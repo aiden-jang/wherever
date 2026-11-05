@@ -35,13 +35,13 @@ export function DinnerTicket({
       style={{ "--reveal-at": "90ms", viewTransitionName: "chosen-card" } as CSSProperties}
     >
       <div className="ticket-top">
-        <span>TONIGHT’S PLAN</span>
+        <span>Tonight’s plan</span>
         <img src="/art/ticket.svg" alt="" width={26} height={26} />
       </div>
       <RestaurantPhoto
         imageUrl={restaurant.imageUrl}
         category={restaurant.category}
-        className="h-44 lg:h-52"
+        className="ticket-photo"
       />
       <div className="ticket-body">
         <p className="meal-category">
@@ -56,12 +56,12 @@ export function DinnerTicket({
         <div className="ticket-name">{restaurant.name}</div>
         <div className="meal-facts">
           <span>
-            <small>THE DAMAGE</small>
+            <small>Price</small>
             {restaurant.priceRange ?? priceLabel(restaurant.priceTier)}
           </span>
           {distanceText(restaurant.distanceMeters) && (
             <span>
-              <small>GETTING THERE</small>
+              <small>Distance</small>
               {distanceText(restaurant.distanceMeters)}
             </span>
           )}

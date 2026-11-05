@@ -33,6 +33,9 @@ export default function App() {
             }
           />
 
+          <a href="#main-content" className="skip-link">
+            Skip to content
+          </a>
           <header className="site-header">
             <Link to="/" className="site-wordmark">
               <span className="brand-plate" aria-hidden>

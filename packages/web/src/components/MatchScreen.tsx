@@ -29,7 +29,7 @@ export function MatchScreen({
     // case where somebody most wants to know what actually happened to their pick.
     const allVetoed = match.vetoedCount > 0;
     return (
-      <div className="text-center max-w-sm mx-auto">
+      <div className="table-panel mx-auto max-w-sm text-center">
         <PlateState art="search" />
         <h1 className="mt-4 font-display text-state font-bold">
           {allVetoed ? "Everything got vetoed." : "Nobody liked anything."}

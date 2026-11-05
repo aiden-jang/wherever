@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 /** Catch-all for unknown URLs. Kept on-brand: a page nobody could agree existed. */
 export default function NotFound() {
   return (
-    <main className="flex-1 flex items-center justify-center px-6 text-center">
-      <div className="max-w-sm">
+    <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
+      <div className="table-panel max-w-sm">
         <PlateState />
         <h1 className="mt-4 font-display text-state font-bold">Nothing's here.</h1>
         <p className="mt-3 text-muted">

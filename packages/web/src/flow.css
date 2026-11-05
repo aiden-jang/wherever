@@ -1,4 +1,5 @@
 .plan-directions {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
@@ -8,13 +9,6 @@
   background: var(--color-ember);
   color: var(--color-ink);
   font-weight: 650;
-}
-.mobile-directions {
-  display: flex;
-  margin-top: 14px;
-}
-.desktop-directions {
-  display: none;
 }
 .restaurant-detail {
   overflow-wrap: anywhere;
@@ -146,15 +140,6 @@
     height: 260px;
   }
 }
-@media (min-width: 1024px) {
-  .mobile-directions {
-    display: none;
-  }
-  .desktop-directions {
-    display: flex;
-  }
-}
-
 /* A code must fit its invite panel even when glyphs are wide or text is enlarged. */
 .session-code {
   font-size: min(3rem, 10vw);

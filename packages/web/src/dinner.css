@@ -1,3 +1,128 @@
+/* A room pairs the current task with its group context on wider screens. */
+.table-room {
+  position: relative;
+  flex: 1;
+  width: min(40rem, 100%);
+  margin-inline: auto;
+  padding: 24px clamp(14px, 4vw, 32px) 44px;
+}
+.table-title {
+  margin-bottom: 16px;
+  font: 750 clamp(32px, 5vw, 54px)/1.06 var(--font-display);
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.table-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.table-panel,
+.table-rail,
+.lobby-invite {
+  min-width: 0;
+  padding: clamp(14px, 2vw, 22px);
+  border: 1px solid rgb(244 241 231 / 15%);
+  border-radius: 16px;
+  background: var(--color-ink-soft);
+  overflow-wrap: anywhere;
+}
+.table-card {
+  min-width: 0;
+  border-radius: 16px;
+  overflow: clip;
+}
+.table-card :is(button, a):focus-visible {
+  outline: 2px solid #83482d;
+  outline-offset: 2px;
+}
+.skip-link {
+  position: fixed;
+  z-index: 60;
+  inset: max(12px, env(safe-area-inset-top)) auto auto 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  translate: 0 -200%;
+}
+.skip-link:focus {
+  translate: 0;
+}
+.table-update {
+  inset-inline: 0;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: min(27rem, calc(100% - 24px));
+  margin-inline: auto;
+  box-shadow: var(--shadow-lifted);
+  overflow-wrap: anywhere;
+}
+.table-face {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.table-face .meal-body {
+  min-block-size: 11.75rem;
+}
+.table-face > [data-card-photo] {
+  min-width: 0;
+}
+.table-photo {
+  height: clamp(116px, 23dvh, 210px);
+}
+.table-vote-feedback {
+  min-height: 44px;
+  padding: 0 16px 10px;
+  color: #59604f;
+  text-align: center;
+  font-size: 12px;
+}
+.table-vote-warning {
+  color: #a13e31;
+}
+.table-plan-actions > button {
+  min-height: 44px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+@media (min-width: 900px) {
+  .table-room {
+    width: min(1100px, 100%);
+    padding-top: 32px;
+  }
+  .table-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(235px, 0.39fr);
+    gap: 22px;
+  }
+  .table-lobby > .table-rail {
+    grid-area: 1 / 2 / span 2;
+  }
+  .table-face,
+  .dinner-ticket {
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+  }
+  .table-face .table-photo {
+    height: 100%;
+    min-height: 240px;
+  }
+  .table-face .meal-body {
+    align-self: center;
+  }
+  .table-face [data-card-info] {
+    right: calc(48% + 12px);
+  }
+  .dinner-ticket .ticket-photo {
+    grid-column: 1;
+    grid-row: 1 / 5;
+    height: 100%;
+    min-height: 255px;
+  }
+  .dinner-ticket > :not(.ticket-photo) {
+    grid-column: 2;
+  }
+}
+
 .meal-card,
 .dinner-ticket {
   background: var(--color-cream);
@@ -24,15 +149,12 @@
   margin-top: 8px;
   font: 750 26px/1.05 var(--font-display);
   letter-spacing: -0.7px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
 }
 .meal-facts {
   display: flex;
-  gap: 24px;
-  margin-top: 14px;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 10px;
   font-size: 13px;
   font-weight: 650;
 }
@@ -43,8 +165,7 @@
   display: block;
   margin-bottom: 3px;
   color: #59604f;
-  font-size: 8px;
-  letter-spacing: 1px;
+  font-size: 11px;
   font-weight: 500;
 }
 .meal-hours {
@@ -94,32 +215,33 @@
   font-size: 10px;
 }
 .vote-controls {
-  margin-top: 12px;
+  border-top: 1px solid rgb(24 27 23 / 18%);
+  padding: 10px 14px 2px;
 }
 .vote-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  gap: 8px;
 }
 .vote-main button {
-  min-height: 56px;
-  border-radius: 16px;
-  font-size: 15px;
+  min-height: 46px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 650;
   transition:
     transform 180ms var(--ease-spring),
     background 180ms ease;
 }
 .vote-main button span {
-  margin-right: 10px;
-  font-size: 20px;
+  margin-right: 5px;
+  font-size: 16px;
 }
 .vote-no {
-  border: 1px solid rgb(244 241 231 / 28%);
+  border: 1px solid rgb(24 27 23 / 34%);
 }
 .vote-yes {
-  background: var(--color-acid);
-  color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-cream);
 }
 .vote-main button:hover {
   transform: translateY(-2px);
@@ -130,8 +252,9 @@
 .vote-special {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-top: 9px;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin-top: 4px;
 }
 .vote-special button {
   display: flex;
@@ -141,34 +264,40 @@
   padding: 6px 10px;
   border-radius: 12px;
   font-size: 11px;
-  color: var(--color-muted);
+  color: #59604f;
   transition: background 180ms ease;
 }
 .vote-special button:hover {
-  background: rgb(244 241 231 / 6%);
+  background: rgb(24 27 23 / 7%);
 }
 .vote-special button > span {
   font-size: 19px;
 }
 .vote-special small {
-  font-size: 9px;
-  border: 1px solid rgb(244 241 231 / 20%);
+  font-size: 10px;
+  border: 1px solid rgb(24 27 23 / 24%);
   border-radius: 4px;
   padding: 3px 4px;
 }
 .vote-special button[aria-disabled="true"] small {
-  color: var(--color-ember);
+  color: #a13e31;
 }
 .dinner-ticket {
   display: block;
   position: relative;
   width: 100%;
-  margin-top: 20px;
-  border-radius: 20px;
+  border-radius: 16px;
   overflow: hidden;
   text-align: left;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 15%);
   transition: transform 180ms var(--ease-spring);
+}
+@media (min-width: 900px) {
+  .dinner-ticket {
+    display: grid;
+  }
+}
+.ticket-photo {
+  height: clamp(155px, 25dvh, 228px);
 }
 .dinner-ticket:hover {
   transform: translateY(-2px);
@@ -181,8 +310,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 13px 20px;
-  font-size: 9px;
-  letter-spacing: 1.8px;
+  font-size: 12px;
   font-weight: 650;
 }
 .ticket-top > span:last-child {
@@ -193,7 +321,7 @@
 }
 .ticket-name {
   margin-top: 9px;
-  font: 750 34px/1.05 var(--font-display);
+  font: 750 clamp(25px, 3.2vw, 38px)/1.05 var(--font-display);
   letter-spacing: -1px;
   overflow-wrap: anywhere;
 }

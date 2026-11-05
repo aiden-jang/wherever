@@ -90,13 +90,11 @@ export function WinnerScreen({
   return (
     <div className="relative w-full">
       {celebrate && <Confetti />}
-      {/* The winner’s name belongs in the page heading as well as the interactive ticket. */}
-      {/* Keep the mobile directions beside the pick; desktop actions occupy the second column. */}
-      <div className="mx-auto w-full max-w-sm text-center lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-start lg:gap-10">
+      <h1 className="table-title">
+        Dinner is handled<span className="sr-only">: {restaurant.name}</span>
+      </h1>
+      <div className="table-layout">
         <div className="min-w-0">
-          <h1 className="reveal font-display text-lg font-bold tracking-widest text-acid uppercase">
-            Dinner is handled<span className="sr-only">: {restaurant.name}</span>
-          </h1>
           <DinnerTicket
             restaurant={restaurant}
             rightSwipes={rightSwipes}
@@ -107,8 +105,43 @@ export function WinnerScreen({
             restaurant={restaurant}
             unavailable={unavailable}
             onOpen={() => setDirectionsOpen(true)}
-            className="mobile-directions"
+            className="mt-3"
           />
+
+          <div className="table-plan-actions mt-3 grid gap-2">
+            <button
+              type="button"
+              onClick={() => void sharePlan()}
+              disabled={shareResult === "sharing"}
+              aria-label={
+                shareResult === "sharing"
+                  ? "Opening dinner plan sharing"
+                  : shareResult === "shared"
+                    ? "Dinner plan shared"
+                    : shareResult === "copied"
+                      ? "Dinner plan copied"
+                      : shareResult === "failed"
+                        ? "Couldn’t share dinner plan"
+                        : "Share dinner plan"
+              }
+              className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
+            >
+              {shareResult === "sharing"
+                ? "Opening…"
+                : shareResult === "shared"
+                  ? "Plan shared"
+                  : shareResult === "copied"
+                    ? "Plan copied"
+                    : shareResult === "failed"
+                      ? "Couldn’t share"
+                      : "Send the plan"}
+            </button>
+            {shareResult === "failed" && (
+              <CopyFallback label="Dinner plan to copy" text={`${text}\n${url}`} />
+            )}
+            <SavePlanImage key={restaurant.id} restaurant={restaurant} />
+            <PlaceLinks restaurant={restaurant} />
+          </div>
 
           <p
             className="reveal mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid"
@@ -169,9 +202,9 @@ export function WinnerScreen({
             </div>
           </section>
         </div>
-        <div className="min-w-0">
+        <div className="table-rail">
           <div
-            className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10"
+            className="h-1.5 w-full overflow-hidden rounded-full bg-white/10"
             role="progressbar"
             aria-label="Group agreement"
             aria-valuemin={0}
@@ -229,7 +262,7 @@ export function WinnerScreen({
                   <span className="block text-sm font-semibold text-cream">
                     {unavailable ? "The doors are shut. Try a backup." : "If the wait is ridiculous"}
                   </span>
-                  <span className="block truncate text-xs text-muted">
+                  <span className="block text-xs text-muted [overflow-wrap:anywhere]">
                     Plan B: {alternatives[0]!.restaurant.name}
                   </span>
                 </span>
@@ -243,10 +276,7 @@ export function WinnerScreen({
                    at min-content, whether they are a bare 1fr or the implicit auto column a single-column
                    grid gets. Either way a long restaurant name widened the column instead of letting the
                    truncate inside it do its job, and the row ran out past the panel. */
-                  <li
-                    key={choice.restaurant.id}
-                    className="grid gap-2 grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_auto]"
-                  >
+                  <li key={choice.restaurant.id} className="grid grid-cols-[minmax(0,1fr)] gap-2">
                     <a
                       href={mapsUrl(choice.restaurant)}
                       target="_blank"
@@ -263,10 +293,10 @@ export function WinnerScreen({
                         className="h-12 w-12 shrink-0 rounded-lg"
                       />
                       <span className="min-w-0 flex-1">
-                        <strong className="block truncate text-sm text-cream">
+                        <strong className="block text-sm text-cream [overflow-wrap:anywhere]">
                           {choice.restaurant.name}
                         </strong>
-                        <span className="block truncate text-xs text-muted">
+                        <span className="block text-xs text-muted [overflow-wrap:anywhere]">
                           {choice.rightSwipes} liked it
                           {distanceText(choice.restaurant.distanceMeters)
                             ? ` · ${distanceText(choice.restaurant.distanceMeters)}`
@@ -296,45 +326,7 @@ export function WinnerScreen({
             </details>
           )}
 
-          <div className="mt-8 flex flex-col gap-3">
-            <PlanDirections
-              restaurant={restaurant}
-              unavailable={unavailable}
-              onOpen={() => setDirectionsOpen(true)}
-              className="desktop-directions"
-            />
-            <button
-              type="button"
-              onClick={() => void sharePlan()}
-              disabled={shareResult === "sharing"}
-              aria-label={
-                shareResult === "sharing"
-                  ? "Opening dinner plan sharing"
-                  : shareResult === "shared"
-                    ? "Dinner plan shared"
-                    : shareResult === "copied"
-                      ? "Dinner plan copied"
-                      : shareResult === "failed"
-                        ? "Couldn’t share dinner plan"
-                        : "Share dinner plan"
-              }
-              className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
-            >
-              {shareResult === "sharing"
-                ? "Opening…"
-                : shareResult === "shared"
-                  ? "Plan shared"
-                  : shareResult === "copied"
-                    ? "Plan copied"
-                    : shareResult === "failed"
-                      ? "Couldn’t share"
-                      : "Send the plan"}
-            </button>
-            {shareResult === "failed" && (
-              <CopyFallback label="Dinner plan to copy" text={`${text}\n${url}`} />
-            )}
-            <SavePlanImage key={restaurant.id} restaurant={restaurant} />
-            <PlaceLinks restaurant={restaurant} />
+          <div className="mt-5 flex flex-col gap-3">
             {installOffer && (
               /* Asked here and nowhere else: the round just ended, so there is an actual reason. */
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm">

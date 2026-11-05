@@ -60,7 +60,7 @@ export function SwipeCard({
 
   return (
     <motion.div
-      className="absolute inset-0 meal-card rounded-card shadow-raised overflow-hidden cursor-grab active:cursor-grabbing"
+      className="table-face relative cursor-grab active:cursor-grabbing"
       role="group"
       aria-roledescription="restaurant card"
       aria-label={cardDescription(restaurant, revisit)}
@@ -118,18 +118,20 @@ export function SwipeCard({
         }}
         data-deck-control
         data-card-info
-        className="absolute bottom-3 right-3 grid h-9 w-9 place-items-center rounded-full bg-black/45 text-sm font-semibold text-white/90 backdrop-blur-sm"
+        className="absolute right-3 top-4 grid h-11 w-11 place-items-center rounded-full bg-ink text-sm font-semibold text-cream"
       >
         <span aria-hidden>i</span>
       </button>
       <motion.span
-        className="absolute top-6 left-6 rotate-[-14deg] rounded-xl border-2 border-acid bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-acid backdrop-blur-[2px]"
+        aria-hidden
+        className="pointer-events-none absolute top-6 left-6 rotate-[-14deg] rounded-xl border-2 border-acid bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-acid backdrop-blur-[2px]"
         style={{ opacity: yes }}
       >
         LET&apos;S EAT
       </motion.span>
       <motion.span
-        className="absolute top-6 right-6 rotate-[14deg] rounded-xl border-2 border-flare bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-flare backdrop-blur-[2px]"
+        aria-hidden
+        className="pointer-events-none absolute top-6 right-6 rotate-[14deg] rounded-xl border-2 border-flare bg-ink/70 px-4 py-1.5 text-lg font-extrabold tracking-widest text-flare backdrop-blur-[2px]"
         style={{ opacity: nope }}
       >
         NOPE

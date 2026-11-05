@@ -4,7 +4,7 @@ import { FieldLabel } from "../components/FilterControls.js";
 import { LocationPicker } from "../components/LocationPicker";
 import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
 import type { SessionFilters } from "@wherever/shared";
-import { TeaserStack } from "../components/TeaserStack.js";
+import { LandingPreview } from "../components/LandingPreview.js";
 import { Modal } from "../components/Modal.js";
 import { ScanQr } from "../components/ScanQr.js";
 import { qrScanSupported } from "../qrScan.js";
@@ -99,7 +99,7 @@ function CreateForm() {
         disabled={!name.trim() || busy}
         className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
       >
-        {busy ? "Shuffling the deck..." : "Deal the cards"}
+        {busy ? "Shuffling the deck…" : "Deal the cards"}
       </button>
       {locOff && (
         <p className="text-center text-sm text-muted">
@@ -215,22 +215,13 @@ export default function Landing() {
   }, []);
 
   return (
-    <main className="landing">
+    <main id="main-content" tabIndex={-1} className="landing">
       <div className="landing-hero">
         <section className="landing-intro">
-          <p className="landing-eyebrow">
-            <span aria-hidden>↗</span> Dinner plans. Finally.
-          </p>
           <h1>
             Big appetites.
             <br />
-            Tiny{" "}
-            <span className="hero-opinions">
-              opinions.
-              <svg viewBox="0 0 380 18" aria-hidden>
-                <path d="M4 12 Q180 -2 376 10 M30 16 Q205 6 343 15" />
-              </svg>
-            </span>
+            <span className="text-ember">Tiny opinions.</span>
           </h1>
           <p className="landing-description">
             Pick somewhere to eat. Together. Swipe on nearby restaurants and let the group decide.
@@ -260,38 +251,12 @@ export default function Landing() {
           </div>
           <p className="landing-footnote">No accounts. Just names and questionable taste.</p>
         </section>
-        <section className="dinner-board" aria-label="Interactive example of restaurant voting">
-          <div className="board-heading">
-            <span>THE DINNER DILEMMA</span>
-            <span className="example-label">EXAMPLE</span>
-          </div>
-          <div className="board-doodle" aria-hidden>
-            <svg viewBox="0 0 80 80">
-              <circle cx="40" cy="40" r="30" />
-              <circle cx="40" cy="40" r="23" />
-              <path d="M30 37v3m20-3v3m-18 8q8 9 16 0M8 10v16m-5-16v10q5 10 10 0V10M8 28v38m64-55v55m0-55q-10 12 0 25" />
-            </svg>
-          </div>
-          <div className="board-note">
-            Everyone has an opinion.
-            <br />
-            <span>Some of them are useful.</span>
-          </div>
-          <div className="board-deck">
-            <TeaserStack />
-          </div>
-          <p className="board-caption">
-            <span aria-hidden>↑</span> Try a vote. Very low stakes.
-          </p>
-          <div className="board-bottom">
-            <span>ONE GROUP. ONE PLACE.</span>
-            <span aria-hidden>✳</span>
-          </div>
+        <section aria-label="Interactive example of restaurant voting">
+          <LandingPreview />
         </section>
       </div>
       <section className="landing-how" aria-label="How it works">
         <div className="how-intro">
-          <span className="landing-eyebrow">THE PLAN</span>
           <p>
             Less debating.
             <br />

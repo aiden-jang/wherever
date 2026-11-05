@@ -52,57 +52,22 @@ export function AppUpdate({ safe = true }: { safe?: boolean }) {
     <aside
       aria-label="App update"
       role="status"
-      style={{
-        position: "fixed",
-        bottom: "max(16px, env(safe-area-inset-bottom))",
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 1000,
-        boxSizing: "border-box",
-        width: "min(440px, calc(100% - 24px))",
-        padding: 16,
-        borderRadius: 16,
-        background: "#f4f1e7",
-        color: "#181b17",
-        boxShadow: "0 6px 32px #0004",
-        fontFamily: "inherit",
-        fontSize: 14,
-        overflowWrap: "anywhere",
-      }}
+      className="table-update fixed z-40 rounded-2xl bg-cream p-4 text-sm text-ink"
     >
-      <p style={{ margin: 0, fontWeight: 600 }}>An update is ready.</p>
-      <p style={{ margin: "6px 0 10px" }}>
-        Save your changes before reloading. This page stays open until you choose.
-      </p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+      <p className="font-semibold">An update is ready.</p>
+      <p className="mt-1">Save your changes before reloading. This page stays open until you choose.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => window.location.reload()}
-          style={{
-            minHeight: 44,
-            padding: "8px 16px",
-            borderRadius: 10,
-            border: "1px solid currentColor",
-            color: "inherit",
-            background: "transparent",
-            font: "inherit",
-            cursor: "pointer",
-          }}
+          className="min-h-11 rounded-xl bg-ink px-4 font-semibold text-cream"
         >
           Reload app
         </button>
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          style={{
-            minHeight: 44,
-            padding: "8px 16px",
-            border: 0,
-            color: "inherit",
-            background: "transparent",
-            font: "inherit",
-            cursor: "pointer",
-          }}
+          className="min-h-11 rounded-xl px-4 font-medium underline"
         >
           Later
         </button>

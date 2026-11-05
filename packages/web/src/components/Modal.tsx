@@ -27,17 +27,14 @@ export function Modal({ title, onClose, children }: ModalProps) {
   const focusPanel = useDialogFocus();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
         ref={(el) => {
           scrollRef.current = el;
           focusPanel(el);
         }}
         tabIndex={-1}
-        className="relative w-full max-w-sm max-h-[85dvh] overflow-y-auto overscroll-contain rounded-3xl bg-ink-soft border border-white/15 p-7 shadow-raised"
+        className="relative w-full max-w-sm max-h-[85dvh] overflow-y-auto overscroll-contain rounded-2xl bg-ink-soft border border-white/15 p-5 sm:p-7"
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragY ? "none" : "transform 0.2s ease",
@@ -52,11 +49,11 @@ export function Modal({ title, onClose, children }: ModalProps) {
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-lg text-muted hover:bg-white/10 hover:text-cream transition-colors"
+          className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full text-lg text-muted hover:bg-white/10 hover:text-cream transition-colors"
         >
           ✕
         </button>
-        <h2 className="font-display text-3xl font-bold mb-6 pr-8">{title}</h2>
+        <h2 className="font-display text-3xl font-bold mb-5 pr-12">{title}</h2>
         {children}
       </div>
     </div>

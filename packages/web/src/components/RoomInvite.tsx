@@ -21,7 +21,7 @@ export function RoomInvite({
   const shareInvite = () =>
     share({ title: "Wherever, Honestly", text: "Come help pick where we're eating.", url: location.href });
   return (
-    <div className="lobby-invite w-full text-center mt-4">
+    <div className="lobby-invite w-full text-center">
       <p className="text-sm text-muted">Share this code. Or the link. Whatever is less effort.</p>
       <button
         onClick={copyCode}

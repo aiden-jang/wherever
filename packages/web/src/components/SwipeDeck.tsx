@@ -3,8 +3,6 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
 import { line, type Restaurant, type SwipeDirection, type VisitedPlace } from "@wherever/shared";
 
-import { CARD_SIZE, DECK_LAYOUT } from "./cardStyle.js";
-import { CardFace } from "./CardFace.js";
 import { VoteControls } from "./VoteControls.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
 import { PlateState } from "./PlateState.js";
@@ -21,19 +19,22 @@ const HINT_KEY = "wherever:swipe-hint-seen";
  * One key cap in the desktop legend. Dimmed rather than hidden when spent, so the row does not
  * reflow under the counter every time somebody uses their super-like.
  */
-function Key({ children, dim = false }: { children: ReactNode; dim?: boolean }) {
+function Key({ children, label, dim = false }: { children: ReactNode; label: string; dim?: boolean }) {
   return (
-    <kbd
-      className={`rounded border px-1.5 py-0.5 font-sans not-italic ${
-        dim ? "border-white/10 text-white/25" : "border-white/20 bg-white/5 text-cream"
-      }`}
-    >
-      {children}
-    </kbd>
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+      <kbd
+        className={`rounded border px-1.5 py-0.5 font-sans ${
+          dim ? "border-dashed border-white/20 text-muted" : "border-white/20 bg-white/5 text-cream"
+        }`}
+      >
+        {children}
+      </kbd>
+      {label}
+    </span>
   );
 }
 
-const RAIL = "mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none lg:text-left";
+const RAIL = "table-rail";
 
 export function SwipeDeck({
   restaurants,
@@ -219,8 +220,7 @@ export function SwipeDeck({
   const done = index >= restaurants.length;
   const waitingLine = useLine("waiting");
 
-  /* A short window, not a mount-only flag: background cards are keyed by restaurant, so a new one
-     mounts on every swipe and animating those would make the stack twitch on each vote. */
+  // Only the first deal animates. Replacing a restaurant after a vote keeps the controls steady.
   const [dealing, setDealing] = useState(true);
   useEffect(() => {
     play("deal");
@@ -243,8 +243,8 @@ export function SwipeDeck({
 
   if (done) {
     return (
-      <div className={DECK_LAYOUT}>
-        <div className="text-center max-w-sm mx-auto mt-10">
+      <div className="table-layout">
+        <div className="table-panel text-center">
           <PlateState art="waiting" />
           <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
           <p className="mt-2 text-muted">{waitingLine}</p>
@@ -294,99 +294,51 @@ export function SwipeDeck({
     );
   }
 
-  const upcoming = restaurants.slice(index + 1, index + 3);
+  const active = restaurants[index]!;
 
   return (
-    <div className={DECK_LAYOUT}>
-      <div className="mx-auto w-full min-w-0 max-w-sm lg:mx-0 lg:max-w-none">
-        <div className={CARD_SIZE}>
-          {/* Background cards, peeking behind the top one. */}
-          {upcoming
-            .map((r, i) => (
-              /* Two elements on purpose: the wrapper carries the deal animation, the inner one carries
-               the stack's own transform. One element cannot do both, because the animation ends at
-               `transform: none` and would drop the card out of the stack as it landed. */
-              <div
-                key={r.id}
-                className={`absolute inset-0 ${dealing ? "deal-in" : ""}`}
-                style={dealing ? { animationDelay: `${(i + 1) * 90}ms` } : undefined}
-              >
-                <div
-                  className="absolute inset-0 meal-card rounded-card overflow-hidden transition-transform duration-200"
-                  style={{
-                    transform: `scale(${1 - (i + 1) * 0.05}) translateY(${(i + 1) * 14}px)`,
-                    zIndex: -i - 1,
-                  }}
-                >
-                  <CardFace
-                    restaurant={r}
-                    photoUrl={r.imageUrl}
-                    photoCount={0}
-                    photoIdx={0}
-                    revisit={revisitNote(visited, r.id)}
-                  />
-                </div>
-              </div>
-            ))
-            .reverse()}
-
-          {/* Render only the active card so outgoing cards cannot retain focus or gestures. */}
-          {/* Named for the view transition into the match screen: the browser pairs this box with the
-            one in `MatchScreen` carrying the same name and tweens between them. `contents` cannot
-            carry it - a box is required - so the name goes on the wrapper that has one. */}
-          <div
-            className={dealing ? "deal-in absolute inset-0" : "contents"}
-            style={{ viewTransitionName: "chosen-card" } as CSSProperties}
-          >
-            <SwipeCard
-              key={restaurants[index]!.id}
-              restaurant={restaurants[index]!}
-              revisit={revisitNote(visited, restaurants[index]!.id)}
-              onCommit={commit}
-              onOpenDetail={setDetail}
-            />
-          </div>
+    <div className="table-layout">
+      <div className="meal-card table-card" style={{ viewTransitionName: "chosen-card" } as CSSProperties}>
+        <div className={dealing ? "deal-in" : undefined}>
+          <SwipeCard
+            key={active.id}
+            restaurant={active}
+            revisit={revisitNote(visited, active.id)}
+            onCommit={commit}
+            onOpenDetail={setDetail}
+          />
         </div>
+        <VoteControls vetoUsed={vetoUsed} superUsed={superUsed} onVote={commit} onSpent={saySpent} />
 
         {/* Reserve one feedback slot so vote controls stay under the user’s finger. */}
-        <p
-          className={`mt-4 flex h-8 items-center justify-center px-4 text-center text-xs ${
-            spentNote ? "text-flare" : showHint ? "animate-pulse text-muted" : "text-muted"
-          }`}
-          aria-live="polite"
-        >
+        <p className={`table-vote-feedback ${spentNote ? "table-vote-warning" : ""}`} aria-live="polite">
           {spentNote ?? (showHint ? "Swipe or tap a vote. Tap the card for details." : "")}
         </p>
-
-        <VoteControls vetoUsed={vetoUsed} superUsed={superUsed} onVote={commit} onSpent={saySpent} />
       </div>
 
-      {/* The second column, and the reason it is not mostly empty: on a wide screen the deck's own
-          status stacked under a card runs to the bottom of the viewport and leaves this half
-          holding one line of text. Under the deck on a phone, in the same order. */}
       <div className={RAIL}>
-        <p className="mt-3 text-center text-sm text-muted tabular-nums lg:mt-0 lg:text-left">
-          {index + 1} / {restaurants.length}
-          {/* The buttons name themselves; what a label cannot fit is that the veto is absolute. */}
-          {!vetoUsed && <span className="ml-2 text-flare">· 🚫 kills it outright</span>}
+        <p className="text-sm text-muted tabular-nums">
+          Place {index + 1} of {restaurants.length}
         </p>
-        {/* Every one of these already worked; nothing said so, and a key nobody knows about is a
-          feature nobody has. Desktop only: there is no keyboard to speak of on the phone layout. */}
-        <p className="mt-3 hidden items-center justify-center gap-2 text-2xs text-muted lg:flex lg:justify-start">
-          <Key>←</Key> pass
-          <Key>→</Key> eat
-          {/* The cap dims, the word does not: fading the word too put it under 4.5:1, and dimming it
-            far enough to be legible would have erased the difference it exists to show. */}
-          <Key dim={superUsed}>↑</Key> super
-          <Key dim={vetoUsed}>↓</Key> veto
-          <Key dim={!canUndo}>⌫</Key> undo
+        <p className="mt-3 hidden flex-wrap gap-x-3 gap-y-1 text-xs text-muted lg:flex">
+          <Key label="pass">←</Key>
+          <Key label="eat">→</Key>
+          <Key label="super" dim={superUsed}>
+            ↑
+          </Key>
+          <Key label="veto" dim={vetoUsed}>
+            ↓
+          </Key>
+          <Key label="undo" dim={!canUndo}>
+            ⌫
+          </Key>
         </p>
         {canUndo && (
           <button
             type="button"
             data-deck-control
             onClick={undoLast}
-            className="mx-auto mt-2 block px-3 py-1 text-xs font-medium text-muted transition hover:text-cream hover:underline lg:mx-0"
+            className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-muted transition hover:text-cream hover:underline"
           >
             Undo last vote
           </button>

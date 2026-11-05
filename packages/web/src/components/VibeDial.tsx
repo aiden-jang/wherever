@@ -24,10 +24,8 @@ export function VibeDial({
   return (
     <section className="mt-6" aria-label="Group vibe">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-white/50">
-          What kind of night
-        </h2>
-        {total > 0 && <span className="text-xs text-white/40">{total} in</span>}
+        <h2 className="font-display text-sm font-bold text-cream">What kind of night</h2>
+        {total > 0 && <span className="text-xs text-muted">{total} in</span>}
       </div>
 
       <p className="mt-1.5 text-sm text-white/70" aria-live="polite">
@@ -65,11 +63,9 @@ export function VibeDial({
               <span className="relative flex items-center gap-2">
                 <span aria-hidden>{option.emoji}</span>
                 <span className="font-display text-sm font-bold">{option.label}</span>
-                {votes > 0 && <span className="ml-auto text-xs tabular-nums text-white/50">{votes}</span>}
+                {votes > 0 && <span className="ml-auto text-xs tabular-nums text-muted">{votes}</span>}
               </span>
-              <span className="relative mt-0.5 block text-2xs leading-snug text-white/45">
-                {option.blurb}
-              </span>
+              <span className="relative mt-0.5 block text-xs leading-snug text-muted">{option.blurb}</span>
             </button>
           );
         })}

@@ -62,7 +62,7 @@ for (const width of [1440, 390]) {
     const placeholder = page.locator(".meal-card").last();
     await expect(placeholder).toBeVisible();
     const cardBefore = (await placeholder.boundingBox())!;
-    const photoBefore = (await placeholder.locator(":scope > div").first().boundingBox())!;
+    const photoBefore = (await placeholder.locator("[data-card-photo]").boundingBox())!;
     await page.screenshot({ path: test.info().outputPath(`dealing-${width}.png`), animations: "disabled" });
     release!();
     await expect(page.getByRole("button", { name: /^See details for / })).toBeVisible();

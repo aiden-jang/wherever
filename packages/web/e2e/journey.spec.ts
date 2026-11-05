@@ -8,7 +8,7 @@ test("create, vote, decide, and run the same deck again", async ({ page }) => {
   await createRoom(page, "Alex with a long display");
   await audit(page);
   await page.getByRole("button", { name: "Start swiping", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Swiping. Vote on tonight's places." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pick your dinner" })).toBeVisible();
   await expect(page.getByRole("group", { name: /stars/ }).first()).toBeVisible();
   await audit(page);
   for (let i = 0; i < 30; i++) {
@@ -63,7 +63,7 @@ test("create, vote, decide, and run the same deck again", async ({ page }) => {
   await page.reload();
   await expect(page.getByRole("heading", { name: /Dinner is handled/ })).toBeVisible();
   await page.getByRole("button", { name: /same/i }).click();
-  await expect(page.getByRole("heading", { name: "Swiping. Vote on tonight's places." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pick your dinner" })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -78,7 +78,7 @@ test("a second person joins and participates in a shared anonymous round", async
     await expect(page.getByText("2 people", { exact: true })).toBeVisible();
     await expect(friend.getByRole("button", { name: "Start swiping", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Start swiping", exact: true }).click();
-    await expect(friend.getByRole("heading", { name: "Swiping. Vote on tonight's places." })).toBeVisible();
+    await expect(friend.getByRole("heading", { name: "Pick your dinner" })).toBeVisible();
     await page.keyboard.press("ArrowRight");
     await friend.keyboard.press("ArrowLeft");
     await page.getByRole("button", { name: "just decide now" }).click();

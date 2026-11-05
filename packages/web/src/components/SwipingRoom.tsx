@@ -50,13 +50,8 @@ export function SwipingRoom({
   const hurryWait = Math.max(0, NUDGE_COOLDOWN_MS / 1000 - Math.floor((now - hurriedAt) / 1000));
 
   return (
-    <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-4">
-      {/*
-          Hidden, because the card is the whole design and a visible title would only take space
-          from it. It still has to exist: this screen had no heading of any level, so anyone
-          navigating by headings landed in the middle of a round with nothing to orient on.
-        */}
-      <h1 className="sr-only">Swiping. Vote on tonight&apos;s places.</h1>
+    <main id="main-content" tabIndex={-1} className="table-room">
+      {(!deck || deck.length > 0) && <h1 className="table-title">Pick your dinner</h1>}
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <RoomChrome {...chrome} />
       {roundEndsAt && <RoundCountdown endsAt={roundEndsAt} />}

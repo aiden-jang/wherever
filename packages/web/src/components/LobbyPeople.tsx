@@ -25,7 +25,7 @@ export function LiveVotes({ count }: { count: number }) {
 export function ParticipantChip({ p }: { p: Participant }) {
   return (
     <div className="participant-tile flex items-center gap-3 rounded-2xl border border-white/10 px-4 py-3">
-      <span className="relative grid place-items-center h-10 w-10 rounded-2xl bg-ember text-ink font-bold">
+      <span className="relative grid h-10 w-10 shrink-0 place-items-center whitespace-nowrap rounded-2xl bg-ember font-bold text-ink">
         {initialsFor(p.displayName)}
         {/* Live presence: solid green pulse when connected, hollow grey when they've dropped. */}
         <span

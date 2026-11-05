@@ -42,7 +42,7 @@ export async function createRoom(page: Page, name = "Alex") {
   const dialog = page.getByRole("dialog", { name: "Start a session" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill(name);
   await dialog.getByRole("button", { name: "Deal the cards" }).click();
-  await expect(page.getByRole("heading", { name: /Waiting to start/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dinner room" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start swiping", exact: true })).toBeEnabled();
   return page.url().split("/s/")[1]!;
 }

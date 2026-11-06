@@ -6,7 +6,7 @@ import { play } from "./sound.js";
 /** Tap row for throwing an emoji to the whole session during a round. */
 export function ReactionBar({ onReact }: { onReact: (emoji: string) => void }) {
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex flex-wrap items-center justify-center gap-1">
       {REACTION_EMOJIS.map((emoji) => (
         <button
           key={emoji}

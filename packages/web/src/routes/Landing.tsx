@@ -19,6 +19,7 @@ function CreateForm() {
   const [filters, setFilters] = useState<SessionFilters>(DEFAULT_FILTERS);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [locOff, setLocOff] = useState(false);
+  const [searchPending, setSearchPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);
@@ -44,7 +45,7 @@ function CreateForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || busy) return;
+    if (!name.trim() || busy || searchPending) return;
     setBusy(true);
     setError(null);
     try {
@@ -88,7 +89,7 @@ function CreateForm() {
       </label>
       {/* Location only. Everything else is set in the lobby, where the group can see it and where
           somebody is waiting for people to join anyway. */}
-      <LocationPicker filters={filters} onChange={setFilters} />
+      <LocationPicker filters={filters} onChange={setFilters} onSearchPendingChange={setSearchPending} />
       {error && (
         <p role="alert" className="text-sm text-flare">
           {error}
@@ -96,10 +97,10 @@ function CreateForm() {
       )}
       <button
         type="submit"
-        disabled={!name.trim() || busy}
+        disabled={!name.trim() || busy || searchPending}
         className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
       >
-        {busy ? "Shuffling the deck…" : "Deal the cards"}
+        {busy ? "Shuffling the deck…" : searchPending ? "Finding your location…" : "Deal the cards"}
       </button>
       {locOff && (
         <p className="text-center text-sm text-muted">

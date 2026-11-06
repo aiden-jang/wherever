@@ -8,9 +8,11 @@ const inputClass =
 export function LocationPicker({
   filters,
   onChange,
+  onSearchPendingChange,
 }: {
   filters: SessionFilters;
   onChange: (f: SessionFilters) => void;
+  onSearchPendingChange?: (pending: boolean) => void;
 }) {
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(false);
@@ -35,12 +37,21 @@ export function LocationPicker({
     },
     [],
   );
-  function select(next: SessionFilters) {
+  function setSearchPending(pending: boolean) {
+    searching.current = pending;
+    setBusy(pending);
+    onSearchPendingChange?.(pending);
+  }
+
+  function stopSearch() {
     request.current += 1;
     controller.current?.abort();
-    searching.current = false;
-    setBusy(false);
+    setSearchPending(false);
     setErr("");
+  }
+
+  function select(next: SessionFilters) {
+    stopSearch();
     setEditing(false);
     onChange(next);
   }
@@ -58,9 +69,8 @@ export function LocationPicker({
   async function runSearch() {
     const query = q.trim();
     if (!query || searching.current) return;
-    searching.current = true;
     const version = ++request.current;
-    setBusy(true);
+    setSearchPending(true);
     setErr("");
     controller.current = new AbortController();
     try {
@@ -84,10 +94,7 @@ export function LocationPicker({
       if (version === request.current)
         setErr(error instanceof Error ? error.message : "Location search is unavailable. Try again shortly.");
     } finally {
-      if (version === request.current) {
-        searching.current = false;
-        setBusy(false);
-      }
+      if (version === request.current) setSearchPending(false);
     }
   }
 
@@ -134,11 +141,7 @@ export function LocationPicker({
               type="text"
               value={q}
               onChange={(e) => {
-                request.current += 1;
-                controller.current?.abort();
-                searching.current = false;
-                setBusy(false);
-                setErr("");
+                stopSearch();
                 setQ(e.target.value);
               }}
               onKeyDown={(e) => {
@@ -172,11 +175,7 @@ export function LocationPicker({
               type="button"
               className="min-h-11 text-sm text-muted underline underline-offset-4"
               onClick={() => {
-                request.current += 1;
-                controller.current?.abort();
-                searching.current = false;
-                setBusy(false);
-                setErr("");
+                stopSearch();
                 setQ("");
                 setEditing(false);
                 changeButton.current?.focus();

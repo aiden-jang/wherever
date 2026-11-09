@@ -32,6 +32,7 @@ export interface StartRoundMessage {
 
 export interface SwipeMessage {
   type: "swipe";
+  roundId?: number;
   restaurantId: string;
   direction: SwipeDirection;
   /** A super-like (weighted right-swipe). Server enforces one per participant per round. */
@@ -44,6 +45,7 @@ export interface SwipeMessage {
 /** Remove this participant's most recent local vote before the round is decided. */
 export interface UndoSwipeMessage {
   type: "undo_swipe";
+  roundId?: number;
   restaurantId: string;
 }
 
@@ -109,7 +111,8 @@ export type ClientMessage =
   | SetFiltersMessage
   | SetNeverAgainMessage
   | ReactMessage
-  | NudgeThemMessage;
+  | NudgeThemMessage
+  | { type: "turn_off_timer"; roundId: number };
 
 // ---- Server -> Client ----
 
@@ -120,6 +123,7 @@ export interface SessionStateMessage {
 
 export interface DeckMessage {
   type: "deck";
+  roundId?: number;
   restaurants: Restaurant[];
   /** Restaurant ids this client already voted on, for resume after reconnect. */
   alreadyVoted?: string[];
@@ -162,6 +166,7 @@ export interface VoteProgressMessage {
 
 export interface MatchMessage {
   type: "match";
+  demo?: DemoReason;
   restaurant: Restaurant;
   rightSwipes: number;
   totalParticipants: number;
@@ -183,6 +188,7 @@ export interface MatchMessage {
 // Distinguish no positive votes from positive choices that were all vetoed.
 export interface NoMatchMessage {
   type: "no_match";
+  demo?: DemoReason;
   vetoedCount?: number;
 }
 
@@ -254,4 +260,5 @@ export type ServerMessage =
   | IdentityMessage
   | VibesMessage
   | ReactionMessage
-  | NudgeMessage;
+  | NudgeMessage
+  | { type: "round_clock"; roundEndsAt: null };

@@ -45,7 +45,16 @@ export const sessionFiltersSchema = z.object({
   locationLabel: z.string().min(1).max(80).optional(),
 });
 
+const clientIdSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .refine((id) => !Object.hasOwn(Object.prototype, id));
+
+export const hostCredentialSchema = z.uuidv4();
+
 export const createSessionSchema = z.object({
+  clientId: hostCredentialSchema,
   displayName: z.string().trim().min(1).max(24),
   filters: sessionFiltersSchema,
 });
@@ -60,13 +69,16 @@ const joinSchema = z.object({
   type: z.literal("join"),
   code: z.string().trim().length(6),
   displayName: z.string().trim().min(1).max(24),
-  clientId: z.string().min(1).max(64).optional(),
+  clientId: clientIdSchema.optional(),
 });
 
 const startRoundSchema = z.object({ type: z.literal("start_round") });
 
+const roundId = z.number().int().positive().optional();
+
 const swipeSchema = z.object({
   type: z.literal("swipe"),
+  roundId,
   restaurantId,
   direction: z.union([z.literal("left"), z.literal("right")]),
   super: z.boolean().optional(),
@@ -75,6 +87,7 @@ const swipeSchema = z.object({
 
 const undoSwipeSchema = z.object({
   type: z.literal("undo_swipe"),
+  roundId,
   restaurantId,
 });
 
@@ -142,4 +155,5 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   setNeverAgainSchema,
   reactSchema,
   nudgeThemSchema,
+  z.object({ type: z.literal("turn_off_timer"), roundId: z.number().int().positive() }),
 ]);

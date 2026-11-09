@@ -10,7 +10,7 @@ export interface GooglePlace {
   /** Enum string: PRICE_LEVEL_FREE | _INEXPENSIVE | _MODERATE | _EXPENSIVE | _VERY_EXPENSIVE. */
   priceLevel?: string;
   formattedAddress?: string;
-  photos?: { name: string }[];
+  photos?: { name: string; authorAttributions?: { displayName?: string; uri?: string }[] }[];
   currentOpeningHours?: { openNow?: boolean; weekdayDescriptions?: string[] };
   googleMapsUri?: string;
   websiteUri?: string;
@@ -139,11 +139,18 @@ export function mapGooglePlace(
 ): Restaurant {
   // Proxy the first few photo refs (already in the search response — no extra billing for the refs
   // themselves; a photo is only paid for when its bytes are actually fetched via /api/photo).
-  const photoUrls = (p.photos ?? [])
-    .map((ph) => ph.name)
-    .filter((name): name is string => Boolean(name))
-    .slice(0, MAX_GALLERY_PHOTOS)
-    .map((name) => photoProxyUrl(name, photoBase));
+  const photos = (p.photos ?? []).filter((photo) => isValidPhotoRef(photo.name)).slice(0, MAX_GALLERY_PHOTOS);
+  const photoUrls = photos.map((photo) => photoProxyUrl(photo.name, photoBase));
+  const photoCredits = Object.fromEntries(
+    photos.map((photo, index) => [
+      photoUrls[index]!,
+      (photo.authorAttributions ?? []).flatMap((author) => {
+        if (!author.displayName) return [];
+        const url = author.uri?.startsWith("//") ? `https:${author.uri}` : author.uri;
+        return [{ name: author.displayName, ...(url?.startsWith("https://") ? { url } : {}) }];
+      }),
+    ]),
+  );
   // Keep only amenities Google actually reported (a missing field means "unknown", not "no").
   const amenities: Partial<Record<AmenityKey, boolean>> = {};
   if (typeof p.goodForGroups === "boolean") amenities.goodForGroups = p.goodForGroups;
@@ -159,9 +166,12 @@ export function mapGooglePlace(
   if (typeof p.goodForChildren === "boolean") amenities.goodForChildren = p.goodForChildren;
   return {
     id: p.id,
+    source: "google",
+    photoCredits,
     name: p.displayName?.text ?? "Unknown spot",
     category: p.primaryTypeDisplayName?.text ?? "Food",
     priceTier: (p.priceLevel ? GOOGLE_PRICE_TIER[p.priceLevel] : undefined) ?? 2,
+    priceUnknown: !p.priceLevel || !(p.priceLevel in GOOGLE_PRICE_TIER),
     // Google already rates 0-5, matching our scale.
     rating: p.rating != null ? Math.round(p.rating * 10) / 10 : null,
     reviewCount: p.userRatingCount ?? null,
@@ -169,7 +179,7 @@ export function mapGooglePlace(
       ? haversineMeters(center, { lat: p.location.latitude, lng: p.location.longitude })
       : 0,
     // Route through our own /api/photo proxy so the API key never reaches the client and the
-    // paid Place Photo SKU is fetched (and edge-cached) on demand.
+    // paid Place Photo SKU is fetched on demand.
     imageUrl: photoUrls[0] ?? null,
     photos: photoUrls,
     address: p.formattedAddress ?? null,
@@ -177,6 +187,7 @@ export function mapGooglePlace(
     website: p.websiteUri ?? null,
     phone: p.nationalPhoneNumber ?? null,
     openNow: p.currentOpeningHours?.openNow ?? null,
+    ...(p.currentOpeningHours?.openNow !== undefined ? { availabilityCheckedAt: Date.now() } : {}),
 
     hours:
       p.currentOpeningHours?.weekdayDescriptions?.map((line) => line.replace(/\s[–—]\s/g, " - ")) ?? null,

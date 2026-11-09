@@ -12,18 +12,20 @@ export function RoomChrome({
   reactions,
   roster,
   demo,
+  online = true,
 }: {
   announcement: string;
   toasts: Toast[];
   reactions: Parameters<typeof FloatingReactions>[0]["reactions"];
   roster: Participant[];
   demo: DemoReason | null;
+  online?: boolean;
 }) {
   return (
     <>
       <LiveRegion message={announcement} />
       <Toasts toasts={toasts} />
-      <FloatingReactions reactions={reactions} roster={roster.map((p) => p.id)} />
+      <FloatingReactions reactions={online ? reactions : []} roster={roster.map((p) => p.id)} />
       {demo && <DemoBanner reason={demo} />}
     </>
   );

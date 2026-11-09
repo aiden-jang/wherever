@@ -2,7 +2,7 @@ import { handleAnalytics } from "../../../analytics/worker.js";
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import type { SessionFilters } from "@wherever/shared";
+import { CODE_ALPHABET, CODE_LENGTH, type SessionFilters } from "@wherever/shared";
 import { createSessionSchema } from "@wherever/shared/schemas";
 import { sessions } from "./db/schema.js";
 import { pruneOldSessions } from "./sessionRetention.js";
@@ -53,8 +53,7 @@ app.get("/api/usage", async (c) => {
   return c.json(await meter.stats());
 });
 
-// Create a session: rate-limit, validate input, mint an unguessable code,
-// persist it. The Durable Object is created lazily on first WS connect.
+// Reserve the creator’s seat before publishing the invite code.
 app.post("/api/sessions", async (c) => {
   const ip = c.req.header("cf-connecting-ip") ?? "local";
   const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(`create:${ip}`));
@@ -65,7 +64,11 @@ app.post("/api/sessions", async (c) => {
   const body = await c.req.json().catch(() => null);
   const parsed = createSessionSchema.safeParse(body);
   if (!parsed.success) {
-    return c.json({ error: "Invalid session setup." }, 400);
+    const needsCreator = parsed.error.issues.some((issue) => issue.path[0] === "clientId");
+    return c.json(
+      { error: needsCreator ? "Reload Wherever before creating a room." : "Invalid session setup." },
+      400,
+    );
   }
 
   const db = drizzle(c.env.DB);
@@ -86,7 +89,11 @@ app.post("/api/sessions", async (c) => {
   // Seed the Durable Object that will own this session's realtime state.
   const room = c.env.SESSION_ROOM.get(c.env.SESSION_ROOM.idFromName(code));
   if (
-    !(await room.initialize({ code, status: "lobby", voteMode: "majority", filters }, createdAt.getTime()))
+    !(await room.initialize(
+      { code, status: "lobby", voteMode: "majority", filters },
+      createdAt.getTime(),
+      parsed.data.clientId,
+    ))
   ) {
     await db.delete(sessions).where(eq(sessions.id, id));
     return c.json({ error: "Could not reserve a new room. Please try again." }, 503);
@@ -95,11 +102,9 @@ app.post("/api/sessions", async (c) => {
   return c.json({ code }, 201);
 });
 
-// Geocode a zip/town to a search center, keeping the Google key server-side. Rate-limited per IP
-// and edge-cached by normalized query. Requires the Geocoding API enabled on the key.
+// Geocode a ZIP code or town without storing the provider’s formatted address in a shared cache.
 const GEOCODE_LIMIT = 20;
 const GEOCODE_WINDOW_MS = 60_000;
-const GEOCODE_CACHE_SECONDS = 86_400; // 1 day
 
 app.get("/api/geocode", async (c) => {
   const q = (c.req.query("q") ?? "").trim();
@@ -116,29 +121,22 @@ app.get("/api/geocode", async (c) => {
     return c.json({ error: "Slow down on the location search." }, 429);
   }
 
-  // Edge-cache by the normalized query so repeats don't re-bill Google.
-  const cache = caches.default;
-  const cacheUrl = new URL(c.req.url);
-  cacheUrl.searchParams.set("q", q.toLowerCase());
-  const cacheKey = new Request(cacheUrl.toString());
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
-
   const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
   if (!(await meter.tryConsume("geocode"))) {
     return c.json({ error: "Monthly location search budget reached." }, 429);
   }
 
   const upstream = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${key}`;
-  const res = await fetch(upstream);
-  if (!res.ok) {
-    console.warn("geocode upstream", res.status);
+  const res = await fetch(upstream, { signal: AbortSignal.timeout(12_000) }).catch(() => null);
+  if (!res?.ok) {
+    console.warn("geocode upstream", res?.status);
     return c.json({ error: "Location search failed." }, 502);
   }
   const data = (await res.json().catch(() => null)) as {
     status?: string;
     results?: {
       formatted_address?: string;
+      partial_match?: boolean;
       geometry?: { location?: { lat: number; lng: number } };
     }[];
   } | null;
@@ -162,17 +160,18 @@ app.get("/api/geocode", async (c) => {
     return c.json({ error: "Location search is unavailable. Try again shortly." }, 502);
   }
 
-  const out = c.json({ lat: loc.lat, lng: loc.lng, label: top?.formatted_address ?? q });
-  out.headers.set("Cache-Control", `public, max-age=${GEOCODE_CACHE_SECONDS}`);
-  c.executionCtx.waitUntil(cache.put(cacheKey, out.clone()));
-  return out;
+  if (top.partial_match || (data.results?.length ?? 0) > 1) {
+    return c.json(
+      { error: "More than one area may match. Enter a ZIP code or add a state or country." },
+      409,
+    );
+  }
+  return c.json({ lat: loc.lat, lng: loc.lng, label: (top.formatted_address ?? q).slice(0, 80) });
 });
 
-// Proxy a Google Place photo, keeping the API key server-side. The deck's imageUrl points here.
-// The edge cache reuses successful responses for a normalized photo reference and width.
+// Google photo names can expire. Fetch only when an image is requested and do not cache its bytes.
 const PHOTO_MAX_WIDTH = 1600;
 const PHOTO_DEFAULT_WIDTH = 800;
-const PHOTO_CACHE_SECONDS = 2_592_000; // 30 days
 
 app.get("/api/photo", async (c) => {
   const ref = c.req.query("ref") ?? "";
@@ -181,48 +180,51 @@ app.get("/api/photo", async (c) => {
   const key = c.env.GOOGLE_PLACES_API_KEY;
   if (!key) return c.json({ error: "Photos are not available." }, 404);
 
-  // Snap to a small set of widths so a valid ref can't be abused to force hundreds of distinct
-  // paid Place-Photo fetches (one per arbitrary w). Cache by the SNAPPED width so every request in
-  // a bucket shares one cache entry and one upstream fetch.
   const requested = Number(c.req.query("w")) || PHOTO_DEFAULT_WIDTH;
-  const allowedWidths = [400, 800, PHOTO_MAX_WIDTH];
-  const width = allowedWidths.find((w) => requested <= w) ?? PHOTO_MAX_WIDTH;
+  const width = [400, 800, PHOTO_MAX_WIDTH].find((candidate) => requested <= candidate) ?? PHOTO_MAX_WIDTH;
 
-  const cache = caches.default;
-  const normalized = new URL(c.req.url);
-  normalized.searchParams.set("w", String(width));
-  const cacheKey = new Request(normalized.toString());
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
+  const ip = c.req.header("cf-connecting-ip");
+  if (ip) {
+    const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(`photo:${ip}`));
+    if (!(await limiter.hit(60, 60_000))) return c.json({ error: "Too many photo requests." }, 429);
+  }
 
-  // Cache miss → this would be a paid Place Photo fetch. Gate it on the monthly budget so we never
-  // exceed the configured call cap; the client’s image fallback handles a budget refusal.
   const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
   if (!(await meter.tryConsume("photo"))) {
     return c.json({ error: "Monthly photo budget reached." }, 429);
   }
 
   const upstream = `https://places.googleapis.com/v1/${ref}/media?maxWidthPx=${width}&key=${key}`;
-  const res = await fetch(upstream);
-  if (!res.ok) {
+  const res = await fetch(upstream, { signal: AbortSignal.timeout(12_000) }).catch(() => null);
+  if (!res?.ok) {
     // Status identifies provider failures without retaining location or credential-bearing bodies.
-    console.warn("photo proxy upstream", res.status);
+    console.warn("photo proxy upstream", res?.status);
     return c.json({ error: "Photo unavailable." }, 502);
   }
 
-  const out = new Response(res.body, {
+  return new Response(res.body, {
     headers: {
       "Content-Type": res.headers.get("Content-Type") ?? "image/jpeg",
-      "Cache-Control": `public, max-age=${PHOTO_CACHE_SECONDS}, immutable`,
+      "Cache-Control": "no-store",
     },
   });
-  c.executionCtx.waitUntil(cache.put(cacheKey, out.clone()));
-  return out;
 });
 
 // Hand the WebSocket upgrade to the Durable Object that owns this session code.
-app.get("/ws/:code", (c) => {
+app.get("/ws/:code", async (c) => {
   const code = c.req.param("code").toUpperCase();
+  if (code.length !== CODE_LENGTH || [...code].some((character) => !CODE_ALPHABET.includes(character))) {
+    return c.json({ error: "Invalid room code." }, 400);
+  }
+  const origin = c.req.header("origin");
+  if (origin && origin !== new URL(c.req.url).origin) {
+    return c.json({ error: "Open the invite from Wherever." }, 403);
+  }
+  const ip = c.req.header("cf-connecting-ip");
+  if (ip) {
+    const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(`socket:${ip}`));
+    if (!(await limiter.hit(60, 60_000))) return c.json({ error: "Too many connection attempts." }, 429);
+  }
   const id = c.env.SESSION_ROOM.idFromName(code);
   const room = c.env.SESSION_ROOM.get(id);
   return room.fetch(c.req.raw);
@@ -230,6 +232,7 @@ app.get("/ws/:code", (c) => {
 
 // Anything that is not the API is the SPA: real files, with index.html as the fallback so client
 // routes resolve. Registered last so it can never shadow a route above it.
+app.all("/api/*", (c) => c.json({ error: "Unknown API endpoint." }, 404));
 app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default {

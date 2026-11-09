@@ -36,6 +36,7 @@ export function RestaurantGallery({
       <RestaurantPhoto
         key={photos[current] ?? restaurant.id}
         imageUrl={photos[current] ?? null}
+        credits={restaurant.photoCredits?.[photos[current] ?? ""]}
         category={restaurant.category}
         className="detail-photo"
       />
@@ -45,8 +46,8 @@ export function RestaurantGallery({
             type="button"
             className="gallery-arrow gallery-prev"
             aria-label="Previous photo"
-            disabled={current === 0}
-            onClick={() => setIndex(current - 1)}
+            aria-disabled={current === 0}
+            onClick={() => setIndex(Math.max(0, current - 1))}
           >
             ‹
           </button>
@@ -54,8 +55,8 @@ export function RestaurantGallery({
             type="button"
             className="gallery-arrow gallery-next"
             aria-label="Next photo"
-            disabled={current === photos.length - 1}
-            onClick={() => setIndex(current + 1)}
+            aria-disabled={current === photos.length - 1}
+            onClick={() => setIndex(Math.min(photos.length - 1, current + 1))}
           >
             ›
           </button>

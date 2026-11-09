@@ -28,13 +28,10 @@ import { DisconnectBanner, HowItWorks } from "../components/LobbyStatus.js";
 import { ParticipantChip } from "../components/LobbyPeople.js";
 
 export default function Lobby() {
-  const { code = "" } = useParams();
+  const { code: rawCode = "" } = useParams();
+  const code = rawCode.toUpperCase();
 
-  // Fetch the decided screen during the round, so its reveal is never a loading state.
-  useEffect(() => {
-    void import("../components/MatchScreen.js");
-  }, []);
-  const [name, setName] = useState(recallName());
+  const [name, setName] = useState(recallName);
 
   if (!name) {
     return (
@@ -71,6 +68,16 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     reactions,
     send,
   } = state;
+  useEffect(() => {
+    if (deck?.length) void import("../components/MatchScreen.js").catch(() => undefined);
+  }, [Boolean(deck?.length)]);
+  const lobbyHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (session?.status === "lobby") lobbyHeading.current?.focus({ preventScroll: true });
+  }, [session?.status]);
+  useEffect(() => {
+    if (error && !session) lobbyHeading.current?.focus({ preventScroll: true });
+  }, [error, session]);
   const [announcement, setAnnouncement] = useState("");
   /*
    * The host's start button, closed for the round it is fetching. Cleared on either outcome: the
@@ -78,6 +85,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
    * reconnect cannot leave the button dead.
    */
   const [starting, setStarting] = useState(false);
+  const [resultPending, setResultPending] = useState(false);
+  useEffect(() => setResultPending(false), [errorSeq, match, status, session?.status]);
+  const [searching, setSearching] = useState(false);
   useEffect(() => setStarting(false), [session?.status, errorSeq, status]);
 
   /* Cards this person still owes the room, on the icon while they are looking at something else.
@@ -98,8 +108,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       // to correct it against.
       setAnnouncement(
         match.vetoedCount > 0
-          ? `Everything got vetoed. ${match.vetoedCount} ${match.vetoedCount === 1 ? "place" : "places"} struck off.`
-          : "Nobody liked anything.",
+          ? `No eligible pick. ${match.vetoedCount} ${match.vetoedCount === 1 ? "place was" : "places were"} vetoed.`
+          : "No place got a yes vote.",
       );
     }
   }, [match]);
@@ -164,7 +174,14 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   // Refusals outside the create/lobby form still need visible feedback.
   const errorToasts = useOneShotToast(error, setAnnouncement, error ? `error-${errorSeq}` : null);
   const screenToasts = [...allToasts, ...errorToasts];
-  const chrome = { announcement, toasts: screenToasts, reactions, roster: session?.participants ?? [], demo };
+  const chrome = {
+    announcement,
+    toasts: screenToasts,
+    reactions,
+    roster: session?.participants ?? [],
+    demo,
+    online: status === "open",
+  };
   const count = session?.participants.length ?? 0;
 
   // An error before any session state means a bad or expired code.
@@ -173,7 +190,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
         <div className="table-panel max-w-sm">
           <PlateState />
-          <h1 className="mt-4 font-display text-state font-bold">This code leads nowhere.</h1>
+          <h1 ref={lobbyHeading} tabIndex={-1} className="mt-4 font-display text-state font-bold">
+            This code leads nowhere.
+          </h1>
           <p className="mt-3 text-muted">{error}</p>
           <Link
             to="/"
@@ -190,6 +209,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   if (match) {
     return (
       <main id="main-content" tabIndex={-1} className="table-room">
+        {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
         <RoomChrome {...chrome} />
         <Suspense fallback={<p className="text-muted">Counting…</p>}>
           <MatchScreen
@@ -198,8 +218,17 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             visited={visited}
             filters={session?.filters}
             isHost={isHost}
-            onAgain={(deck) => send({ type: "again", deck })}
-            onChooseAlternative={(restaurantId) => send({ type: "choose_alternative", restaurantId })}
+            online={status === "open"}
+            pending={resultPending}
+            demo={Boolean(demo)}
+            onAgain={(deck) => {
+              setResultPending(true);
+              send({ type: "again", deck });
+            }}
+            onChooseAlternative={(restaurantId) => {
+              setResultPending(true);
+              send({ type: "choose_alternative", restaurantId });
+            }}
             onNeverAgain={(restaurantId, neverAgain) =>
               send({ type: "set_never_again", restaurantId, neverAgain })
             }
@@ -208,7 +237,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         {/* Keep the reaction bar mounted here: this is the one moment everyone is looking at the
             same thing. */}
         <div className="mt-4">
-          <ReactionBar onReact={(emoji) => send({ type: "react", emoji })} />
+          <ReactionBar disabled={status !== "open"} onReact={(emoji) => send({ type: "react", emoji })} />
         </div>
       </main>
     );
@@ -217,52 +246,34 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   if (session?.status === "swiping")
     return <SwipingRoom state={state} chrome={chrome} onAnnounce={setAnnouncement} isHost={isHost} />;
 
+  if (!session) {
+    return (
+      <main id="main-content" tabIndex={-1} className="table-room">
+        <h1 className="table-title">Joining the dinner room</h1>
+        <p role="status">{status === "closed" ? "Couldn’t connect to the room." : "Connecting…"}</p>
+        {status === "closed" && <DisconnectBanner reconnecting={false} />}
+      </main>
+    );
+  }
+
   return (
     <main id="main-content" tabIndex={-1} className="table-room">
-      <h1 className="table-title">Dinner room</h1>
+      <h1 ref={lobbyHeading} tabIndex={-1} className="table-title">
+        Dinner room
+      </h1>
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <LiveRegion message={announcement} />
       <Toasts toasts={allToasts} />
       <div className="table-layout table-lobby">
         <div className="min-w-0">
-          <RoomInvite code={code} filters={session?.filters} isHost={isHost} send={send} />
-          <div className="mt-4">
-            {isHost && (
-              <p className="mb-3 text-center text-sm text-muted">Everyone here? Start when you’re ready.</p>
-            )}
-            {isHost ? (
-              <button
-                onClick={() => {
-                  setStarting(true);
-                  send({ type: "start_round" });
-                }}
-                disabled={starting}
-                className="w-full rounded-xl bg-ember px-8 py-3 text-lg font-semibold text-ink transition-transform disabled:opacity-60 enabled:hover:scale-[1.02]"
-              >
-                {starting ? "Finding places…" : "Start swiping"}
-              </button>
-            ) : (
-              <div className="lobby-wait flex flex-col items-center gap-2 text-center text-muted">
-                <div className="flex items-center gap-2">
-                  <PlateState art="waiting" small />
-                  <span className="font-medium">
-                    {session
-                      ? "You’re in. Waiting on the host."
-                      : status === "closed"
-                        ? "The session is unavailable."
-                        : "Connecting to the session…"}
-                  </span>
-                </div>
-                <p className="text-sm">Gentle peer pressure is an option.</p>
-              </div>
-            )}
-          </div>
-
-          {error && (
-            <p role="alert" className="mt-4 text-sm text-flare">
-              {error}
-            </p>
-          )}
+          <RoomInvite
+            code={code}
+            filters={session.filters}
+            isHost={isHost && status === "open"}
+            send={send}
+            onSearchPendingChange={setSearching}
+            syncError={errorSeq}
+          />
         </div>
         <div className="table-rail">
           <div className="min-w-0">
@@ -295,6 +306,43 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             groupSize={count}
             onPick={(vibe) => send({ type: "set_vibe", vibe })}
           />
+          <div className="mt-4">
+            {isHost && (
+              <p className="mb-3 text-center text-sm text-muted">Start voting once everyone is ready.</p>
+            )}
+            {isHost ? (
+              <button
+                onClick={() => {
+                  setStarting(true);
+                  send({ type: "start_round" });
+                }}
+                disabled={starting || searching || status !== "open"}
+                className="w-full rounded-xl bg-ember px-8 py-3 text-lg font-semibold text-ink transition-transform disabled:opacity-60 enabled:hover:scale-[1.02]"
+              >
+                {starting ? "Finding places…" : "Start swiping"}
+              </button>
+            ) : (
+              <div className="lobby-wait flex flex-col items-center gap-2 text-center text-muted">
+                <div className="flex items-center gap-2">
+                  <PlateState art="waiting" small />
+                  <span className="font-medium">
+                    {session
+                      ? "You’re in. Waiting on the host."
+                      : status === "closed"
+                        ? "The session is unavailable."
+                        : "Connecting to the session…"}
+                  </span>
+                </div>
+                <p className="text-sm">Gentle peer pressure is an option.</p>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <p role="alert" className="mt-4 text-sm text-flare">
+              {error}
+            </p>
+          )}
           <HowItWorks />
         </div>
       </div>

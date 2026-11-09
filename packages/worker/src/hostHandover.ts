@@ -1,4 +1,5 @@
-import type { ClientMap, SocketAttachment } from "./roomState.js";
+import { hostCredentialSchema } from "@wherever/shared/schemas";
+import { socketIdentity, type ClientMap } from "./roomState.js";
 import type { Env } from "./env.js";
 import { putLive } from "./sessionRetention.js";
 
@@ -19,7 +20,7 @@ export function hasLiveSocketFor(
 ): boolean {
   return ctx.getWebSockets().some((socket) => {
     if (socket === exclude) return false;
-    const att = socket.deserializeAttachment() as SocketAttachment | null;
+    const att = socketIdentity(socket);
     return att?.participantId === participantId;
   });
 }
@@ -51,44 +52,39 @@ export async function beginHostGraceIfNeeded(
   env: Env,
   closing: WebSocket,
 ): Promise<void> {
-  const att = closing.deserializeAttachment() as SocketAttachment | null;
+  const att = socketIdentity(closing);
   if (!att?.isHost) return;
   const hostId = await ctx.storage.get<string>("hostId");
   if (hostId !== att.participantId) return;
   // Still present on another socket (second tab)? They're not gone at all.
   if (hasLiveSocketFor(ctx, att.participantId, closing)) return;
-  await putLive(ctx.storage, { hostGraceUntil: Date.now() + hostGraceMs(env) });
+  await putLive(ctx.storage, { hostGraceUntil: Date.now() + hostGraceMs(env), departedHostId: hostId });
   await rescheduleAlarm(ctx);
 }
 
-/** Move host to another connected person, or clear it if the room emptied. */
+/** Keep a reconnectable owner even when the room has no eligible participant online. */
 export async function reassignHostAway(ctx: DurableObjectState, oldHostId: string): Promise<void> {
-  let newHostId: string | undefined;
-  for (const socket of ctx.getWebSockets()) {
-    const att = socket.deserializeAttachment() as SocketAttachment | null;
-    if (att && att.participantId !== oldHostId) {
-      newHostId = att.participantId;
-      break;
-    }
-  }
-
   const map = (await ctx.storage.get<ClientMap>("clientMap")) ?? {};
+  const eligible = new Set(
+    Object.entries(map)
+      .filter(([clientId]) => hostCredentialSchema.safeParse(clientId).success)
+      .map(([, entry]) => entry.participantId),
+  );
+  const successor = ctx
+    .getWebSockets()
+    .map(socketIdentity)
+    .find((att) => att && att.participantId !== oldHostId && eligible.has(att.participantId));
+  if (!successor) return;
+
+  const newHostId = successor.participantId;
   for (const [key, entry] of Object.entries(map)) {
-    if (entry.participantId === oldHostId) map[key] = { ...entry, isHost: false };
-    else if (newHostId && entry.participantId === newHostId) map[key] = { ...entry, isHost: true };
+    map[key] = { ...entry, isHost: entry.participantId === newHostId };
   }
-
-  if (!newHostId) {
-    await ctx.storage.delete("hostId");
-    await putLive(ctx.storage, { clientMap: map });
-    return;
-  }
-
   await putLive(ctx.storage, { hostId: newHostId, clientMap: map });
   for (const socket of ctx.getWebSockets()) {
-    const att = socket.deserializeAttachment() as SocketAttachment | null;
-    if (att?.participantId === newHostId && !att.isHost) {
-      socket.serializeAttachment({ ...att, isHost: true });
+    const att = socketIdentity(socket);
+    if (att && att.isHost !== (att.participantId === newHostId)) {
+      socket.serializeAttachment({ ...att, isHost: att.participantId === newHostId });
     }
   }
 }

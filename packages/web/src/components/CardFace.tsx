@@ -1,6 +1,7 @@
 import type { Restaurant } from "@wherever/shared";
 import { distanceText } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel, styleFor } from "./cardStyle.js";
+import { availabilityLabel } from "./RestaurantFacts.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 
 export function CardFace({
@@ -8,34 +9,38 @@ export function CardFace({
   photoUrl,
   photoCount,
   photoIdx,
+  onNextPhoto,
   revisit,
 }: {
   restaurant: Restaurant;
   photoUrl: string | null | undefined;
   photoCount: number;
   photoIdx: number;
+  onNextPhoto: () => void;
   revisit?: string | null;
 }) {
   const cuisine = styleFor(restaurant.category);
   const distance = distanceText(restaurant.distanceMeters);
-  const closed =
-    restaurant.businessStatus === "CLOSED_PERMANENTLY"
-      ? "Permanently closed"
-      : restaurant.businessStatus === "CLOSED_TEMPORARILY"
-        ? "Temporarily closed"
-        : restaurant.openNow === false
-          ? "Closed now"
-          : null;
+  const availability = availabilityLabel(restaurant);
   return (
     <>
       <div data-card-photo className="relative">
-        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="table-photo" />
+        <RestaurantPhoto
+          imageUrl={photoUrl ?? null}
+          credits={restaurant.photoCredits?.[photoUrl ?? ""]}
+          category={restaurant.category}
+          className="table-photo"
+        />
         {photoCount > 1 && (
-          <div className="photo-tracks" aria-hidden>
-            {Array.from({ length: photoCount }).map((_, i) => (
-              <span key={i} className={i === photoIdx ? "photo-current" : ""} />
-            ))}
-          </div>
+          <button
+            type="button"
+            aria-label={`Next photo, ${photoIdx + 1} of ${photoCount}`}
+            className="absolute bottom-2 right-2 min-h-11 min-w-11 rounded-full bg-black/90 px-2 text-xs text-white"
+            onPointerUp={(event) => event.stopPropagation()}
+            onClick={onNextPhoto}
+          >
+            {photoIdx + 1}/{photoCount}
+          </button>
         )}
         {revisit && (
           <span className="meal-revisit">
@@ -47,7 +52,7 @@ export function CardFace({
         <div className="meal-category">
           <span aria-hidden>{cuisine.emoji}</span> {categoryLabel(restaurant.category)}
           <span className="meal-rating">
-            {restaurant.rating ? `★ ${restaurant.rating}` : "New"}
+            {restaurant.rating ? `★ ${restaurant.rating}` : "Unrated"}
             {restaurant.rating && restaurant.reviewCount
               ? ` (${reviewCountLabel(restaurant.reviewCount)})`
               : ""}
@@ -57,7 +62,8 @@ export function CardFace({
         <div className="meal-facts">
           <span>
             <small>Price</small>
-            {restaurant.priceRange ?? priceLabel(restaurant.priceTier)}
+            {restaurant.priceRange ??
+              (restaurant.priceUnknown ? "Price unavailable" : priceLabel(restaurant.priceTier))}
           </span>
           {distance && (
             <span>
@@ -66,11 +72,18 @@ export function CardFace({
             </span>
           )}
         </div>
-        {closed ? (
-          <p className="meal-hours meal-closed">● {closed}</p>
-        ) : restaurant.openNow === true ? (
-          <p className="meal-hours">● Open now</p>
-        ) : null}
+        {availability && (
+          <p
+            className={`meal-hours ${restaurant.openNow === false || restaurant.businessStatus?.startsWith("CLOSED_") ? "meal-closed" : ""}`}
+          >
+            {availability}
+          </p>
+        )}
+        {restaurant.source === "google" && (
+          <p className="mt-2 text-xs" translate="no">
+            Google Maps
+          </p>
+        )}
         {restaurant.editorialSummary && <p className="meal-summary">{restaurant.editorialSummary}</p>}
       </div>
     </>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ROUND_TIMER_OPTIONS, type SessionFilters } from "@wherever/shared";
-import { FieldLabel, Chevron, segBase, segOn, segOff } from "./FilterControls.js";
+import { Chevron, FilterChoices } from "./FilterControls.js";
 export function RoundRules({
   filters,
   onChange,
@@ -43,7 +43,9 @@ export function RoundRules({
             <span className="flex flex-col">
               <span className="font-semibold">Show who's voted</span>
               <span className="text-xs text-muted">
-                {filters.revealVoters ? "Everyone sees who's finished" : "Off. Votes stay anonymous"}
+                {filters.revealVoters
+                  ? "Everyone sees who's finished"
+                  : "Off. Individual ballots stay hidden"}
               </span>
             </span>
             <span
@@ -60,27 +62,16 @@ export function RoundRules({
           </button>
 
           <div className="flex flex-col gap-2">
-            <FieldLabel>Round timer</FieldLabel>
-            <div className="filter-options gap-2">
-              {ROUND_TIMER_OPTIONS.map((o) => {
-                const on = (filters.roundSeconds ?? 0) === o.seconds;
-                return (
-                  <button
-                    key={o.seconds}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => onChange({ ...filters, roundSeconds: o.seconds })}
-                    className={`${segBase} ${on ? segOn : segOff}`}
-                  >
-                    {o.label}
-                  </button>
-                );
-              })}
-            </div>
+            <FilterChoices
+              label="Round timer"
+              options={ROUND_TIMER_OPTIONS.map(({ seconds: value, label }) => ({ value, label }))}
+              value={filters.roundSeconds ?? 0}
+              onChange={(roundSeconds) => onChange({ ...filters, roundSeconds })}
+            />
             <span className="text-xs text-muted">
               {(filters.roundSeconds ?? 0) === 0
                 ? "No timer. Decide when everyone's done"
-                : "When time's up, the votes so far decide"}
+                : "When time’s up, the votes so far decide. Anyone can turn off the timer."}
             </span>
           </div>
         </div>

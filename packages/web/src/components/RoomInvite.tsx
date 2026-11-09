@@ -8,7 +8,11 @@ export function RoomInvite({
   filters,
   isHost,
   send,
+  onSearchPendingChange,
+  syncError,
 }: {
+  syncError?: number;
+  onSearchPendingChange?: (pending: boolean) => void;
   code: string;
   filters?: SessionFilters;
   isHost: boolean;
@@ -17,9 +21,10 @@ export function RoomInvite({
   const { status: codeStatus, share: copy } = useShareAction(code);
   const { status: inviteStatus, share } = useShareAction(code);
   const copyCode = () => void copy({ text: code }, false);
-  const copyInviteLink = () => share({ url: location.href }, false);
+  const invite = new URL(`/s/${code}`, location.origin).href;
+  const copyInviteLink = () => share({ url: invite }, false);
   const shareInvite = () =>
-    share({ title: "Wherever, Honestly", text: "Come help pick where we're eating.", url: location.href });
+    share({ title: "Wherever, Honestly", text: "Come help pick where we're eating.", url: invite });
   return (
     <div className="lobby-invite w-full text-center">
       <p className="text-sm text-muted">Share this code. Or the link. Whatever is less effort.</p>
@@ -30,7 +35,7 @@ export function RoomInvite({
       >
         {code}
       </button>
-      <p className="mt-1 text-xs text-muted">
+      <p role="status" className="mt-1 text-xs text-muted">
         {codeStatus === "copied"
           ? "Copied the code."
           : codeStatus === "failed"
@@ -65,13 +70,15 @@ export function RoomInvite({
         </button>
       </div>
       {codeStatus === "failed" && <CopyFallback label="Session code to copy" text={code} />}
-      {inviteStatus === "failed" && <CopyFallback label="Invite link to copy" text={location.href} />}
-      <JoinQr code={code} url={location.href} />
+      {inviteStatus === "failed" && <CopyFallback label="Invite link to copy" text={invite} />}
+      <JoinQr code={code} url={invite} />
       {/* Everyone sees the shared deck's filters; only its host can change them. */}
       {filters && (
         <FilterSummary
           filters={filters}
           editable={isHost}
+          onSearchPendingChange={onSearchPendingChange}
+          syncError={syncError}
           onChange={(filters) => send({ type: "set_filters", filters })}
         />
       )}

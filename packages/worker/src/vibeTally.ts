@@ -1,5 +1,5 @@
 import type { Vibe } from "@wherever/shared";
-import type { SocketAttachment } from "./roomState.js";
+import { socketIdentity } from "./roomState.js";
 import { sendTo } from "./roomSockets.js";
 import { putLive } from "./sessionRetention.js";
 
@@ -39,7 +39,7 @@ export async function sendVibes(ctx: DurableObjectState, vibes?: VibeMap): Promi
   const map = vibes ?? (await readVibes(ctx.storage));
   const counts = tally(map);
   for (const socket of ctx.getWebSockets()) {
-    const att = socket.deserializeAttachment() as SocketAttachment | null;
+    const att = socketIdentity(socket);
     if (!att) continue;
     sendTo(socket, { type: "vibes", counts, yours: map[att.participantId] ?? null });
   }

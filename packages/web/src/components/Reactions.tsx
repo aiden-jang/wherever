@@ -4,13 +4,20 @@ import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 
 /** Tap row for throwing an emoji to the whole session during a round. */
-export function ReactionBar({ onReact }: { onReact: (emoji: string) => void }) {
+export function ReactionBar({
+  onReact,
+  disabled = false,
+}: {
+  onReact: (emoji: string) => void;
+  disabled?: boolean;
+}) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-1">
       {REACTION_EMOJIS.map((emoji) => (
         <button
           key={emoji}
           type="button"
+          disabled={disabled}
           aria-label={`React ${emoji}`}
           onClick={() => {
             buzz(8);

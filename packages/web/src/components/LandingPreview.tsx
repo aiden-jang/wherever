@@ -65,6 +65,7 @@ export function LandingPreview() {
           key={card.image}
           src={card.image}
           alt=""
+          fetchPriority={index === 0 ? "high" : undefined}
           width={640}
           height={400}
           onError={(event) => {
@@ -85,7 +86,7 @@ export function LandingPreview() {
           <button type="button" className="vote-no" onClick={() => vote("left")}>
             <span aria-hidden>✕</span> Nope
           </button>
-          <button type="button" aria-label="Yes" className="vote-yes" onClick={() => vote("right")}>
+          <button type="button" className="vote-yes" onClick={() => vote("right")}>
             <span aria-hidden>♥</span> Yes, please
           </button>
         </div>

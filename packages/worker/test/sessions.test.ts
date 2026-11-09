@@ -11,6 +11,7 @@ const BASE = "https://wherever.test";
 
 const validBody = () => ({
   displayName: "Alex",
+  clientId: crypto.randomUUID(),
   filters: { radiusMeters: 5000, maxPriceTier: 3, categories: ["pizza"] },
 });
 
@@ -35,6 +36,16 @@ describe("POST /api/sessions", () => {
     expect(row!.status).toBe("lobby");
     expect(JSON.parse(row!.filters) as { categories: string[] }).toMatchObject({ categories: ["pizza"] });
   });
+
+  it.each([undefined, "guessable"])(
+    "requires a creator credential instead of assigning the first visitor (%s)",
+    async (clientId) => {
+      const response = await createSession({ ...validBody(), clientId });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "Reload Wherever before creating a room." });
+      expect(await drizzle(testEnv.DB).select().from(sessions).all()).toEqual([]);
+    },
+  );
 
   it("rejects an invalid body with 400", async () => {
     expect((await createSession({ displayName: "", filters: {} })).status).toBe(400);

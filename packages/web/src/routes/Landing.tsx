@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTransitionNavigate } from "../useViewTransition.js";
 import { FieldLabel } from "../components/FilterControls.js";
@@ -18,7 +19,7 @@ function CreateForm() {
   const [name, setName] = useState(recallName());
   const [filters, setFilters] = useState<SessionFilters>(DEFAULT_FILTERS);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
-  const [locOff, setLocOff] = useState(false);
+  const [locPending, setLocPending] = useState(true);
   const [searchPending, setSearchPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,28 +40,27 @@ function CreateForm() {
     getLocation().then((l) => {
       if (!alive.current) return;
       setLoc(l);
-      setLocOff(l === null);
+      setLocPending(false);
     });
   }, []);
 
+  const usingExplicitCenter = Boolean(filters.area) || (filters.lat != null && filters.lng != null);
+  const waitingForLocation = !usingExplicitCenter && locPending;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || busy || searchPending) return;
+    if (!name.trim() || busy || searchPending || waitingForLocation) return;
     setBusy(true);
     setError(null);
     try {
       rememberName(name.trim());
-      // Apply browser geolocation only in the pure "near me" case. If the host picked a neighborhood
-      // (area) or searched a zip/town (lat/lng already in filters), that explicit center wins and we
-      // must NOT overlay the device location on top of it. Don't re-invoke geolocation here either.
-      const usingExplicitCenter = Boolean(filters.area) || (filters.lat != null && filters.lng != null);
       const controller = new AbortController();
       createRequest.current = controller;
       const code = await createSession(
         name.trim(),
         {
           ...filters,
-          ...(usingExplicitCenter ? {} : (loc ?? {})),
+          ...(usingExplicitCenter ? {} : (loc ?? { locationLabel: "New York City" })),
         },
         controller.signal,
       );
@@ -79,17 +79,24 @@ function CreateForm() {
         <input
           className={inputClass}
           aria-label="Your name"
-          placeholder="Your name"
+          name="displayName"
+          placeholder="e.g. Alex…"
           value={name}
           maxLength={24}
           autoComplete="name"
           onChange={(e) => setName(e.target.value)}
-          autoFocus
+          autoFocus={window.matchMedia("(pointer: fine)").matches}
         />
       </label>
       {/* Location only. Everything else is set in the lobby, where the group can see it and where
           somebody is waiting for people to join anyway. */}
-      <LocationPicker filters={filters} onChange={setFilters} onSearchPendingChange={setSearchPending} />
+      <LocationPicker
+        filters={filters}
+        onChange={setFilters}
+        onSearchPendingChange={setSearchPending}
+        deviceLocation={loc}
+        deferDeviceLocation={locPending}
+      />
       {error && (
         <p role="alert" className="text-sm text-flare">
           {error}
@@ -97,14 +104,18 @@ function CreateForm() {
       )}
       <button
         type="submit"
-        disabled={!name.trim() || busy || searchPending}
+        disabled={!name.trim() || busy || searchPending || waitingForLocation}
         className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
       >
-        {busy ? "Shuffling the deck…" : searchPending ? "Finding your location…" : "Deal the cards"}
+        {busy
+          ? "Creating room…"
+          : searchPending || waitingForLocation
+            ? "Finding your location…"
+            : "Create room"}
       </button>
-      {locOff && (
-        <p className="text-center text-sm text-muted">
-          location's off. search a zip or town above, or you'll get a default area.
+      {!usingExplicitCenter && !locPending && !loc && (
+        <p className="text-center text-sm text-muted" role="status">
+          Your location is unavailable. Search for a ZIP code or town, or use New York City.
         </p>
       )}
     </form>
@@ -152,12 +163,13 @@ function JoinForm() {
         <input
           className={inputClass}
           aria-label="Your name"
-          placeholder="Your name"
+          name="displayName"
+          placeholder="e.g. Alex…"
           value={name}
           maxLength={24}
           autoComplete="name"
           onChange={(e) => setName(e.target.value)}
-          autoFocus
+          autoFocus={window.matchMedia("(pointer: fine)").matches}
         />
       </label>
       {/* No maxLength: a pasted invite link has to arrive whole for the parser to find the code in it. */}
@@ -166,7 +178,8 @@ function JoinForm() {
         <input
           className={`${inputClass} tracking-[0.4em] uppercase`}
           aria-label="Session code"
-          placeholder="CODE"
+          name="code"
+          placeholder="e.g. ABCDEF…"
           // Not a field any password manager or address book has a value for.
           autoComplete="off"
           value={code}
@@ -198,22 +211,15 @@ function JoinForm() {
 }
 
 export default function Landing() {
-  /*
-   * The manifest's two home-screen shortcuts land here with `?new=1` or `?join=1`, so a long-press on
-   * the installed icon opens the dialog rather than the page behind it. Read once, on mount: they are
-   * an entry point, not state, and leaving them in the address bar would reopen the dialog on every
-   * back-navigation.
-   */
-  const [modal, setModal] = useState<"create" | "join" | null>(() => {
-    const asked = new URLSearchParams(window.location.search);
-    if (asked.has("new")) return "create";
-    if (asked.has("join")) return "join";
-    return null;
-  });
-  useEffect(() => {
-    if (!window.location.search) return;
-    window.history.replaceState(null, "", window.location.pathname);
-  }, []);
+  const [params, setParams] = useSearchParams();
+  const modal = params.has("new") ? "create" : params.has("join") ? "join" : null;
+  function setModal(next: "create" | "join" | null) {
+    const updated = new URLSearchParams(params);
+    updated.delete("new");
+    updated.delete("join");
+    if (next) updated.set(next === "create" ? "new" : "join", "1");
+    setParams(updated, { replace: next === null, preventScrollReset: true });
+  }
 
   return (
     <main id="main-content" tabIndex={-1} className="landing">
@@ -277,7 +283,9 @@ export default function Landing() {
         <div className="how-step">
           <span className="step-number">03</span>
           <h2>Go eat something.</h2>
-          <p>The most-liked place wins. The group chat can take the night off.</p>
+          <p>
+            Yes votes earn 1 point, super-likes earn 2, and a veto takes a place out. The highest score wins.
+          </p>
         </div>
       </section>
 

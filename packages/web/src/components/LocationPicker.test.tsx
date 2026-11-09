@@ -12,7 +12,9 @@ describe("location search", () => {
   it("distinguishes an unavailable search from a place with no matches", async () => {
     vi.mocked(geocode).mockRejectedValue(new Error("Location search is unavailable. Try again shortly."));
     render(<LocationPicker filters={DEFAULT_FILTERS} onChange={vi.fn()} />);
-    fireEvent.change(screen.getByPlaceholderText("Zip or town"), { target: { value: "Denver" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "ZIP code or town" }), {
+      target: { value: "Denver" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Go" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Location search is unavailable");
   });
@@ -26,7 +28,7 @@ describe("location search", () => {
     );
     const onChange = vi.fn();
     render(<LocationPicker filters={DEFAULT_FILTERS} onChange={onChange} />);
-    const field = screen.getByPlaceholderText("Zip or town");
+    const field = screen.getByRole("textbox", { name: "ZIP code or town" });
     fireEvent.change(field, { target: { value: "Denver" } });
     fireEvent.click(screen.getByRole("button", { name: "Go" }));
     fireEvent.change(field, { target: { value: "Boulder" } });
@@ -45,7 +47,9 @@ describe("location search", () => {
     );
     const onChange = vi.fn();
     const view = render(<LocationPicker filters={DEFAULT_FILTERS} onChange={onChange} />);
-    fireEvent.change(screen.getByPlaceholderText("Zip or town"), { target: { value: "Denver" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "ZIP code or town" }), {
+      target: { value: "Denver" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Go" }));
     view.rerender(
       <LocationPicker filters={{ ...DEFAULT_FILTERS, categories: ["pizza"] }} onChange={onChange} />,
@@ -65,7 +69,9 @@ describe("location search", () => {
     );
     const onChange = vi.fn();
     render(<LocationPicker filters={DEFAULT_FILTERS} onChange={onChange} />);
-    fireEvent.change(screen.getByPlaceholderText("Zip or town"), { target: { value: "Denver" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "ZIP code or town" }), {
+      target: { value: "Denver" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Go" }));
     fireEvent.click(screen.getByRole("button", { name: "NYC neighborhoods" }));
     fireEvent.click(screen.getByRole("button", { name: "Williamsburg" }));

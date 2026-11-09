@@ -26,7 +26,7 @@ test("an unavailable location search keeps the query and can be retried", async 
   await page.getByRole("button", { name: "Start a session", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Start a session" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
-  const field = dialog.getByRole("textbox", { name: "Zip or town" });
+  const field = dialog.getByRole("textbox", { name: "ZIP code or town" });
   await field.fill("Denver");
   await dialog.getByRole("button", { name: "Go", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("Location search is unavailable");
@@ -55,12 +55,12 @@ test("changing a location preserves the selected town until a replacement is cho
   await page.getByRole("button", { name: "Start a session", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Start a session" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
-  await dialog.getByRole("textbox", { name: "Zip or town" }).fill("Denver");
+  await dialog.getByRole("textbox", { name: "ZIP code or town" }).fill("Denver");
   await dialog.getByRole("button", { name: "Go", exact: true }).click();
   await expect(dialog.getByText("Denver, CO", { exact: true })).toBeVisible();
   const change = dialog.getByRole("button", { name: "Change", exact: true });
   await change.click();
-  const search = dialog.getByRole("textbox", { name: "Zip or town" });
+  const search = dialog.getByRole("textbox", { name: "ZIP code or town" });
   await expect(search).toBeFocused();
   await search.fill("Boulder");
   for (const width of [1440, 390, 320]) {

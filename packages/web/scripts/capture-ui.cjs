@@ -140,7 +140,7 @@ async function setup(page, name) {
         });
       }
       if (status === "decided") {
-        send({ type: "deck", restaurants: places, demo: "sample" });
+        send({ type: "deck", restaurants: places });
         if (name === "no-match") send({ type: "no_match", vetoedCount: 3 });
         else
           send({
@@ -162,11 +162,11 @@ async function setup(page, name) {
     const dialog = page.getByRole("dialog", { name: "Start a session" });
     await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
     if (name === "create-error") {
-      await dialog.getByRole("button", { name: "Deal the cards" }).click();
+      await dialog.getByRole("button", { name: "Create room" }).click();
       await dialog.getByRole("alert").waitFor();
     }
     if (name === "location-error") {
-      await dialog.getByRole("textbox", { name: "Zip or town" }).fill("Denver");
+      await dialog.getByRole("textbox", { name: "ZIP code or town" }).fill("Denver");
       await dialog.getByRole("button", { name: "Go", exact: true }).click();
       await dialog.getByRole("alert").waitFor();
     }
@@ -183,7 +183,7 @@ async function setup(page, name) {
     await page.getByRole("textbox", { name: "Invite link to copy" }).waitFor();
   }
   if (name === "winner-share-error") {
-    await page.getByRole("button", { name: "Share dinner plan" }).click();
+    await page.getByRole("button", { name: "Send the plan" }).click();
     await page.getByRole("textbox", { name: "Dinner plan to copy" }).waitFor();
   }
   if (name === "filters") {
@@ -205,7 +205,7 @@ async function setup(page, name) {
         : name === "empty-deck"
           ? "Nothing survived the filters."
           : name === "no-match"
-            ? "Everything got vetoed."
+            ? "No eligible pick."
             : ["winner", "winner-share-error", "directions"].includes(name)
               ? /Dinner is handled/
               : ["swiping", "details"].includes(name)

@@ -49,6 +49,8 @@ export interface SessionState {
   nudges: number;
   vetoUsed: boolean;
   roundEndsAt: number | null;
+  deckRevision: number;
+  roundId: number;
   progress: Progress | null;
   match: MatchState;
   vibeCounts: Partial<Record<Vibe, number>>;
@@ -72,6 +74,8 @@ export const initialSessionState: SessionState = {
   nudges: 0,
   vetoUsed: false,
   roundEndsAt: null,
+  deckRevision: 0,
+  roundId: 0,
   progress: null,
   match: null,
   vibeCounts: {},
@@ -111,6 +115,8 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
         match: null,
         progress: null,
         deck: msg.restaurants,
+        deckRevision: state.deckRevision + 1,
+        roundId: msg.roundId ?? 1,
         demo: msg.demo ?? null,
         deckNote: [msg.vibeEffect, msg.searchNote].filter(Boolean).join(" ") || null,
         behindBy: msg.behindBy ?? 0,
@@ -121,6 +127,8 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
         error: null,
         reactions: [],
       };
+    case "round_clock":
+      return { ...state, roundEndsAt: msg.roundEndsAt };
     case "vote_progress":
       return {
         ...state,
@@ -135,6 +143,7 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
     case "match":
       return {
         ...state,
+        demo: msg.demo ?? state.demo,
         match: {
           kind: "match",
           restaurant: msg.restaurant,
@@ -151,7 +160,11 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
     case "nudge":
       return { ...state, nudges: state.nudges + 1 };
     case "no_match":
-      return { ...state, match: { kind: "none", vetoedCount: msg.vetoedCount ?? 0 } };
+      return {
+        ...state,
+        demo: msg.demo ?? state.demo,
+        match: { kind: "none", vetoedCount: msg.vetoedCount ?? 0 },
+      };
     case "history":
       return { ...state, visited: msg.visited };
     case "vibes":

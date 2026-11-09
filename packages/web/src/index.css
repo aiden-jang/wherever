@@ -192,18 +192,6 @@ body {
 }
 
 /* Slow-drifting sunset aurora behind everything. */
-@keyframes aurora-drift {
-  0% {
-    transform: translate3d(-8%, -6%, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(6%, 8%, 0) scale(1.15);
-  }
-  100% {
-    transform: translate3d(-8%, -6%, 0) scale(1);
-  }
-}
-
 /* Solid ink backdrop pinned to the viewport, behind the aurora. Because it's fixed it always fills
    the visible screen regardless of where <body> is. That matters when a modal opens: the scroll lock
    pins <body> with position:fixed and top:-scrollY, shifting it up and leaving an unpainted gap at
@@ -234,7 +222,6 @@ body {
   transition:
     background 2.4s ease,
     opacity 2.4s ease;
-  animation: aurora-drift 18s ease-in-out infinite;
 }
 
 /* Fine film grain over the whole page for a tactile, less-flat feel. */
@@ -442,7 +429,6 @@ summary,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aurora,
   .float {
     animation: none;
   }

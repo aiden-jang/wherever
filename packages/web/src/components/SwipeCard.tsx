@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import { type Restaurant, type SwipeDirection } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
@@ -54,9 +54,7 @@ export function SwipeCard({
         ? [restaurant.imageUrl]
         : [];
   const [photoIdx, setPhotoIdx] = useState(0);
-  useEffect(() => {
-    setPhotoIdx(0);
-  }, [restaurant.id]);
+  const nextPhoto = () => setPhotoIdx((index) => (index + 1) % photos.length);
 
   return (
     <motion.div
@@ -88,7 +86,7 @@ export function SwipeCard({
           target.closest?.("[data-card-photo]") &&
           !target.closest?.("[data-card-info]")
         ) {
-          setPhotoIdx((i) => (i + 1) % photos.length);
+          nextPhoto();
         } else {
           onOpenDetail(restaurant);
         }
@@ -105,6 +103,7 @@ export function SwipeCard({
         photoUrl={photos[photoIdx] ?? restaurant.imageUrl}
         photoCount={photos.length}
         photoIdx={photoIdx}
+        onNextPhoto={nextPhoto}
       />
       {/* The details affordance: a real hit target (data-card-info) so the tap handler opens details
           when it's tapped, even though the surrounding photo cycles. */}

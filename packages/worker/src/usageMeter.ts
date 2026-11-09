@@ -20,7 +20,7 @@ function monthlyCap(value: string | undefined): number {
   return Number.isSafeInteger(cap) ? Math.min(cap, MAX_CAP) : 0;
 }
 
-/* Reserve before contacting Google. Failed attempts also consume budget; cached responses do not. */
+/* Reserve before contacting Google. Failed attempts also consume budget. */
 export class UsageMeter extends DurableObject<Env> {
   private caps(): Record<UsageKind, number> {
     return {

@@ -2,15 +2,15 @@ import { writeEvent } from "./events.js";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
-  applyVibe,
   blockedIds,
   radiusLabel,
   resolveVibe,
   shuffleDeck,
-  vibeEffectLine,
+  vibeOption,
   widerRadius,
   type DemoReason,
   type Restaurant,
+  type SessionFilters,
   type Vibe,
   type VisitedPlace,
 } from "@wherever/shared";
@@ -19,6 +19,7 @@ import { createRestaurantSource, isDemoSource, MockRestaurantSource } from "./re
 import { visitedPlaces } from "./db/schema.js";
 import type { Env } from "./env.js";
 import type { SessionMeta } from "./roomState.js";
+import { storedPlace, type RoomPlaces } from "./roomPlaces.js";
 import { assertRoomLive, ExpiredRoomError, putLive, SESSION_TTL_MS } from "./sessionRetention.js";
 
 /* Deck sourcing combines the provider, monthly search budget, vibe filters, and visited history. It does not own sockets. */
@@ -27,11 +28,30 @@ import { assertRoomLive, ExpiredRoomError, putLive, SESSION_TTL_MS } from "./ses
 export async function visitedFor(env: Env, code: string): Promise<VisitedPlace[]> {
   const db = drizzle(env.DB);
   const rows = await db.select().from(visitedPlaces).where(eq(visitedPlaces.sessionCode, code));
+  if (
+    env.RESTAURANT_SOURCE === "google" &&
+    env.GOOGLE_PLACES_API_KEY &&
+    rows.some((row) => row.name && !row.restaurantId.startsWith("mock-"))
+  ) {
+    await env.DB.prepare(
+      "UPDATE visited_places SET name = '' WHERE session_code = ? AND restaurant_id NOT LIKE 'mock-%'",
+    )
+      .bind(code)
+      .run();
+    for (const row of rows) if (!row.restaurantId.startsWith("mock-")) row.name = "";
+  }
   return rows.map((r) => ({
     restaurantId: r.restaurantId,
     name: r.name,
     visitedAt: r.visitedAt.toISOString(),
     ...(r.neverAgain ? { neverAgain: true } : {}),
+  }));
+}
+
+export async function presentHistory(env: Env, code: string, places: RoomPlaces): Promise<VisitedPlace[]> {
+  return (await visitedFor(env, code)).map((entry) => ({
+    ...entry,
+    name: entry.name || places.name(entry.restaurantId) || "Restaurant details unavailable",
   }));
 }
 
@@ -42,7 +62,13 @@ export async function recordVisit(env: Env, code: string, restaurantId: string, 
     .from(visitedPlaces)
     .where(and(eq(visitedPlaces.sessionCode, code), eq(visitedPlaces.restaurantId, restaurantId)))
     .get();
-  if (existing) return;
+  if (existing) {
+    await db
+      .update(visitedPlaces)
+      .set({ visitedAt: new Date(), name })
+      .where(eq(visitedPlaces.id, existing.id));
+    return;
+  }
   await env.DB.prepare(
     "INSERT INTO visited_places(id,session_code,restaurant_id,name) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM sessions WHERE code=? AND created_at>?)",
   )
@@ -78,6 +104,7 @@ interface DeckRequest {
   /** Tallied by the caller, which owns the votes; this module only reads the winner out of them. */
   vibeCounts: Partial<Record<Vibe, number>>;
   exclude?: ReadonlySet<string>;
+  places?: RoomPlaces;
 }
 
 /** Fetch from the source, drop anything the group already picked, cache it. */
@@ -87,6 +114,7 @@ export async function fetchFreshDeck({
   meta,
   vibeCounts,
   exclude = new Set(),
+  places,
 }: DeckRequest): Promise<Restaurant[]> {
   const kind = env.RESTAURANT_SOURCE ?? "mock";
   const apiKey = kind === "google" ? env.GOOGLE_PLACES_API_KEY : undefined;
@@ -111,44 +139,43 @@ export async function fetchFreshDeck({
     demo = isDemoSource(kind, apiKey) ? "sample" : undefined;
   }
 
-  /*
-   * The vibe, folded into the filters the deck is actually fetched with, and saved onto the session so
-   * the summary everyone is reading describes the deck they were dealt. No vibe changes nothing, which
-   * is why it is opt-in.
-   */
   const reading = resolveVibe(vibeCounts);
-  if (reading.vibe) {
-    // Describe the change before making it: applyVibe overwrites the very filters it is measured
-    // against, and this is the only place both halves exist.
-    await putLive(storage, { vibeEffect: vibeEffectLine(reading.vibe, meta.filters) });
-    meta.filters = applyVibe(meta.filters, reading.vibe);
-    await putLive(storage, { meta });
-  } else {
-    await storage.delete("vibeEffect");
-  }
+  const preference = reading.vibe ? vibeOption(reading.vibe) : undefined;
+  const filters = preference?.filters.shuffle ? { ...meta.filters, shuffle: true } : meta.filters;
 
   await assertRoomLive(storage);
-  const all = await source.fetchDeck(meta.filters);
-  /* Everywhere the group has been, minus the ones whose cooldown expired. Excluding them forever meant
-     a group that actually used the app shrank its own deck one dinner at a time. See revisit.ts. */
+  const results = await source.fetchDeck(filters);
+  const all = preference
+    ? [...results].sort(
+        (a, b) => preferenceScore(b, preference.filters) - preferenceScore(a, preference.filters),
+      )
+    : results;
+  // Fresh rounds skip earlier picks. Same-deck replay handles explicit exclusions separately.
   const blocked = blockedIds(await visitedFor(env, meta.code));
   /* Every card this session has already been dealt, not just the deck in hand. The reserve means a
      later fetch would otherwise offer round one's places back as new ones. */
-  return storage.transaction(async (transaction) => {
-    await assertRoomLive(transaction);
-    const seen = new Set((await transaction.get<string[]>("seenIds")) ?? []);
-    const filtered = all.filter((r) => !blocked.has(r.id) && !exclude.has(r.id) && !seen.has(r.id));
-    const ordered = meta.filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
-    const deck = ordered.slice(0, ROUND_SIZE);
-    for (const restaurant of deck) seen.add(restaurant.id);
-    await transaction.put({
-      deck,
-      reserve: ordered.slice(ROUND_SIZE),
-      seenIds: [...seen],
-      demoMode: demo ?? null,
+  return storage
+    .transaction(async (transaction) => {
+      await assertRoomLive(transaction);
+      const seen = new Set((await transaction.get<string[]>("seenIds")) ?? []);
+      const filtered = all.filter((r) => !blocked.has(r.id) && !exclude.has(r.id) && !seen.has(r.id));
+      const ordered = filters.shuffle ? shuffleDeck(filtered, meta.code) : filtered;
+      const deck = ordered.slice(0, ROUND_SIZE);
+      if (deck.length === 0) return deck;
+      for (const restaurant of deck) seen.add(restaurant.id);
+      await transaction.put({
+        deck: deck.map(storedPlace),
+        reserve: ordered.slice(ROUND_SIZE).map(storedPlace),
+        seenIds: [...seen],
+        demoMode: demo ?? null,
+        vibeEffect: preference ? `Group preference: ${preference.label}. Your filters still apply.` : null,
+      });
+      return deck;
+    })
+    .then((deck) => {
+      if (deck.length) places?.remember(all);
+      return deck;
     });
-    return deck;
-  });
 }
 
 async function rememberDealt(storage: DurableObjectStorage, deck: Restaurant[]): Promise<void> {
@@ -158,50 +185,62 @@ async function rememberDealt(storage: DurableObjectStorage, deck: Restaurant[]):
 }
 
 const spentLine = (meters: number) =>
-  `That's everywhere within ${radiusLabel(meters)}, picked clean. Start a fresh session somewhere else.`;
+  `No new places turned up within ${radiusLabel(meters)}. Try the same places or start a room in another area.`;
 
-/* `canPay` is asked only once the reserve is gone: the cap counts paid fetches, and a reserve round
-   is not one. */
+function preferenceScore(place: Restaurant, preference: Partial<SessionFilters>): number {
+  return (
+    Number(preference.priceTiers?.includes(place.priceTier) ?? false) +
+    Number(preference.radiusMeters !== undefined && place.distanceMeters <= preference.radiusMeters) +
+    Number(preference.minRating !== undefined && (place.rating ?? 0) >= preference.minRating) +
+    Number(preference.openNow === true && place.openNow === true) +
+    (preference.amenities?.filter((amenity) => place.amenities?.[amenity]).length ?? 0)
+  );
+}
+
 export async function nextRoundDeck(
   request: DeckRequest,
   canPay: boolean,
 ): Promise<{ deck: Restaurant[]; paid: boolean; note?: string } | { error: string }> {
-  const held = await dealFromReserve(request.storage);
-  if (held) return { deck: held, paid: false };
-  if (!canPay) return { error: "you've been through a lot of rounds. start a fresh session to keep going." };
+  const blocked = blockedIds(await visitedFor(request.env, request.meta.code));
+  const held = await dealFromReserve(request.storage, blocked);
+  if (held) {
+    const deck = request.places
+      ? await Promise.all(held.map((place) => request.places!.show(place, request.meta.filters)))
+      : held;
+    return { deck, paid: false };
+  }
+  if (!canPay) return { error: "This room has used its new searches. Replay the deck or start a new room." };
 
-  /* Widen before the call, not after a disappointing one. An empty reserve means every place this
-     radius returns has been dealt, so the same query provably cannot find anything new. */
-  const from = request.meta.filters.radiusMeters;
+  const from = (await request.storage.get<number>("lastSearchRadius")) ?? request.meta.filters.radiusMeters;
   const wider = widerRadius(from);
   if (wider === null) {
     writeEvent(request.env, "run_it_back_spent");
     return { error: spentLine(from) };
   }
   writeEvent(request.env, "run_it_back", String(wider));
-  /* Kept even when the wider search also comes up empty, so the next attempt steps further out
-     instead of paying again for the radius that just failed. The caller broadcasts either way. */
-  request.meta.filters = { ...request.meta.filters, radiusMeters: wider };
-  await putLive(request.storage, { meta: request.meta });
-
+  const meta = { ...request.meta, filters: { ...request.meta.filters, radiusMeters: wider } };
   let deck: Restaurant[];
-  // Fetch BEFORE the caller tears down the current result, or a picked-clean area leaves a late
-  // joiner on a null winner being told nobody liked anything.
   try {
-    deck = await fetchFreshDeck(request);
+    deck = await fetchFreshDeck({ ...request, meta });
   } catch (error) {
     if (error instanceof ExpiredRoomError) throw error;
     console.error("restaurant_deck_failed", error);
-    return { error: "couldn't load more spots right now. give it a moment and try again." };
+    return { error: "Couldn’t load more places. Try again in a moment." };
   }
+  await putLive(request.storage, { lastSearchRadius: wider });
   if (deck.length === 0) return { error: spentLine(wider) };
-  const note = `Nothing new within ${radiusLabel(from)}, so the search went out to ${radiusLabel(wider)}.`;
-  return { deck, paid: true, note };
+  request.meta.filters = meta.filters;
+  return { deck, paid: true, note: `Expanded the search to ${radiusLabel(wider)}.` };
 }
 
 /** The overflow from the last fetch: a free round, already paid for. */
-export async function dealFromReserve(storage: DurableObjectStorage): Promise<Restaurant[] | null> {
-  const reserve = (await storage.get<Restaurant[]>("reserve")) ?? [];
+async function dealFromReserve(
+  storage: DurableObjectStorage,
+  blocked: ReadonlySet<string>,
+): Promise<Restaurant[] | null> {
+  const reserve = ((await storage.get<Restaurant[]>("reserve")) ?? []).filter(
+    (place) => !blocked.has(place.id),
+  );
   // A round of one or two is worse than saying the area is spent, so a thin reserve is not dealt.
   if (reserve.length < MIN_ROUND) return null;
   const deck = reserve.slice(0, ROUND_SIZE);
@@ -210,7 +249,6 @@ export async function dealFromReserve(storage: DurableObjectStorage): Promise<Re
   return deck;
 }
 
-export async function getOrCreateDeck(request: DeckRequest): Promise<Restaurant[]> {
-  const cached = await request.storage.get<Restaurant[]>("deck");
-  return cached ?? fetchFreshDeck(request);
+export async function readDeck(storage: DurableObjectStorage): Promise<Restaurant[]> {
+  return (await storage.get<Restaurant[]>("deck")) ?? [];
 }

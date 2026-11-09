@@ -24,6 +24,7 @@ async function create() {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       displayName: "Synthetic owner",
+      clientId: crypto.randomUUID(),
       filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
     }),
   });
@@ -109,7 +110,7 @@ it("clears an orphaned legacy room on access and never reinitializes an expired 
     await state.storage.delete("expiresAt");
     await state.storage.put("winner", { private: true });
     await instance.alarm();
-    expect(await instance.initialize(meta)).toBe(false);
+    expect(await instance.initialize(meta, Date.now(), crypto.randomUUID())).toBe(false);
     expect(Object.fromEntries(await state.storage.list())).toEqual({ expired: true, expiredCode: code });
   });
   await recordVisit(bindings, code, "late", "Must not return");

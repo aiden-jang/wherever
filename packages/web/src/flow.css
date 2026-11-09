@@ -58,7 +58,7 @@
 .gallery-next {
   right: 12px;
 }
-.gallery-arrow:disabled {
+.gallery-arrow[aria-disabled="true"] {
   opacity: 0.4;
 }
 .gallery-count {
@@ -84,10 +84,6 @@
 }
 .detail-hours li {
   padding: 3px 0;
-}
-.hours-today {
-  font-weight: 650;
-  color: var(--color-cream);
 }
 .restaurant-detail .hours-today {
   color: var(--color-ink);

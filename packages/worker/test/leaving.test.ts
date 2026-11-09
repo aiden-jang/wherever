@@ -8,9 +8,10 @@ import type { ClientMessage, ServerMessage } from "@wherever/shared";
  * is not cosmetic: the same count decides "0 of 2 done" and how many people a result was picked by.
  */
 
+const creatorId = crypto.randomUUID();
 const BASE = "https://wherever.test";
 
-async function join(code: string, displayName: string) {
+async function join(code: string, displayName: string, clientId?: string) {
   const res = await workers.default.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
   const socket = res.webSocket!;
   socket.accept();
@@ -30,7 +31,7 @@ async function join(code: string, displayName: string) {
     }
     throw new Error(`never got ${type}; saw ${seen.map((m) => m.type).join(", ")}`);
   };
-  send({ type: "join", code, displayName });
+  send({ type: "join", code, displayName, clientId });
   await waitFor("identity");
   return { send, seen, waitFor, close: () => socket.close() };
 }
@@ -41,13 +42,14 @@ describe("someone leaving", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        clientId: creatorId,
         displayName: "Alex",
         filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
       }),
     });
     const { code } = (await created.json()) as { code: string };
 
-    const host = await join(code, "Alex");
+    const host = await join(code, "Alex", creatorId);
     const sam = await join(code, "Sam");
 
     const both = await host.waitFor("session_state");

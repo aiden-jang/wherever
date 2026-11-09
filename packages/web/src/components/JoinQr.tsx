@@ -75,6 +75,8 @@ export function JoinQr({ code, url }: JoinQrProps) {
             <img
               src={image}
               alt={`QR code to join room ${code}`}
+              width={480}
+              height={480}
               className="aspect-square w-full max-w-[14rem] rounded-xl"
             />
           ) : (

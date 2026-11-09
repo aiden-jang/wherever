@@ -39,12 +39,16 @@ votes, each participant's keyed vote replaces its predecessor, and undo removes
 that participant's choice. Completion, the host, or the round alarm can decide.
 The pure decision core ranks non-vetoed places and retains backups.
 
-A host disconnect begins a grace deadline. Reassignment updates stored identities
-and live attachments; the alarm schedules the earliest host, round, or room expiry deadline. Roster
-and vote projections disclose only the fields allowed by the room's rules.
+Room creation reserves the host seat using the creator's browser credential. An
+invite alone cannot grant the seat. Existing rooms without a recorded host ask
+visitors to create a new room. A connected host's departure starts a grace
+deadline. If no guest with a valid host credential remains when it expires,
+the seat stays reserved for its current host. Reassignment updates the stored
+owner and live attachments. The alarm also tracks round deadlines and room expiry.
 
-D1 holds session records and visited history; live metadata, votes, winner, decks,
-reserves, and identity maps are in Durable Object storage. New rooms expire seven
+D1 holds session records and past picks. Durable Object storage keeps room metadata,
+votes, identity maps, and the deck and verdict references. Live Places records stay
+in the active object’s display state, with only their place IDs persisted. New rooms expire seven
 days after creation. Expiry clears both stores, closes sockets, and leaves only a
 non-personal expired-code marker so late provider replies and reconnects cannot
 restore the room. Writes check expiry inside storage transactions.
@@ -59,31 +63,33 @@ client data authorize room operations.
 
 `restaurantSource.ts` owns source selection, transport, and source-independent
 filter predicates. `googlePlace.ts` normalizes provider fields and constructs
-validated photo references. `deckSource.ts` combines vibe filters, visited cooldowns,
-never-again choices, seen IDs, a shuffled or ordered deck, and its reserve.
+validated photo references with author credits. `deckSource.ts` orders filtered
+places by the group’s vibe without removing explicit requirements. It also keeps
+track of past picks, exclusions, seen IDs, and the reserve.
 
 A new round uses reserve data before another search. Exhausting the reserve widens
 the radius; failure preserves the current result and permits retry. Same-deck
 replays do not consume the new-search cap. Missing setup and exhausted budgets
 carry distinct sample-data reasons.
 
-The usage meter reserves search/photo calls before their upstream requests.
-Geocoding uses the same atomic reservation meter, plus its own per-IP rate limit
-and edge cache. Provider rejection returns a retryable service error; only a real
-zero-result response is reported as a missing place. These are call limits, not
-provider billing guarantees.
+The usage meter reserves search, details, photo, and geocoding calls before their
+upstream requests. Details requests use the search allowance when a resumed room
+needs live place data again. Photos and geocode responses are sent without a shared
+cache. Provider failures preserve a retryable room, and an empty first search leaves
+the filters editable. These limits count calls rather than provider charges.
 
 ## Client composition and lifetime
 
-`useSessionSocket` owns connection/retry mechanics and the per-room command buffer.
-`sessionReducer` applies messages coherently. A room-code change resets the state
-before paint; callbacks from old sockets and delayed transitions are ignored.
+`useSessionSocket` owns connection and retry mechanics. Voting pauses on disconnect.
+After reconnect, the server supplies the confirmed votes and active round, and any
+unconfirmed card is offered again. Votes carry the round identifier.
+`sessionReducer` applies snapshots and resets room state on a code change.
 The route also keys room UI by code so dialogs, sharing, and announcements reset.
 
 The lobby delegates invites and the active round to focused components. Voting
 state stays with the deck, gestures with the active card, and round rules with
 their own controls. Results separate winner presentation, copy generation, and
-visited history.
+past picks.
 
 Location results apply to the latest non-location filters; editing the query or
 choosing a location cancels and invalidates an older lookup. Creation and location

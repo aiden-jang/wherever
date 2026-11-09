@@ -2,8 +2,18 @@
 // API and WebSocket traffic always go to the network, never the cache.
 
 // Clear older shells and asset entries when the caching boundaries change.
-const CACHE = "wherever-v5";
+const CACHE = "wherever-v6";
 const SHELL = "/";
+const MAX_ASSETS = 48;
+
+async function storeAsset(request, response) {
+  const cache = await caches.open(CACHE);
+  await cache.put(request, response);
+  const assets = (await cache.keys()).filter((entry) => new URL(entry.url).pathname !== SHELL);
+  await Promise.all(
+    assets.slice(0, Math.max(0, assets.length - MAX_ASSETS)).map((entry) => cache.delete(entry)),
+  );
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.add(SHELL)));
@@ -12,7 +22,13 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))),
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.filter((k) => k.startsWith("wherever-") && k !== CACHE).map((k) => caches.delete(k)),
+        ),
+      ),
   );
   self.clients.claim();
 });
@@ -63,12 +79,12 @@ self.addEventListener("fetch", (event) => {
         .then((res) => {
           if (res.ok) {
             const copy = res.clone();
-            event.waitUntil(caches.open(CACHE).then((c) => c.put(request, copy)));
+            event.waitUntil(storeAsset(request, copy));
           }
           return res;
         })
         // A failed revalidation must not become the answer when a cached copy exists.
-        .catch(() => hit);
+        .catch(() => hit ?? new Response(null, { status: 503 }));
       event.waitUntil(fresh.then(() => undefined));
       return hit ?? fresh;
     }),

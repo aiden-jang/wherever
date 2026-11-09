@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   AMENITY_OPTIONS,
   CUISINE_OPTIONS,
+  googleTypeFor,
   MIN_REVIEWS_OPTIONS,
   PRICE_OPTIONS,
   RADIUS_OPTIONS,
@@ -9,11 +10,10 @@ import {
   SORT_OPTIONS,
   type AmenityKey,
   type PriceTier,
-  type RestaurantSort,
   type SessionFilters,
 } from "@wherever/shared";
 
-import { FieldLabel, Chevron, segBase, segOn, segOff } from "./FilterControls.js";
+import { FieldLabel, Chevron, FilterChoices, segBase, segOn, segOff } from "./FilterControls.js";
 import { LocationPicker } from "./LocationPicker.js";
 import { RoundRules } from "./RoundRules.js";
 /**
@@ -25,7 +25,9 @@ import { RoundRules } from "./RoundRules.js";
 export function FilterFields({
   filters,
   onChange,
+  onSearchPendingChange,
 }: {
+  onSearchPendingChange?: (pending: boolean) => void;
   filters: SessionFilters;
   onChange: (next: SessionFilters) => void;
 }) {
@@ -38,11 +40,19 @@ export function FilterFields({
   const hasHiddenSelected = moreCuisines.some((c) => filters.categories.includes(c.value));
   const [showAllCuisines, setShowAllCuisines] = useState(hasHiddenSelected);
 
+  function removeCuisineType(categories: string[], value: string): string[] {
+    const type = googleTypeFor(value);
+    return categories.filter((category) => category !== value && (!type || googleTypeFor(category) !== type));
+  }
+
   function toggleCuisine(value: string) {
     const has = filters.categories.includes(value);
     onChange({
       ...filters,
       categories: has ? filters.categories.filter((c) => c !== value) : [...filters.categories, value],
+      excludedCategories: has
+        ? filters.excludedCategories
+        : removeCuisineType(filters.excludedCategories ?? [], value),
     });
   }
 
@@ -70,6 +80,7 @@ export function FilterFields({
     onChange({
       ...filters,
       excludedCategories: has ? current.filter((c) => c !== value) : [...current, value],
+      categories: has ? filters.categories : removeCuisineType(filters.categories, value),
     });
   }
 
@@ -82,7 +93,7 @@ export function FilterFields({
 
   return (
     <div className="filter-fields flex flex-col gap-4">
-      <LocationPicker filters={filters} onChange={onChange} />
+      <LocationPicker filters={filters} onChange={onChange} onSearchPendingChange={onSearchPendingChange} />
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Cravings (pick some, or leave it to fate)</FieldLabel>
@@ -118,26 +129,16 @@ export function FilterFields({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <FieldLabel>How far you'll actually go</FieldLabel>
-        <div className="filter-options gap-2">
-          {RADIUS_OPTIONS.map((o) => (
-            <button
-              key={o.meters}
-              type="button"
-              aria-pressed={filters.radiusMeters === o.meters}
-              onClick={() => onChange({ ...filters, radiusMeters: o.meters })}
-              className={`${segBase} ${filters.radiusMeters === o.meters ? segOn : segOff}`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <FilterChoices
+        label="Distance"
+        options={RADIUS_OPTIONS.map(({ meters: value, label }) => ({ value, label }))}
+        value={filters.radiusMeters}
+        onChange={(radiusMeters) => onChange({ ...filters, radiusMeters })}
+      />
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Budget, realistically</FieldLabel>
-        <div className="filter-options gap-2">
+        <div role="group" aria-label="Price levels" className="filter-options gap-2">
           {PRICE_OPTIONS.map((o) => {
             const on = (filters.priceTiers ?? []).includes(o.tier as PriceTier);
             return (
@@ -160,45 +161,19 @@ export function FilterFields({
         </span>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <FieldLabel>Standards</FieldLabel>
-        <div className="filter-options gap-2">
-          {RATING_OPTIONS.map((o) => {
-            const on = (filters.minRating ?? 0) === o.value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                aria-pressed={on}
-                onClick={() => onChange({ ...filters, minRating: o.value })}
-                className={`${segBase} ${on ? segOn : segOff}`}
-              >
-                {o.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <FilterChoices
+        label="Minimum rating"
+        options={RATING_OPTIONS}
+        value={filters.minRating ?? 0}
+        onChange={(minRating) => onChange({ ...filters, minRating })}
+      />
 
-      <div className="flex flex-col gap-2">
-        <FieldLabel>Enough reviews to trust it</FieldLabel>
-        <div className="filter-options gap-2">
-          {MIN_REVIEWS_OPTIONS.map((o) => {
-            const on = (filters.minReviews ?? 0) === o.value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                aria-pressed={on}
-                onClick={() => onChange({ ...filters, minReviews: o.value })}
-                className={`${segBase} ${on ? segOn : segOff}`}
-              >
-                {o.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <FilterChoices
+        label="Minimum number of reviews"
+        options={MIN_REVIEWS_OPTIONS}
+        value={filters.minReviews ?? 0}
+        onChange={(minReviews) => onChange({ ...filters, minReviews })}
+      />
 
       <button
         type="button"
@@ -235,7 +210,7 @@ export function FilterFields({
           className="flex w-full items-center justify-between px-4 py-3 text-left"
         >
           <span className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 font-semibold">Get picky</span>
+            <span className="shrink-0 font-semibold">More filters</span>
             {pickyCount > 0 && (
               <span className="shrink-0 whitespace-nowrap rounded-full bg-ember px-2 py-0.5 text-xs font-bold text-ink">
                 {pickyCount} on
@@ -299,25 +274,12 @@ export function FilterFields({
               <span className="text-xs text-muted">Anything you tap here won't show up.</span>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <FieldLabel>Order by</FieldLabel>
-              <div className="flex gap-2">
-                {SORT_OPTIONS.map((o) => {
-                  const on = (filters.sort ?? "popularity") === o.value;
-                  return (
-                    <button
-                      key={o.value}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => onChange({ ...filters, sort: o.value as RestaurantSort })}
-                      className={`${segBase} ${on ? segOn : segOff}`}
-                    >
-                      {o.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <FilterChoices
+              label="Order by"
+              options={SORT_OPTIONS}
+              value={filters.sort ?? "popularity"}
+              onChange={(sort) => onChange({ ...filters, sort })}
+            />
           </div>
         )}
       </div>

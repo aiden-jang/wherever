@@ -1,3 +1,4 @@
+import { CODE_ALPHABET, CODE_LENGTH } from "@wherever/shared";
 import { useEffect, useRef, useState } from "react";
 
 /* Scan a shared invite into a code; camera access is scoped to the open scanner. */
@@ -9,6 +10,7 @@ interface ScanQrProps {
 export function ScanQr({ onCode, onClose }: ScanQrProps) {
   const video = useRef<HTMLVideoElement>(null);
   const [fault, setFault] = useState<string | null>(null);
+  const [invalidCode, setInvalidCode] = useState(false);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -54,13 +56,28 @@ export function ScanQr({ onCode, onClose }: ScanQrProps) {
           try {
             const found = await detector.detect(video.current);
             if (stop) return;
-            const hit = found[0]?.rawValue;
-            if (hit) {
+            for (const { rawValue } of found) {
+              let code = rawValue.trim().toUpperCase();
+              try {
+                const url = new URL(rawValue);
+                code =
+                  url.origin === location.origin
+                    ? (url.pathname.match(/^\/s\/([^/]+)\/?$/i)?.[1] ?? "").toUpperCase()
+                    : "";
+              } catch {
+                // A printed invite may encode just the room code.
+              }
+              if (
+                code.length !== CODE_LENGTH ||
+                [...code].some((character) => !CODE_ALPHABET.includes(character))
+              )
+                continue;
               stop = true;
               release();
-              onCode(hit);
+              onCode(code);
               return;
             }
+            if (found.length) setInvalidCode(true);
           } catch {
             /* A frame that cannot be decoded is the normal case, not a failure. */
           }
@@ -93,6 +110,11 @@ export function ScanQr({ onCode, onClose }: ScanQrProps) {
           <video ref={video} muted playsInline className="aspect-square w-full object-cover" />
           <div className="pointer-events-none absolute inset-6 rounded-xl border-2 border-acid/70" />
         </div>
+      )}
+      {invalidCode && !fault && (
+        <p role="status" className="text-sm text-muted">
+          This QR code isn’t a Wherever invite. Try another code.
+        </p>
       )}
       <button
         type="button"

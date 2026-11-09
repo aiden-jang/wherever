@@ -53,7 +53,9 @@ export function Modal({ title, onClose, children }: ModalProps) {
         >
           ✕
         </button>
-        <h2 className="font-display text-3xl font-bold mb-5 pr-12">{title}</h2>
+        <h2 tabIndex={-1} className="font-display text-3xl font-bold mb-5 pr-12">
+          {title}
+        </h2>
         {children}
       </div>
     </div>

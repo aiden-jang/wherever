@@ -27,12 +27,20 @@ export type AmenityKey =
   | "liveMusic"
   | "goodForChildren";
 
+export interface PhotoCredit {
+  name: string;
+  url?: string;
+}
+
 export interface Restaurant {
+  source?: "google";
+  photoCredits?: Record<string, PhotoCredit[]>;
   id: string;
   name: string;
   /** Short category label, e.g. "Tacos", "Ramen". */
   category: string;
   priceTier: PriceTier;
+  priceUnknown?: boolean;
   /** 0-5, may be null when a source has no rating. */
   rating: number | null;
   /** Number of ratings behind the score, null when a source has none. */
@@ -62,6 +70,7 @@ export interface Restaurant {
   phone?: string | null;
   /** Whether the place is open at search time; null when hours are unknown. */
   openNow?: boolean | null;
+  availabilityCheckedAt?: number;
   /** Human-readable weekly hours, one line per day (Google's weekdayDescriptions). */
   hours?: string[] | null;
 }
@@ -128,12 +137,12 @@ export interface Session {
   participants: Participant[];
 }
 
-/** A restaurant the group has already gone to, hidden from future decks. */
+/** A restaurant picked earlier in this room. */
 export interface VisitedPlace {
   restaurantId: string;
   name: string;
   visitedAt: string;
-  /** Kept out of every future deck, not just the next few months. See revisit.ts. */
+  /** Excluded from all subsequent rounds in this room, including replay. */
   neverAgain?: boolean;
 }
 

@@ -1,5 +1,5 @@
-import type { DecisionResult, Participant, ServerMessage } from "@wherever/shared";
-import type { SessionMeta, SocketAttachment } from "./roomState.js";
+import type { DecisionResult, DemoReason, Participant, ServerMessage } from "@wherever/shared";
+import { socketIdentity, type SessionMeta, type SocketAttachment } from "./roomState.js";
 
 /* Fan-out and participant projections share one payload shape for joins and round transitions. */
 
@@ -9,7 +9,7 @@ export function attachmentsOn(ctx: DurableObjectState, exclude?: WebSocket): Soc
   for (const socket of ctx.getWebSockets()) {
     // During webSocketClose the closing socket is still returned here, so callers can exclude it.
     if (socket === exclude) continue;
-    const att = socket.deserializeAttachment() as SocketAttachment | null;
+    const att = socketIdentity(socket);
     if (att) seen.set(att.participantId, att);
   }
   return [...seen.values()];
@@ -30,7 +30,7 @@ export function sendTo(ws: WebSocket, message: ServerMessage): void {
 export function broadcastTo(ctx: DurableObjectState, message: ServerMessage, exclude?: WebSocket): void {
   const payload = JSON.stringify(message);
   for (const socket of ctx.getWebSockets()) {
-    if (socket === exclude) continue;
+    if (socket === exclude || !socketIdentity(socket)) continue;
     try {
       socket.send(payload);
     } catch {
@@ -45,10 +45,12 @@ export function resultMessage(
   totalParticipants: number,
   vetoedCount: number,
   round: number,
+  demo?: DemoReason,
 ): ServerMessage {
-  if (!result) return { type: "no_match", vetoedCount };
+  if (!result) return { type: "no_match", vetoedCount, ...(demo ? { demo } : {}) };
   return {
     type: "match",
+    ...(demo ? { demo } : {}),
     restaurant: result.restaurant,
     rightSwipes: result.rightSwipes,
     alternatives: result.alternatives ?? [],
@@ -65,19 +67,34 @@ export function resultMessage(
 export async function broadcastSessionState(ctx: DurableObjectState, closing?: WebSocket): Promise<void> {
   const meta = await ctx.storage.get<SessionMeta>("meta");
   if (!meta) return;
-  broadcastTo(
-    ctx,
-    {
-      type: "session_state",
-      session: {
-        id: meta.code,
-        code: meta.code,
-        status: meta.status,
-        voteMode: meta.voteMode,
-        filters: meta.filters,
-        participants: participantsOn(ctx, closing),
-      },
-    },
-    closing,
-  );
+  const { lat, lng, ...publicFilters } = meta.filters;
+  const participants = participantsOn(ctx, closing);
+  const hostId = await ctx.storage.get<string>("hostId");
+  for (const socket of ctx.getWebSockets()) {
+    const identity = socketIdentity(socket);
+    if (socket === closing || !identity) continue;
+    try {
+      sendTo(socket, {
+        type: "session_state",
+        session: {
+          id: meta.code,
+          code: meta.code,
+          status: meta.status,
+          voteMode: meta.voteMode,
+          filters:
+            identity.participantId === hostId
+              ? { ...publicFilters, lat, lng }
+              : {
+                  ...publicFilters,
+                  ...(lat != null && lng != null && !publicFilters.locationLabel
+                    ? { locationLabel: "Host’s location" }
+                    : {}),
+                },
+          participants,
+        },
+      });
+    } catch {
+      // A disconnect during fan-out must not block the other participants.
+    }
+  }
 }

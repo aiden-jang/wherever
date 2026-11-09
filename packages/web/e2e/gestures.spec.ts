@@ -30,6 +30,7 @@ test("selecting text, focusing controls and cancelled presses do not vote", asyn
   await page.keyboard.press("ArrowRight");
   await page.keyboard.up("Shift");
   await expect(detail).toHaveAttribute("aria-label", original!);
+  await page.locator("main").focus();
   await page.keyboard.press("ArrowRight");
   await expect(detail).not.toHaveAttribute("aria-label", original!);
   // Touch scrolling sends pointercancel. A later release must not open the card.

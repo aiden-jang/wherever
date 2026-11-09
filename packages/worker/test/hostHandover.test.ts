@@ -12,6 +12,7 @@ import type { ClientMessage, ServerMessage } from "@wherever/shared";
  * milliseconds so this runs rather than being skipped.
  */
 
+const creatorId = crypto.randomUUID();
 const BASE = "https://wherever.test";
 
 async function join(code: string, displayName: string, clientId?: string) {
@@ -44,6 +45,7 @@ async function session() {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      clientId: creatorId,
       displayName: "Alex",
       filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
     }),
@@ -55,24 +57,26 @@ const hostIn = (msg: Extract<ServerMessage, { type: "session_state" }>) =>
   msg.session.participants.find((p) => p.isHost)?.displayName ?? null;
 
 describe("the host leaving", () => {
-  it("hands the room to somebody still in it", async () => {
+  it("hands the room to a guest with a valid host credential", async () => {
     const code = await session();
-    const alex = await join(code, "Alex");
-    const sam = await join(code, "Sam");
-    expect(hostIn(await sam.until("session_state", (m) => m.session.participants.length === 2))).toBe("Alex");
+    const alex = await join(code, "Alex", creatorId);
+    const legacy = await join(code, "Legacy", "guessable");
+    const sam = await join(code, "Sam", crypto.randomUUID());
+    expect(hostIn(await sam.until("session_state", (m) => m.session.participants.length === 3))).toBe("Alex");
 
     alex.close();
 
     const after = await sam.until("session_state", (m) => hostIn(m) === "Sam");
     expect(after.session.participants.find((p) => p.displayName === "Sam")?.isHost).toBe(true);
+    legacy.close();
     sam.close();
   });
 
   /* The attachment is the copy the server trusts when a message arrives, so it has to move too. */
   it("lets the new host actually start the round", async () => {
     const code = await session();
-    const alex = await join(code, "Alex");
-    const sam = await join(code, "Sam");
+    const alex = await join(code, "Alex", creatorId);
+    const sam = await join(code, "Sam", crypto.randomUUID());
     await sam.until("session_state", (m) => m.session.participants.length === 2);
 
     alex.close();
@@ -92,7 +96,7 @@ describe("the host leaving", () => {
    */
   it("still agrees who the host is after everybody refreshes", async () => {
     const code = await session();
-    const alexId = crypto.randomUUID();
+    const alexId = creatorId;
     const samId = crypto.randomUUID();
     const alex = await join(code, "Alex", alexId);
     const sam = await join(code, "Sam", samId);
@@ -123,10 +127,10 @@ describe("the host leaving", () => {
      leaving, and a grace window that opened here would demote somebody sitting right there. */
   it("does not demote a host who is still on another tab", async () => {
     const code = await session();
-    const alexId = crypto.randomUUID();
+    const alexId = creatorId;
     const firstTab = await join(code, "Alex", alexId);
     const secondTab = await join(code, "Alex", alexId);
-    const sam = await join(code, "Sam");
+    const sam = await join(code, "Sam", crypto.randomUUID());
     await sam.until("session_state", (m) => m.session.participants.length === 2);
 
     firstTab.close();

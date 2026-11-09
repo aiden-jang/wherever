@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { NEIGHBORHOODS, isInNYC, type SessionFilters } from "@wherever/shared";
-import { geocode } from "../api.js";
+import { geocode, getLocation } from "../api.js";
 import { FieldLabel, Chevron } from "./FilterControls.js";
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
@@ -9,11 +9,17 @@ export function LocationPicker({
   filters,
   onChange,
   onSearchPendingChange,
+  deviceLocation,
+  deferDeviceLocation,
 }: {
   filters: SessionFilters;
   onChange: (f: SessionFilters) => void;
   onSearchPendingChange?: (pending: boolean) => void;
+  deviceLocation?: { lat: number; lng: number } | null;
+  deferDeviceLocation?: boolean;
 }) {
+  const errorId = useId();
+  const searchId = useId();
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(false);
   const searchField = useRef<HTMLInputElement>(null);
@@ -34,8 +40,9 @@ export function LocationPicker({
     () => () => {
       request.current += 1;
       controller.current?.abort();
+      if (searching.current) onSearchPendingChange?.(false);
     },
-    [],
+    [onSearchPendingChange],
   );
   function setSearchPending(pending: boolean) {
     searching.current = pending;
@@ -56,15 +63,30 @@ export function LocationPicker({
     onChange(next);
   }
 
-  const nearMe = !filters.area && filters.lat == null;
+  const nearMe = !filters.area && !filters.locationLabel;
   /* Only offer NYC shortcuts while the location is unknown or inside their coverage area. Keep a chosen neighborhood visible so it can be cleared. */
   const showNyc =
     Boolean(filters.area) || filters.lat == null || filters.lng == null || isInNYC(filters.lat, filters.lng);
 
   const activeNeighborhood = filters.area ? NEIGHBORHOODS.find((n) => n.value === filters.area) : undefined;
 
-  const useNearMe = () =>
-    select({ ...filters, area: undefined, lat: undefined, lng: undefined, locationLabel: undefined });
+  async function useNearMe() {
+    if (searching.current || deferDeviceLocation) return;
+    const version = ++request.current;
+    setSearchPending(true);
+    setErr("");
+    try {
+      const position = deviceLocation === undefined ? await getLocation() : deviceLocation;
+      if (version !== request.current) return;
+      if (!position) {
+        setErr("Your location is unavailable. Search for a ZIP code or town instead.");
+        return;
+      }
+      select({ ...latest.current.filters, ...position, area: undefined, locationLabel: undefined });
+    } finally {
+      if (version === request.current) setSearchPending(false);
+    }
+  }
 
   async function runSearch() {
     const query = q.trim();
@@ -100,14 +122,14 @@ export function LocationPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <FieldLabel>Where, geographically</FieldLabel>
+      <FieldLabel>Search area</FieldLabel>
 
       {filters.locationLabel && (
         // A searched place is active: show it as a chip with a way back to "Near me".
         <div className="flex items-center gap-2">
           <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-acid bg-acid/10 px-3 py-2 text-sm text-cream">
             <span aria-hidden>📍</span>
-            <span className="truncate">{filters.locationLabel}</span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">{filters.locationLabel}</span>
           </span>
           <button
             type="button"
@@ -128,15 +150,23 @@ export function LocationPicker({
           <button
             type="button"
             aria-pressed={nearMe}
-            onClick={useNearMe}
+            onClick={() => void useNearMe()}
+            disabled={deferDeviceLocation || busy}
             className={`shrink-0 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors ${
               nearMe ? "bg-acid text-ink border-acid" : "border-white/15 text-cream hover:border-white/30"
             }`}
           >
             📍 Near me
           </button>
+          <label htmlFor={searchId} className="text-sm text-muted">
+            ZIP code or town
+          </label>
           <div className="flex gap-2">
             <input
+              id={searchId}
+              name="location"
+              aria-invalid={Boolean(err)}
+              aria-describedby={err ? errorId : undefined}
               ref={searchField}
               type="text"
               value={q}
@@ -153,8 +183,7 @@ export function LocationPicker({
               // Takes a town too, but the zip is the case a phone can fill for you.
               autoComplete="postal-code"
               enterKeyHint="search"
-              aria-label="Zip or town"
-              placeholder="Zip or town"
+              placeholder="e.g. Denver, CO…"
               maxLength={120}
               className={`${inputClass} min-w-0 flex-1 !py-2 !text-base`}
             />
@@ -166,7 +195,7 @@ export function LocationPicker({
                 aria-label={busy ? "Searching location" : undefined}
                 className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50 transition"
               >
-                {busy ? "..." : "Go"}
+                {busy ? "Searching…" : "Go"}
               </button>
             )}
           </div>
@@ -187,7 +216,7 @@ export function LocationPicker({
         </div>
       )}
       {err && (
-        <p role="alert" className="text-xs text-flare">
+        <p id={errorId} role="alert" className="text-xs text-flare">
           {err}
         </p>
       )}

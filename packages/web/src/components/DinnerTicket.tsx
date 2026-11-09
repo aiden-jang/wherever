@@ -1,28 +1,23 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { Restaurant } from "@wherever/shared";
 import { distanceText } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantGallery } from "./RestaurantGallery.js";
-import { RestaurantAmenities } from "./RestaurantFacts.js";
+import { availabilityLabel, RestaurantAmenities } from "./RestaurantFacts.js";
 
 export function DinnerTicket({
   restaurant,
   rightSwipes,
   totalParticipants,
+  action,
 }: {
   restaurant: Restaurant;
   rightSwipes: number;
   totalParticipants: number;
+  action?: ReactNode;
 }) {
   const distance = distanceText(restaurant.distanceMeters);
-  const closed =
-    restaurant.businessStatus === "CLOSED_PERMANENTLY"
-      ? "Permanently closed"
-      : restaurant.businessStatus === "CLOSED_TEMPORARILY"
-        ? "Temporarily closed"
-        : restaurant.openNow === false
-          ? "Closed right now"
-          : null;
+  const availability = availabilityLabel(restaurant);
   return (
     <article
       className="dinner-ticket reveal"
@@ -37,17 +32,19 @@ export function DinnerTicket({
         <p className="meal-category">
           {categoryLabel(restaurant.category)}
           <span className="meal-rating">
-            {restaurant.rating ? `★ ${restaurant.rating}` : "New"}
+            {restaurant.rating ? `★ ${restaurant.rating}` : "Unrated"}
             {restaurant.rating && restaurant.reviewCount
               ? ` (${reviewCountLabel(restaurant.reviewCount)})`
               : ""}
           </span>
         </p>
         <h2 className="ticket-name">{restaurant.name}</h2>
+        {action}
         <div className="meal-facts">
           <span>
             <small>Price</small>
-            {restaurant.priceRange ?? priceLabel(restaurant.priceTier)}
+            {restaurant.priceRange ??
+              (restaurant.priceUnknown ? "Price unavailable" : priceLabel(restaurant.priceTier))}
           </span>
           {distance && (
             <span>
@@ -56,16 +53,23 @@ export function DinnerTicket({
             </span>
           )}
         </div>
-        {closed ? (
-          <p className="meal-hours meal-closed">● {closed}</p>
-        ) : restaurant.openNow === true ? (
-          <p className="meal-hours">● Open now</p>
-        ) : null}
+        {availability && (
+          <p
+            className={`meal-hours ${restaurant.openNow === false || restaurant.businessStatus?.startsWith("CLOSED_") ? "meal-closed" : ""}`}
+          >
+            {availability}
+          </p>
+        )}
         {restaurant.address && <p className="ticket-address">{restaurant.address}</p>}
         {restaurant.editorialSummary && (
           <p className="mt-3 text-sm leading-relaxed">{restaurant.editorialSummary}</p>
         )}
         <RestaurantAmenities restaurant={restaurant} />
+        {restaurant.source === "google" && (
+          <p className="mt-2 text-xs" translate="no">
+            Google Maps
+          </p>
+        )}
       </div>
       <div className="ticket-tear">
         <span>

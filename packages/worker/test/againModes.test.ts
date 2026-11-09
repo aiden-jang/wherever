@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 import { RoundController } from "../src/roundController.js";
 import type { Env } from "../src/env.js";
+import { MockRestaurantSource } from "../src/restaurantSource.js";
 import type { SessionRoom } from "../src/sessionRoom.js";
 
 /*
@@ -11,6 +12,7 @@ import type { SessionRoom } from "../src/sessionRoom.js";
  * hand, so it must not spend a round of that cap and must come back with the same restaurants.
  */
 
+const creatorId = crypto.randomUUID();
 const BASE = "https://wherever.test";
 
 async function host() {
@@ -18,6 +20,7 @@ async function host() {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      clientId: creatorId,
       displayName: "Alex",
       // Every price tier, so the sample deck is big enough to leave a reserve behind round one.
       filters: { radiusMeters: 4800, maxPriceTier: 4, categories: [] },
@@ -44,7 +47,7 @@ async function host() {
     }
     throw new Error(`never got ${type}; saw ${seen.map((m) => m.type).join(", ")}`);
   };
-  send({ type: "join", code, displayName: "Alex" });
+  send({ type: "join", code, displayName: "Alex", clientId: creatorId });
   await waitFor("identity");
   return { code, send, seen, waitFor, close: () => socket.close() };
 }
@@ -65,7 +68,7 @@ describe("running it back", () => {
         const controller = new RoundController(state, bindings);
         const socket = state.getWebSockets()[0]!;
         const failure = new Error("deck_load_test_failure");
-        const load = vi.spyOn(controller, "deckFor").mockRejectedValueOnce(failure);
+        const load = vi.spyOn(MockRestaurantSource.prototype, "fetchDeck").mockRejectedValueOnce(failure);
         const log = vi.spyOn(console, "error").mockImplementation(() => {});
         try {
           await controller.handleStartRound(socket);
@@ -163,12 +166,12 @@ describe("running it back", () => {
     // The sample source ignores radius, so the widened search still finds nothing new. What is being
     // asserted is that the app widened before giving up, not that a wider search rescued it.
     const state = await h.waitFor("session_state");
-    expect(state.session.filters.radiusMeters).toBe(8000);
+    expect(state.session.filters.radiusMeters).toBe(reply?.type === "deck" ? 8000 : 4800);
 
     h.close();
   });
 
-  it("says the area is spent only once it genuinely is", async () => {
+  it("reports a search with no new places", async () => {
     const h = await host();
     h.send({ type: "start_round" });
     await decide(h, (await h.waitFor("deck")).restaurants);
@@ -183,7 +186,7 @@ describe("running it back", () => {
       }
       if (!reply) throw new Error("no answer to `again`");
       if (reply.type === "error") {
-        expect((reply as { message: string }).message).toMatch(/picked clean/i);
+        expect((reply as { message: string }).message).toMatch(/No new places turned up/i);
         h.close();
         return;
       }

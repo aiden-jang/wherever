@@ -9,13 +9,19 @@ import type { DemoReason } from "@wherever/shared";
 export function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
   if (reconnecting) {
     return (
-      <div className="fixed top-0 inset-x-0 z-40 bg-white/10 backdrop-blur text-cream text-center text-sm font-medium py-2 pad-safe-top [--pad:0.5rem]">
-        Connection dropped. Reconnecting...
+      <div
+        role="status"
+        className="fixed top-0 inset-x-0 z-40 bg-white/10 backdrop-blur text-cream text-center text-sm font-medium py-2 pad-safe-top [--pad:0.5rem]"
+      >
+        Connection dropped. Voting pauses until you reconnect.
       </div>
     );
   }
   return (
-    <div className="fixed top-0 inset-x-0 z-40 bg-flare/90 text-ink text-center text-sm font-medium py-2 pad-safe-top [--pad:0.5rem]">
+    <div
+      role="status"
+      className="fixed top-0 inset-x-0 z-40 bg-flare/90 text-ink text-center text-sm font-medium py-2 pad-safe-top [--pad:0.5rem]"
+    >
       Still can&apos;t reach the session.{" "}
       <button onClick={() => location.reload()} className="underline font-semibold">
         Reload to rejoin
@@ -46,7 +52,7 @@ export function DemoBanner({ reason }: { reason: DemoReason }) {
 export function HowItWorks() {
   const steps = [
     { emoji: "👆", label: "Everyone swipes" },
-    { emoji: "🗳️", label: "Majority rules" },
+    { emoji: "🗳️", label: "Highest score wins" },
     { emoji: "🍽️", label: "Nobody's fault" },
   ];
   return (
@@ -70,7 +76,7 @@ export function HowItWorks() {
 }
 
 /** Live round countdown from an absolute deadline; goes red in the final stretch, then "Deciding…". */
-export function RoundCountdown({ endsAt }: { endsAt: number }) {
+export function RoundCountdown({ endsAt, onTurnOff }: { endsAt: number; onTurnOff?: () => void }) {
   const [remaining, setRemaining] = useState(() => Math.max(0, endsAt - Date.now()));
   useEffect(() => {
     const t = setInterval(() => setRemaining(Math.max(0, endsAt - Date.now())), 500);
@@ -78,7 +84,11 @@ export function RoundCountdown({ endsAt }: { endsAt: number }) {
   }, [endsAt]);
 
   if (remaining <= 0) {
-    return <p className="mb-4 text-sm font-semibold text-flare">Time! Deciding…</p>;
+    return (
+      <p role="status" className="mb-4 text-sm font-semibold text-flare">
+        Time’s up. Counting votes…
+      </p>
+    );
   }
   const totalSec = Math.ceil(remaining / 1000);
   const m = Math.floor(totalSec / 60);
@@ -88,7 +98,13 @@ export function RoundCountdown({ endsAt }: { endsAt: number }) {
     <p
       className={`mb-4 text-sm font-semibold tabular-nums ${low ? "text-flare animate-pulse" : "text-muted"}`}
     >
-      ⏱ {m}:{String(s).padStart(2, "0")} left
+      <span aria-hidden>⏱ </span>
+      {m}:{new Intl.NumberFormat(undefined, { minimumIntegerDigits: 2 }).format(s)} left
+      {onTurnOff && (
+        <button type="button" className="ml-3 min-h-11 underline hover:text-cream" onClick={onTurnOff}>
+          Turn off timer
+        </button>
+      )}
     </p>
   );
 }

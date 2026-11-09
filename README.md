@@ -13,8 +13,8 @@ swipe on one common deck, and turn the result into a dinner plan.
   veto per round; a veto removes the restaurant from contention.
 - Set food and location filters together in the lobby. Optional timers and host
   controls keep the group moving; voter identities stay hidden by default.
-- Review the winner, ranked backups, directions, and visited history. Replay the same
-  deck or deal new places from the reserve, then widen the search when needed.
+- Review the winner, ranked backups, directions, and past picks. Replay the same deck, excluding places the group marked to skip, or deal new
+  places from the reserve. Widen the search when needed.
 - Small table, menu and map illustrations mark the lobby, waiting and no-match states;
   a plate stamp accompanies the dinner ticket. These are decorative, locally bundled
   artwork; restaurant photos and voting facts remain separate.

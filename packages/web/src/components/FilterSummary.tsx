@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SessionFilters } from "@wherever/shared";
 import { FilterFields } from "./FilterFields";
 import {
@@ -23,8 +23,12 @@ export function filterSummaryChips(filters: SessionFilters): string[] {
   } else if (filters.maxPriceTier < 4) {
     chips.push(`up to ${priceLabelFor(filters.maxPriceTier)}`);
   }
-  if (filters.minRating && filters.minRating > 0) chips.push(`${filters.minRating.toFixed(1)}+ stars`);
-  if (filters.minReviews && filters.minReviews > 0) chips.push(`${filters.minReviews}+ reviews`);
+  if (filters.minRating && filters.minRating > 0)
+    chips.push(
+      `${new Intl.NumberFormat(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(filters.minRating)}+ stars`,
+    );
+  if (filters.minReviews && filters.minReviews > 0)
+    chips.push(`${new Intl.NumberFormat().format(filters.minReviews)}+ reviews`);
   if (filters.openNow) chips.push("open now");
   if (filters.roundSeconds) {
     const timer = ROUND_TIMER_OPTIONS.find((option) => option.seconds === filters.roundSeconds)?.label;
@@ -33,7 +37,7 @@ export function filterSummaryChips(filters: SessionFilters): string[] {
   for (const amenity of filters.amenities ?? []) chips.push(amenityLabel(amenity).toLowerCase());
   for (const category of filters.excludedCategories ?? [])
     chips.push(`no ${cuisineLabel(category).toLowerCase()}`);
-  if (filters.revealVoters) chips.push("votes shown");
+  if (filters.revealVoters) chips.push("completion shown");
   if (filters.sort === "distance") {
     const sort = SORT_OPTIONS.find((option) => option.value === "distance")?.label ?? "closest";
     chips.push(sort.toLowerCase());
@@ -42,19 +46,49 @@ export function filterSummaryChips(filters: SessionFilters): string[] {
   return chips;
 }
 
+function filterKey(filters: SessionFilters): string {
+  return JSON.stringify(
+    Object.entries(filters)
+      .filter(([, value]) => value !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+}
+
 export function FilterSummary({
   filters,
   editable = false,
   onChange,
+  onSearchPendingChange,
+  syncError,
 }: {
+  onSearchPendingChange?: (pending: boolean) => void;
   filters: SessionFilters;
   editable?: boolean;
   onChange?: (next: SessionFilters) => void;
+  syncError?: number;
 }) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<SessionFilters | null>(null);
+  const pending = useRef<string[]>([]);
+  useEffect(() => {
+    const acknowledged = pending.current.indexOf(filterKey(filters));
+    if (acknowledged >= 0) pending.current.splice(0, acknowledged + 1);
+    if (!pending.current.length) setDraft(null);
+  }, [filters]);
+  useEffect(() => {
+    pending.current = [];
+    setDraft(null);
+  }, [editable, syncError]);
+
+  function update(next: SessionFilters) {
+    if (filterKey(next) === filterKey(draft ?? filters)) return;
+    pending.current.push(filterKey(next));
+    setDraft(next);
+    onChange?.(next);
+  }
   const chips = (
     <div className="flex flex-wrap justify-center gap-2">
-      {filterSummaryChips(filters).map((chip) => (
+      {filterSummaryChips(draft ?? filters).map((chip) => (
         <span
           key={chip}
           className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted"
@@ -82,7 +116,11 @@ export function FilterSummary({
       </button>
       {open && (
         <div className="filter-editor mt-3 rounded-2xl border border-white/10 p-4 text-left">
-          <FilterFields filters={filters} onChange={onChange} />
+          <FilterFields
+            filters={draft ?? filters}
+            onChange={update}
+            onSearchPendingChange={onSearchPendingChange}
+          />
         </div>
       )}
     </div>

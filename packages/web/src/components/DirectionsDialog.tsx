@@ -89,6 +89,7 @@ export function DirectionsDialog({
           type="button"
           onClick={() => void onCopyAddress()}
           disabled={addressCopied}
+          aria-live="polite"
           className="mt-3 w-full px-4 py-2 text-xs font-semibold text-muted transition hover:text-cream disabled:opacity-70"
         >
           {addressCopied

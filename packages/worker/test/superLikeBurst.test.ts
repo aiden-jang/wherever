@@ -2,9 +2,10 @@ import { exports as workers } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 
+const creatorId = crypto.randomUUID();
 const BASE = "https://wherever.test";
 
-async function connect(code: string, displayName: string) {
+async function connect(code: string, displayName: string, clientId?: string) {
   const res = await workers.default.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
   const socket = res.webSocket;
   if (!socket) throw new Error(`no socket for ${displayName} (status ${res.status})`);
@@ -22,7 +23,7 @@ async function connect(code: string, displayName: string) {
     }
     throw new Error(`never got ${type}; saw ${seen.map((m) => m.type).join(", ")}`);
   };
-  send({ type: "join", code, displayName });
+  send({ type: "join", code, displayName, clientId });
   await waitFor("identity");
   return { send, seen, waitFor, close: () => socket.close() };
 }
@@ -32,13 +33,15 @@ async function room(names: string[]) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      clientId: creatorId,
       displayName: names[0],
       filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
     }),
   });
   const { code } = (await res.json()) as { code: string };
   const people = [];
-  for (const name of names) people.push(await connect(code, name));
+  for (const [index, name] of names.entries())
+    people.push(await connect(code, name, index === 0 ? creatorId : undefined));
   return people;
 }
 

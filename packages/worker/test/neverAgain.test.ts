@@ -7,6 +7,7 @@ import type { ClientMessage, ServerMessage } from "@wherever/shared";
  * session. It was the one mutating message that never looked at who was asking.
  */
 
+const creatorId = crypto.randomUUID();
 const BASE = "https://wherever.test";
 
 async function createSession(): Promise<string> {
@@ -14,6 +15,7 @@ async function createSession(): Promise<string> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      clientId: creatorId,
       displayName: "Alex",
       filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
     }),
@@ -60,7 +62,7 @@ describe("marking a place never again", () => {
   it("lets anyone who actually joined set it, not just the host", async () => {
     const code = await createSession();
     const host = await connect(code);
-    host.send({ type: "join", code, displayName: "Alex" });
+    host.send({ type: "join", code, displayName: "Alex", clientId: creatorId });
     await host.waitFor("identity");
 
     const guest = await connect(code);

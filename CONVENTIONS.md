@@ -39,7 +39,7 @@ Provider fetches can yield to another event. Keep start/replay guards active unt
 the resulting status and deck are written. Failed fetches preserve a retryable
 lobby or result; a successful empty search is a different outcome.
 
-The client clears old room state and its buffered commands on a code change.
+The client clears old room state on a code change. A reconnect restores confirmed ballots and the active round from the server.
 Callbacks from a disposed or superseded socket must not mutate the current room.
 Keep the new deck's round state coherent and its display consistent with server data.
 

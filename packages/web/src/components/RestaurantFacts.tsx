@@ -3,6 +3,19 @@ import { AMENITY_OPTIONS, type Restaurant } from "@wherever/shared";
 
 const chipClass = "inline-flex items-center gap-1.5 detail-chip rounded-full px-3 py-1 text-xs";
 
+export function availabilityLabel(restaurant: Restaurant): string | null {
+  if (restaurant.businessStatus === "CLOSED_PERMANENTLY") return "Permanently closed";
+  if (restaurant.businessStatus === "CLOSED_TEMPORARILY") return "Temporarily closed";
+  if (restaurant.openNow == null) return null;
+  if (restaurant.availabilityCheckedAt) {
+    const time = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(
+      restaurant.availabilityCheckedAt,
+    );
+    return `${restaurant.openNow ? "Open" : "Closed"} when checked at ${time}`;
+  }
+  return restaurant.openNow ? "Open now" : "Closed now";
+}
+
 export function RestaurantAmenities({ restaurant }: { restaurant: Restaurant }) {
   const active = AMENITY_OPTIONS.filter((option) => restaurant.amenities?.[option.key]);
   if (!active.length && !restaurant.wheelchairAccessible) return null;
@@ -15,7 +28,7 @@ export function RestaurantAmenities({ restaurant }: { restaurant: Restaurant }) 
       ))}
       {restaurant.wheelchairAccessible && (
         <span className={chipClass}>
-          <span aria-hidden>♿</span> Wheelchair-accessible
+          <span aria-hidden>♿</span> Wheelchair-accessible entrance
         </span>
       )}
     </div>
@@ -33,17 +46,13 @@ export function RestaurantHours({
 }) {
   const [expanded, setExpanded] = useState(false);
   if (!hours?.length) return null;
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-  const compact = compactOnMobile && !expanded && hours.some((line) => line.startsWith(today));
+  const compact = compactOnMobile && !expanded && hours.length > 2;
   return (
     <section className={className}>
       <h3 className="text-sm font-semibold">Hours</h3>
       <ul className="mt-1 space-y-0.5 text-sm text-muted">
-        {hours.map((line) => (
-          <li
-            key={line}
-            className={line.startsWith(today) ? "hours-today" : compact ? "hidden sm:list-item" : undefined}
-          >
+        {hours.map((line, index) => (
+          <li key={line} className={compact && index >= 2 ? "hidden sm:list-item" : undefined}>
             {line}
           </li>
         ))}
@@ -52,7 +61,7 @@ export function RestaurantHours({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="mt-1 text-xs font-semibold text-ember sm:hidden"
+          className="mt-1 min-h-11 text-sm font-semibold text-ember sm:hidden"
         >
           See all hours
         </button>

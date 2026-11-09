@@ -106,55 +106,58 @@ describe("session socket ownership", () => {
     expect(hook.result.current.status).toBe("connecting");
   });
 
-  it("rejoins before flushing buffered votes with the same stable identity", () => {
+  it("waits for the confirmed deck and scopes votes to the current round", () => {
     vi.useFakeTimers();
     const hook = renderHook(() => useSessionSocket("ABCDEF", "Alex"));
+    const vote = { type: "swipe", restaurantId: "pizza", direction: "right" } as const;
     act(() => newest().open());
-    const joined = newest().sent[0];
+    const join = newest().sent[0];
+    act(() =>
+      newest().message({ type: "session_state", session: { ...session("ABCDEF"), status: "swiping" } }),
+    );
+    act(() => hook.result.current.send(vote));
+    expect(newest().sent).toEqual([join]);
+    act(() => newest().message({ type: "deck", roundId: 3, restaurants: [] }));
+    act(() => hook.result.current.send(vote));
+    expect(newest().sent).toEqual([join, { ...vote, roundId: 3 }]);
     act(() => newest().close());
-    act(() => hook.result.current.send({ type: "swipe", restaurantId: "pizza", direction: "right" }));
+    act(() => hook.result.current.send(vote));
     act(() => vi.advanceTimersByTime(1000));
     act(() => newest().open());
-    expect(newest().sent).toEqual([joined, { type: "swipe", restaurantId: "pizza", direction: "right" }]);
+    expect(newest().sent).toEqual([join]);
+    act(() =>
+      newest().message({ type: "session_state", session: { ...session("ABCDEF"), status: "swiping" } }),
+    );
+    act(() => newest().message({ type: "deck", roundId: 4, restaurants: [], alreadyVoted: ["tacos"] }));
+    expect(hook.result.current.alreadyVoted).toEqual(["tacos"]);
+    expect(hook.result.current.deckRevision).toBe(2);
+    act(() => hook.result.current.send(vote));
+    expect(newest().sent).toEqual([join, { ...vote, roundId: 4 }]);
   });
 
-  it("keeps a vote when sending throws during a disconnect", () => {
+  it("reconnects when a live vote cannot be sent and trusts the restored ballot", () => {
     vi.useFakeTimers();
     const hook = renderHook(() => useSessionSocket("ABCDEF", "Alex"));
     act(() => newest().open());
+    act(() =>
+      newest().message({ type: "session_state", session: { ...session("ABCDEF"), status: "swiping" } }),
+    );
+    act(() => newest().message({ type: "deck", roundId: 1, restaurants: [] }));
     vi.spyOn(newest(), "send").mockImplementationOnce(() => {
       throw new Error("Connection lost");
     });
-    const vote = { type: "swipe", restaurantId: "pizza", direction: "right" } as const;
-    expect(() => act(() => hook.result.current.send(vote))).not.toThrow();
+    expect(() =>
+      act(() => hook.result.current.send({ type: "swipe", restaurantId: "pizza", direction: "right" })),
+    ).not.toThrow();
     expect(hook.result.current.status).toBe("connecting");
     act(() => vi.advanceTimersByTime(1000));
     act(() => newest().open());
-    expect(newest().sent).toEqual([expect.objectContaining({ type: "join" }), vote]);
-  });
-
-  it("keeps the unsent tail when reconnecting fails halfway through the queued votes", () => {
-    vi.useFakeTimers();
-    const hook = renderHook(() => useSessionSocket("ABCDEF", "Alex"));
-    const votes = ["pizza", "tacos", "ramen"].map(
-      (restaurantId) => ({ type: "swipe", restaurantId, direction: "right" }) as const,
+    expect(newest().sent).toEqual([expect.objectContaining({ type: "join" })]);
+    act(() =>
+      newest().message({ type: "session_state", session: { ...session("ABCDEF"), status: "swiping" } }),
     );
-    act(() => newest().open());
-    act(() => newest().close());
-    act(() => votes.forEach((vote) => hook.result.current.send(vote)));
-    act(() => vi.advanceTimersByTime(1000));
-    const interrupted = newest();
-    const send = interrupted.send.bind(interrupted);
-    let calls = 0;
-    vi.spyOn(interrupted, "send").mockImplementation((raw) => {
-      if (++calls === 3) throw new Error("Connection lost");
-      send(raw);
-    });
-    expect(() => act(() => interrupted.open())).not.toThrow();
-    expect(interrupted.sent).toEqual([expect.objectContaining({ type: "join" }), votes[0]]);
-    act(() => vi.advanceTimersByTime(1000));
-    act(() => newest().open());
-    expect(newest().sent).toEqual([expect.objectContaining({ type: "join" }), ...votes.slice(1)]);
+    act(() => newest().message({ type: "deck", roundId: 1, restaurants: [], alreadyVoted: [] }));
+    expect(hook.result.current.alreadyVoted).toEqual([]);
   });
 
   it("ignores invalid JSON without breaking the next valid message", () => {

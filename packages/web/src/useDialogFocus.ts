@@ -16,6 +16,15 @@ export function useDialogFocus(): (el: HTMLElement | null) => void {
 
   useLayoutEffect(() => {
     const restoreTo = trigger.current;
+    const outside = new Set<HTMLElement>();
+    for (let node = panel.current; node?.parentElement && node !== document.body; node = node.parentElement) {
+      for (const sibling of node.parentElement.children) {
+        if (sibling instanceof HTMLElement && sibling !== node && !sibling.inert) {
+          sibling.inert = true;
+          outside.add(sibling);
+        }
+      }
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Tab" || !panel.current) return;
       const items = [...panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
@@ -39,6 +48,7 @@ export function useDialogFocus(): (el: HTMLElement | null) => void {
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      for (const element of outside) element.inert = false;
       restoreTo?.focus?.();
     };
   }, []);
@@ -46,7 +56,9 @@ export function useDialogFocus(): (el: HTMLElement | null) => void {
   return useCallback((el: HTMLElement | null) => {
     panel.current = el;
     if (!el || el.contains(document.activeElement)) return;
-    const first = el.querySelector<HTMLElement>(FOCUSABLE);
+    const first = window.matchMedia("(pointer: coarse)").matches
+      ? el.querySelector<HTMLElement>("h2[tabindex]")
+      : el.querySelector<HTMLElement>(FOCUSABLE);
     // The panel itself is the fallback, which is why callers give it tabIndex={-1}.
     (first ?? el).focus({ preventScroll: true });
   }, []);

@@ -7,6 +7,7 @@ import type { ClientMessage, ServerMessage } from "@wherever/shared";
  * without a check against the deck a client can finish without seeing a card.
  */
 
+const creatorId = crypto.randomUUID();
 const BASE = "https://wherever.test";
 
 async function connect(code: string) {
@@ -36,6 +37,7 @@ describe("votes for cards that were never dealt", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        clientId: creatorId,
         displayName: "Alex",
         filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
       }),
@@ -43,7 +45,7 @@ describe("votes for cards that were never dealt", () => {
     const { code } = (await res.json()) as { code: string };
 
     const host = await connect(code);
-    host.send({ type: "join", code, displayName: "Alex" });
+    host.send({ type: "join", code, displayName: "Alex", clientId: creatorId });
     await host.waitFor("identity");
     host.send({ type: "start_round" });
     const dealt = await host.waitFor("deck");
@@ -65,6 +67,7 @@ describe("votes for cards that were never dealt", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        clientId: creatorId,
         displayName: "Sam",
         filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
       }),
@@ -72,7 +75,7 @@ describe("votes for cards that were never dealt", () => {
     const { code } = (await res.json()) as { code: string };
 
     const host = await connect(code);
-    host.send({ type: "join", code, displayName: "Sam" });
+    host.send({ type: "join", code, displayName: "Sam", clientId: creatorId });
     await host.waitFor("identity");
     host.send({ type: "start_round" });
     const dealt = await host.waitFor("deck");

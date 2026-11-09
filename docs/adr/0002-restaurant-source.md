@@ -19,15 +19,15 @@ Cuisine/radius restrictions are sent upstream. Price, rating, reviews, open-now,
 and amenities are enforced in the Worker before dealing. The sample source uses
 the same applicable filters; its restaurant details are stand-ins.
 
-Fetch one source result per new search, keep the dealt deck and a reserve in room
-storage, and use reserve data before another call. Same-deck replay does not fetch.
-An exhausted reserve widens the radius before a new search; failures preserve a
-retryable state rather than claiming no restaurants exist.
+Keep the dealt place IDs and reserve IDs in room storage. Live display data lives
+in the active object and can be fetched by place ID when that object resumes. An
+exhausted reserve widens the radius before a new search. Same-deck replay uses
+the same IDs and respects places the group excluded.
 
-Photo URLs point to `/api/photo`: validated references and snapped widths keep the
-key server-side and make cache reuse practical. Search/photo reservations are
-bounded by [ADR 0003](0003-usage-meter.md). Location search uses a separately
-rate-limited and cached geocode route.
+Photo URLs point to `/api/photo`. The Worker validates photo references and keeps
+the key server-side. It requests the photo when displayed and returns it without
+caching the bytes. Location lookup also returns an uncached response. Usage
+reservations are bounded by [ADR 0003](0003-usage-meter.md).
 
 ## Consequences
 
@@ -35,6 +35,5 @@ The interface keeps the provider out of voting and UI state. Pure normalization
 and filter tests detect missing fields and sample/live inconsistencies.
 
 Straight-line distance is a display estimate, not routing. Provider field masks
-can change the billing tier, and quota/key setup remains external. Cache hits
-reduce calls but do not guarantee each image is fetched only once globally.
+can change the billing tier, and quota/key setup remains external.
 Live provider behavior is outside sample-backed browser verification.

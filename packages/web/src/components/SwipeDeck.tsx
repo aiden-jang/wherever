@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { line, type Restaurant, type SwipeDirection, type VisitedPlace } from "@wherever/shared";
 
@@ -38,6 +38,7 @@ const RAIL = "table-rail";
 
 export function SwipeDeck({
   restaurants,
+  disabled = false,
   alreadyVoted = [],
   visited = [],
   superSpent = false,
@@ -48,6 +49,7 @@ export function SwipeDeck({
   aside,
 }: {
   restaurants: Restaurant[];
+  disabled?: boolean;
   alreadyVoted?: string[];
   /** Where the group has already been, so a place out of cooldown says so instead of arriving as new. */
   visited?: VisitedPlace[];
@@ -61,12 +63,17 @@ export function SwipeDeck({
   /** Feeds the page's live region, so voting is not silent for a screen reader. */
   onAnnounce?: (text: string) => void;
 }) {
-  // Resume after a reconnect: start at the first card this client has not voted.
-  const [index, setIndex] = useState(() => {
-    const voted = new Set(alreadyVoted);
-    const first = restaurants.findIndex((r) => !voted.has(r.id));
-    return first === -1 ? restaurants.length : first;
-  });
+  const restoredVotes = useMemo(() => new Set(alreadyVoted), [alreadyVoted]);
+  const nextUnvoted = useCallback(
+    (after: number) => {
+      for (let index = after + 1; index < restaurants.length; index += 1) {
+        if (!restoredVotes.has(restaurants[index]!.id)) return index;
+      }
+      return restaurants.length;
+    },
+    [restaurants, restoredVotes],
+  );
+  const [index, setIndex] = useState(() => nextUnvoted(-1));
   // One super-like per round; seeded from the server (survives reconnect) then set locally on use.
   const [superUsed, setSuperUsed] = useState(superSpent);
   const [vetoUsed, setVetoUsed] = useState(vetoSpent);
@@ -122,10 +129,12 @@ export function SwipeDeck({
   const indexRef = useRef(index);
   const commit = useCallback(
     (dir: SwipeDirection, isSuper = false, isVeto = false) => {
+      if (disabled) return;
       const i = indexRef.current;
       const current = restaurants[i];
       if (!current) return;
-      indexRef.current = i + 1;
+      const next = nextUnvoted(i);
+      indexRef.current = next;
       // A firmer triple-buzz for a super-like; light on a like, double on a pass.
       buzz(isVeto ? [20, 40, 20, 40] : isSuper ? [12, 30, 12] : dir === "right" ? 12 : [8, 20]);
       play(isVeto ? "veto" : isSuper ? "superLike" : dir === "right" ? "like" : "pass");
@@ -152,17 +161,18 @@ export function SwipeDeck({
           isSuper,
           isVeto,
           name: current.name,
-          next: restaurants[i + 1]?.name ?? null,
-          position: i + 2,
+          next: restaurants[next]?.name ?? null,
+          position: next + 1,
           total: restaurants.length,
         }),
       );
-      setIndex(i + 1);
+      setIndex(next);
     },
-    [restaurants, onSwipe, onAnnounce, dismissHint],
+    [disabled, restaurants, onSwipe, onAnnounce, dismissHint, nextUnvoted],
   );
 
   const undoLast = useCallback(() => {
+    if (disabled) return;
     const previous = historyRef.current.pop();
     if (!previous) return;
     indexRef.current = previous.index;
@@ -175,13 +185,15 @@ export function SwipeDeck({
     onUndo(previous.restaurantId);
     const back = restaurants[previous.index];
     if (back) onAnnounce?.(undoAnnouncement(back.name, previous.index + 1, restaurants.length));
-  }, [onUndo, onAnnounce, restaurants]);
+  }, [disabled, onUndo, onAnnounce, restaurants]);
 
   // Desktop: arrow keys swipe. Suspended while the detail sheet is open so arrows don't vote the
   // card behind it (the sheet has its own concerns, e.g. dismissing).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+  const keyHandler = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  useLayoutEffect(() => {
+    keyHandler.current = (e: KeyboardEvent) => {
       if (
+        disabled ||
         detail ||
         e.defaultPrevented ||
         e.isComposing ||
@@ -192,7 +204,9 @@ export function SwipeDeck({
           e.target.closest(
             'input, textarea, select, button:not([data-deck-control]), a, [contenteditable]:not([contenteditable="false"])',
           )) ||
-        window.getSelection()?.isCollapsed === false
+        window.getSelection()?.isCollapsed === false ||
+        !(e.target instanceof HTMLElement && e.target.closest("#main-content")) ||
+        Boolean(e.target.closest("[data-card-info]"))
       )
         return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() !== "z") return;
@@ -213,12 +227,19 @@ export function SwipeDeck({
         commit("left", false, true);
       }
     };
+  }, [canUndo, commit, detail, disabled, superUsed, undoLast, vetoUsed]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => keyHandler.current(event);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [canUndo, commit, detail, superUsed, undoLast, vetoUsed]);
+  }, []);
 
   const done = index >= restaurants.length;
   const waitingLine = useLine("waiting");
+  const waitingHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (done) waitingHeading.current?.focus();
+  }, [done]);
 
   // Only the first deal animates. Replacing a restaurant after a vote keeps the controls steady.
   const [dealing, setDealing] = useState(true);
@@ -228,26 +249,29 @@ export function SwipeDeck({
     return () => clearTimeout(t);
   }, []);
 
-  /*
-   * Two cards ahead. A swipe reveals the one underneath instantly but its photo only starts loading
-   * then, so on a phone every swipe flashed the fallback gradient first. Two covers a fast double-swipe
-   * without pulling the whole deck down a mobile connection.
-   */
-  useEffect(() => {
-    for (const next of restaurants.slice(index + 1, index + 3)) {
-      const url = next.imageUrl ?? next.photos?.[0];
-      if (url) new Image().src = url;
-    }
-  }, [index, restaurants]);
   const likedChoices = choices.filter((choice) => choice.direction === "right");
+
+  const undoControl = canUndo && (
+    <button
+      type="button"
+      data-deck-control
+      onClick={undoLast}
+      className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-muted transition hover:text-cream hover:underline"
+    >
+      Undo last vote
+    </button>
+  );
 
   if (done) {
     return (
       <div className="table-layout">
         <div className="table-panel text-center">
           <PlateState art="waiting" />
-          <h2 className="mt-4 font-display text-3xl font-bold">That's all of them.</h2>
+          <h2 ref={waitingHeading} tabIndex={-1} className="mt-4 font-display text-3xl font-bold">
+            Waiting for the group
+          </h2>
           <p className="mt-2 text-muted">{waitingLine}</p>
+          {undoControl}
           {choices.length > 0 && (
             <details className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] text-left">
               <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
@@ -273,7 +297,9 @@ export function SwipeDeck({
                             onClick={() => setDetail(restaurant)}
                             className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-white/5"
                           >
-                            <span className="min-w-0 truncate font-medium">{restaurant.name}</span>
+                            <span className="min-w-0 [overflow-wrap:anywhere] font-medium">
+                              {restaurant.name}
+                            </span>
                             <span className={choice.super ? "shrink-0 text-grape" : "shrink-0 text-acid"}>
                               {choice.super ? "⭐ super" : "♥ liked"}
                             </span>
@@ -308,7 +334,13 @@ export function SwipeDeck({
             onOpenDetail={setDetail}
           />
         </div>
-        <VoteControls vetoUsed={vetoUsed} superUsed={superUsed} onVote={commit} onSpent={saySpent} />
+        <VoteControls
+          disabled={disabled}
+          vetoUsed={vetoUsed}
+          superUsed={superUsed}
+          onVote={commit}
+          onSpent={saySpent}
+        />
 
         {/* Reserve one feedback slot so vote controls stay under the user’s finger. */}
         <p className={`table-vote-feedback ${spentNote ? "table-vote-warning" : ""}`} aria-live="polite">
@@ -333,16 +365,7 @@ export function SwipeDeck({
             ⌫
           </Key>
         </p>
-        {canUndo && (
-          <button
-            type="button"
-            data-deck-control
-            onClick={undoLast}
-            className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-muted transition hover:text-cream hover:underline"
-          >
-            Undo last vote
-          </button>
-        )}
+        {undoControl}
         {aside}
       </div>
 

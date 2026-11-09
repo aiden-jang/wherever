@@ -50,6 +50,40 @@ describe("provider budget enforcement", () => {
     expect(await response.json()).toEqual({ error: "Couldn't find that place." });
   });
 
+  it("persists place IDs without Google display data or photo references", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      Response.json({
+        places: [
+          {
+            id: "provider-id",
+            displayName: { text: "Provider place" },
+            formattedAddress: "Provider address",
+            photos: [{ name: "places/provider-id/photos/photo-ref" }],
+          },
+        ],
+      }),
+    );
+    const room = bindings.SESSION_ROOM.get(bindings.SESSION_ROOM.idFromName(crypto.randomUUID()));
+    await runInDurableObject(room, async (_instance, state) => {
+      const deck = await fetchFreshDeck({
+        storage: state.storage,
+        env: { ...bindings, RESTAURANT_SOURCE: "google" },
+        meta: {
+          code: "BUDGET",
+          status: "lobby",
+          voteMode: "majority",
+          filters: { radiusMeters: 8000, maxPriceTier: 4, categories: [] },
+        },
+        vibeCounts: {},
+      });
+      expect(deck[0]?.name).toBe("Provider place");
+      const stored = await state.storage.get("deck");
+      expect(stored).toEqual([expect.objectContaining({ id: "provider-id", imageUrl: null, address: null })]);
+      expect(JSON.stringify(stored)).not.toMatch(/Provider place|Provider address|photo-ref/);
+    });
+    expect(upstream).toHaveBeenCalledTimes(1);
+  });
+
   it("uses labeled sample restaurants without contacting Google after the search cap", async () => {
     await exhaust("search");
     const upstream = vi.spyOn(globalThis, "fetch");
@@ -127,17 +161,16 @@ describe("provider budget enforcement", () => {
       geocodePath,
       () => Response.json({ status: "OK", results: [{ geometry: { location: { lat: 40, lng: -74 } } }] }),
     ],
-  ] as const)(
-    "serves cached %s results after the cap without spending another call",
-    async (kind, path, result) => {
-      const upstream = vi.spyOn(globalThis, "fetch").mockImplementation(async () => result());
-      const url = path();
-      expect((await request(url)).status).toBe(200);
-      await exhaust(kind);
-      expect((await request(url)).status).toBe(200);
-      expect(upstream).toHaveBeenCalledTimes(1);
-    },
-  );
+  ] as const)("does not reuse %s content after the cap", async (kind, path, result) => {
+    const upstream = vi.spyOn(globalThis, "fetch").mockImplementation(async () => result());
+    const url = path();
+    const first = await request(url);
+    expect(first.status).toBe(200);
+    expect(first.headers.get("Cache-Control")).toContain("no-store");
+    await exhaust(kind);
+    expect((await request(url)).status).toBe(429);
+    expect(upstream).toHaveBeenCalledTimes(1);
+  });
 
   it.each([photoPath, geocodePath])("fails closed when the meter is unavailable for %s", async (path) => {
     vi.spyOn(console, "error").mockImplementation(() => {});

@@ -1,7 +1,8 @@
 import { readFile, mkdir, copyFile } from "node:fs/promises";
-import { test, expect, audit, createRoom } from "./fixtures.js";
+import { test, expect, audit, createRoom, showLiveResultActions } from "./fixtures.js";
 
 test("create, vote, decide, and run the same deck again", async ({ page }) => {
+  await showLiveResultActions(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setViewportSize({ width: 390, height: 844 });
@@ -27,8 +28,8 @@ test("create, vote, decide, and run the same deck again", async ({ page }) => {
       },
     });
   });
-  await page.getByRole("button", { name: "Share dinner plan", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Couldn’t share dinner plan" })).toBeVisible();
+  await page.getByRole("button", { name: "Send the plan", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Couldn’t share" })).toBeVisible();
   const imageDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Save plan image", exact: true }).click();
   const image = await imageDownload;
@@ -136,11 +137,11 @@ test("a failed create stays in one recoverable dialog and preserves the name", a
   await page.getByRole("button", { name: "Start a session", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Start a session" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Sam");
-  await dialog.getByRole("button", { name: "Deal the cards" }).click();
+  await dialog.getByRole("button", { name: "Create room" }).click();
   await expect(dialog.getByRole("alert")).toHaveText("Restaurant setup is unavailable. Try again.");
   await expect(page.getByRole("dialog")).toHaveCount(1);
   await expect(dialog.getByRole("textbox", { name: "Your name" })).toHaveValue("Sam");
-  await expect(dialog.getByRole("button", { name: "Deal the cards" })).toBeEnabled();
+  await expect(dialog.getByRole("button", { name: "Create room" })).toBeEnabled();
   await audit(page);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -185,7 +186,7 @@ test("closing creation cancels its pending request and ignores a late response",
     await page.getByRole("button", { name: "Start a session", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Start a session" });
     await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
-    await dialog.getByRole("button", { name: "Deal the cards" }).click();
+    await dialog.getByRole("button", { name: "Create room" }).click();
     await requestStarted;
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
@@ -226,6 +227,9 @@ test("special votes can be undone and restaurant details suspend keyboard voting
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.keyboard.press("ArrowDown");
+  await expect(active).toHaveAttribute("aria-label", first!);
+  await page.locator("main").focus();
+  await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("button", { name: "Veto, already used this round" })).toHaveAttribute(
     "aria-disabled",
     "true",
@@ -240,7 +244,8 @@ test("enlarged text and stronger contrast keep phone filters usable", async ({ p
     document.documentElement.style.fontSize = "20px";
   });
   await page.getByRole("button", { name: /Edit dinner filters/ }).click();
-  const query = page.getByRole("textbox", { name: "Zip or town" });
+  await page.getByRole("button", { name: "Change", exact: true }).click();
+  const query = page.getByRole("textbox", { name: "ZIP code or town" });
   await query.fill("Brooklyn");
   const box = await query.boundingBox();
   expect(box?.width).toBeGreaterThanOrEqual(120);

@@ -4,6 +4,7 @@ import type { ClientMessage, ServerMessage } from "@wherever/shared";
 
 /* Drives the real protocol: the "nobody finds out who said fancy" promise has to hold at the wire. */
 
+const creatorId = crypto.randomUUID();
 const BASE = "https://wherever.test";
 
 async function createSession(): Promise<string> {
@@ -11,6 +12,7 @@ async function createSession(): Promise<string> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
+      clientId: creatorId,
       displayName: "Alex",
       filters: { radiusMeters: 5000, maxPriceTier: 3, categories: [] },
     }),
@@ -36,7 +38,7 @@ interface Member {
   close: () => void;
 }
 
-async function join(code: string, displayName: string): Promise<Member> {
+async function join(code: string, displayName: string, clientId?: string): Promise<Member> {
   const res = await workers.default.fetch(`${BASE}/ws/${code}`, { headers: { Upgrade: "websocket" } });
   const socket = res.webSocket;
   if (!socket) throw new Error(`no socket for ${displayName} (status ${res.status})`);
@@ -71,7 +73,7 @@ async function join(code: string, displayName: string): Promise<Member> {
     close: () => socket.close(),
   };
 
-  member.send({ type: "join", code, displayName });
+  member.send({ type: "join", code, displayName, clientId });
   await member.next("identity");
   return member;
 }
@@ -79,7 +81,7 @@ async function join(code: string, displayName: string): Promise<Member> {
 describe("the vibe vote", () => {
   it("tells everyone the tallies and nobody the voters", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     const sam = await join(code, "Sam");
 
     alex.send({ type: "set_vibe", vibe: "fancy" });
@@ -101,7 +103,7 @@ describe("the vibe vote", () => {
 
   it("hands each client its own pick and only its own", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     const sam = await join(code, "Sam");
 
     alex.send({ type: "set_vibe", vibe: "cozy" });
@@ -122,7 +124,7 @@ describe("the vibe vote", () => {
    */
   it("adds up when two people want the same thing", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     const sam = await join(code, "Sam");
 
     alex.send({ type: "set_vibe", vibe: "cozy" });
@@ -137,7 +139,7 @@ describe("the vibe vote", () => {
 
   it("takes your vote back out when you clear it", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
 
     alex.send({ type: "set_vibe", vibe: "fancy" });
     await alex.until("vibes", (msg) => msg.counts.fancy === 1);
@@ -152,7 +154,7 @@ describe("the vibe vote", () => {
 
   it("lets somebody change their mind without double-counting them", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
 
     // `until`, not `next`: joining delivers an empty vibes frame, so a length captured after the first
     // `next` can still predate the frame for the first vote. This test was flaky on exactly that.
@@ -169,7 +171,7 @@ describe("the vibe vote", () => {
 
   it("lets somebody take it back", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     alex.send({ type: "set_vibe", vibe: "fancy" });
     await alex.until("vibes", (msg) => msg.counts.fancy === 1);
 
@@ -183,7 +185,7 @@ describe("the vibe vote", () => {
 
   it("gives a late arrival the state instead of an empty dial", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     alex.send({ type: "set_vibe", vibe: "cozy" });
     await alex.next("vibes");
 
@@ -199,7 +201,7 @@ describe("the vibe vote", () => {
 
   it("rejects a vibe that is not one of ours", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     // The schema is the door. A client is not trusted to only send the five.
     alex.send({ type: "set_vibe", vibe: "expensive" } as unknown as ClientMessage);
     expect((await alex.next("error")).message).toBe("Unrecognized message.");
@@ -209,7 +211,7 @@ describe("the vibe vote", () => {
   // A vote mid-round would mean two people swiping different decks. A hidden control is not a rule.
   it("ignores a vote once the round has started", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     alex.send({ type: "start_round" });
     await alex.next("deck");
     const before = alex.seen.length;
@@ -230,7 +232,7 @@ describe("somewhere the group has been", () => {
      * quietly shrink the deck by banning ids they made up.
      */
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     alex.send({ type: "set_never_again", restaurantId: "never-visited", neverAgain: true });
 
     const history = await alex.until("history", () => true);
@@ -240,7 +242,7 @@ describe("somewhere the group has been", () => {
 
   it("rejects a message that is not shaped like one", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     alex.send({ type: "set_never_again", restaurantId: "x" } as unknown as ClientMessage);
     expect((await alex.next("error")).message).toBe("Unrecognized message.");
     alex.close();
@@ -252,7 +254,7 @@ describe("changing the rules from the lobby", () => {
 
   it("lets the host change them, and tells everybody", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex"); // first in is the host
+    const alex = await join(code, "Alex", creatorId);
     alex.send({ type: "set_filters", filters } as never);
 
     const state = await alex.until("session_state", (msg) => msg.session.filters.radiusMeters === 1600);
@@ -266,7 +268,7 @@ describe("changing the rules from the lobby", () => {
    */
   it("ignores anybody who is not the host", async () => {
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     const sam = await join(code, "Sam");
 
     sam.send({ type: "set_filters", filters } as never);
@@ -281,7 +283,7 @@ describe("changing the rules from the lobby", () => {
   it("ignores a change once the round has started", async () => {
     // Mid-round would deal two people different restaurants.
     const code = await createSession();
-    const alex = await join(code, "Alex");
+    const alex = await join(code, "Alex", creatorId);
     alex.send({ type: "start_round" });
     await alex.next("deck");
 

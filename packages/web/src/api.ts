@@ -1,3 +1,4 @@
+import { rememberClientId } from "./clientIdentity.js";
 import type { SessionFilters } from "@wherever/shared";
 import { DEFAULT_FILTERS } from "@wherever/shared";
 
@@ -24,12 +25,13 @@ export async function createSession(
   filters: SessionFilters = DEFAULT_FILTERS,
   signal?: AbortSignal,
 ): Promise<string> {
+  const clientId = crypto.randomUUID();
   const res = await request(
     "/api/sessions",
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ displayName, filters }),
+      body: JSON.stringify({ displayName, filters, clientId }),
     },
     signal,
   );
@@ -39,6 +41,7 @@ export async function createSession(
     throw new Error(body?.error ?? "Couldn't start the session. Give it another shot.");
   }
   const data = (await res.json()) as { code: string };
+  rememberClientId(data.code, clientId);
   return data.code;
 }
 
@@ -50,9 +53,14 @@ export async function createSession(
 export function getLocation(): Promise<{ lat: number; lng: number } | null> {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
+    const timer = setTimeout(() => resolve(null), 5000);
+    function finish(location: { lat: number; lng: number } | null) {
+      clearTimeout(timer);
+      resolve(location);
+    }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null),
+      (pos) => finish({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => finish(null),
       { timeout: 5000, maximumAge: 600_000 },
     );
   });

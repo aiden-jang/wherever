@@ -1,41 +1,20 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
 import type { ClientMessage, ServerMessage } from "@wherever/shared";
 import { initialSessionState, sessionReducer } from "./sessionState.js";
+import { clientIdFor } from "./clientIdentity.js";
 import { withViewTransition } from "./viewTransition.js";
-
-/** Preserve identity across reconnects. Blocked storage falls back to memory so joining still works. */
-const fallbackClientIds = new Map<string, string>();
-
-function clientIdFor(code: string): string {
-  const key = `cid:${code}`;
-  try {
-    let id = sessionStorage.getItem(key);
-    if (!id) {
-      id = crypto.randomUUID();
-      sessionStorage.setItem(key, id);
-    }
-    return id;
-  } catch {
-    let id = fallbackClientIds.get(key);
-    if (!id) {
-      id = crypto.randomUUID();
-      fallbackClientIds.set(key, id);
-    }
-    return id;
-  }
-}
 
 export function useSessionSocket(code: string, displayName: string) {
   const [state, dispatch] = useReducer(sessionReducer, initialSessionState);
   const wsRef = useRef<WebSocket | null>(null);
-  // Messages sent while the socket is mid-reconnect are buffered here and flushed on reopen, so a
-  // vote cast during a blip isn't silently dropped (which would stall the round for everyone).
-  const outboxRef = useRef<ClientMessage[]>([]);
+  const activeRound = useRef<number | null>(null);
+  const joined = useRef(false);
   const terminalRef = useRef(false);
 
   useLayoutEffect(() => {
     dispatch({ type: "reset" });
-    outboxRef.current = [];
+    activeRound.current = null;
+    joined.current = false;
     terminalRef.current = false;
   }, [code, displayName]);
 
@@ -49,10 +28,12 @@ export function useSessionSocket(code: string, displayName: string) {
     let disposed = false;
     let attempts = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let joinTimer: ReturnType<typeof setTimeout> | undefined;
     const MAX_ATTEMPTS = 6;
 
     const reactionTimers = new Set<ReturnType<typeof setTimeout>>();
-    const handleMessage = (event: MessageEvent) => {
+    let phaseFrame = 0;
+    const handleMessage = (event: MessageEvent, socket: WebSocket) => {
       if (disposed) return;
       let msg: ServerMessage;
       try {
@@ -61,9 +42,28 @@ export function useSessionSocket(code: string, displayName: string) {
         return;
       }
       if (!msg || typeof msg !== "object" || typeof msg.type !== "string") return;
+      if (
+        !joined.current &&
+        ((msg.type === "session_state" && msg.session.status === "lobby") ||
+          msg.type === "deck" ||
+          msg.type === "match" ||
+          msg.type === "no_match")
+      ) {
+        clearTimeout(joinTimer);
+        attempts = 0;
+        joined.current = true;
+        dispatch({ type: "connection", status: "open" });
+      }
+      if (msg.type === "deck") activeRound.current = msg.roundId ?? 1;
+      if (msg.type === "match" || msg.type === "no_match") activeRound.current = null;
+      if (msg.type === "reaction" && reactionTimers.size >= 24) return;
       const reactionId = msg.type === "reaction" ? crypto.randomUUID() : undefined;
+      if (msg.type === "deck" || msg.type === "match" || msg.type === "no_match") phaseFrame += 1;
+      const frame = phaseFrame;
       const update = () => {
-        if (!disposed) dispatch({ type: "received", message: msg, reactionId });
+        if (!disposed && socket === wsRef.current && (msg.type !== "match" || frame === phaseFrame)) {
+          dispatch({ type: "received", message: msg, reactionId });
+        }
       };
       if (msg.type === "match") withViewTransition(update);
       else update();
@@ -79,41 +79,26 @@ export function useSessionSocket(code: string, displayName: string) {
     const connect = () => {
       const ws = new WebSocket(`${wsBase}/ws/${code}`);
       wsRef.current = ws;
+      joinTimer = setTimeout(() => ws.close(), 8000);
 
       ws.onopen = () => {
         if (disposed || ws !== wsRef.current) return;
-        attempts = 0;
-        dispatch({ type: "connection", status: "open" });
-        const queued = outboxRef.current;
-        outboxRef.current = [];
-        let sent = 0;
         try {
-          ws.send(
-            JSON.stringify({
-              type: "join",
-              code,
-              displayName,
-              clientId: clientIdFor(code),
-            }),
-          );
-          // Rejoin first, then retain any unsent tail if the connection fails during recovery.
-          for (const message of queued) {
-            ws.send(JSON.stringify(message));
-            sent += 1;
-          }
+          ws.send(JSON.stringify({ type: "join", code, displayName, clientId: clientIdFor(code) }));
         } catch {
-          outboxRef.current = [...queued.slice(sent), ...outboxRef.current];
           ws.close();
         }
       };
       ws.onmessage = (event) => {
-        if (ws === wsRef.current) handleMessage(event);
+        if (ws === wsRef.current) handleMessage(event, ws);
       };
       ws.onclose = (event) => {
         if (disposed || ws !== wsRef.current) return;
+        clearTimeout(joinTimer);
+        joined.current = false;
+        activeRound.current = null;
         if (event.code === 1008) {
           terminalRef.current = true;
-          outboxRef.current = [];
           dispatch({ type: "reset" });
           dispatch({
             type: "received",
@@ -151,6 +136,7 @@ export function useSessionSocket(code: string, displayName: string) {
     return () => {
       disposed = true;
       clearTimeout(reconnectTimer);
+      clearTimeout(joinTimer);
       for (const timer of reactionTimers) clearTimeout(timer);
       window.removeEventListener("online", retryNow);
       document.removeEventListener("visibilitychange", retryNow);
@@ -160,18 +146,14 @@ export function useSessionSocket(code: string, displayName: string) {
   }, [code, displayName]);
 
   const send = useCallback((message: ClientMessage) => {
-    if (terminalRef.current) return;
     const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      try {
-        ws.send(JSON.stringify(message));
-      } catch {
-        outboxRef.current.push(message);
-        ws.close();
-      }
-    } else {
-      // Not open (reconnecting): queue and flush on reopen instead of throwing/dropping.
-      outboxRef.current.push(message);
+    if (!joined.current || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const isVote = message.type === "swipe" || message.type === "undo_swipe";
+    if (isVote && activeRound.current === null) return;
+    try {
+      ws.send(JSON.stringify(isVote ? { ...message, roundId: activeRound.current } : message));
+    } catch {
+      ws.close();
     }
   }, []);
 

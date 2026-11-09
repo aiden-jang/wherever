@@ -147,7 +147,9 @@ test("the winner has its gallery, hours and contact details on the result page",
     const server = socket.connectToServer();
     server.onMessage((data) => {
       const message = JSON.parse(String(data)) as ServerMessage;
+      if (message.type === "deck") delete message.demo;
       if (message.type === "match") {
+        delete message.demo;
         message.restaurant = {
           ...message.restaurant,
           name,

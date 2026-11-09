@@ -1,9 +1,10 @@
 import { mkdir } from "node:fs/promises";
-import { test, expect, createRoom } from "./fixtures.js";
+import { test, expect, createRoom, showLiveResultActions } from "./fixtures.js";
 
 test("the dinner image reaches native sharing from the click and cancellation does not download", async ({
   page,
 }) => {
+  await showLiveResultActions(page);
   await page.addInitScript(() => {
     let attempt = 0;
     Object.defineProperty(navigator, "canShare", { configurable: true, value: () => true });

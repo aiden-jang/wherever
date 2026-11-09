@@ -4,11 +4,13 @@ import { createRoot } from "react-dom/client";
 import "@fontsource-variable/bricolage-grotesque/opsz.css";
 import "@fontsource-variable/inter";
 
+import { captureInstallPrompt } from "./useInstallPrompt.js";
 import App from "./App.js";
 import "./index.css";
 import { primeOnFirstGesture } from "./components/sound.js";
 
 primeOnFirstGesture();
+captureInstallPrompt();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

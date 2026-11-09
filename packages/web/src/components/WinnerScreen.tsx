@@ -1,6 +1,6 @@
 import { SavePlanImage } from "./SavePlanImage.js";
 import { CopyFallback } from "./CopyFallback.js";
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { useShareAction } from "../useShareAction.js";
 import { useInstallPrompt } from "../useInstallPrompt.js";
@@ -28,6 +28,9 @@ export function WinnerScreen({
   visited,
   filters,
   isHost,
+  online,
+  pending,
+  demo,
   onAgain,
   onChooseAlternative,
   onNeverAgain,
@@ -36,6 +39,9 @@ export function WinnerScreen({
   visited: VisitedPlace[];
   filters?: SessionFilters;
   isHost: boolean;
+  online: boolean;
+  pending: boolean;
+  demo: boolean;
   onAgain: (deck: "new" | "same") => void;
   onChooseAlternative: (restaurantId: string) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
@@ -65,22 +71,26 @@ export function WinnerScreen({
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
+  const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
+    heading.current?.focus({ preventScroll: true });
     buzz([18, 40, 18]);
     play("match");
     const t = setTimeout(() => setCelebrate(false), 4000);
     return () => clearTimeout(t);
   }, []);
 
-  const text = planText(
-    restaurant,
-    rightSwipes,
-    totalParticipants,
-    reasons.map((reason) => reason.label),
-    alternatives[0]?.restaurant,
-  );
+  const text = demo
+    ? `Sample plan: ${restaurant.name}. This restaurant is fictional.`
+    : planText(
+        restaurant,
+        rightSwipes,
+        totalParticipants,
+        reasons.map((reason) => reason.label),
+        alternatives[0]?.restaurant,
+      );
   const url = mapsUrl(restaurant);
-  const sharePlan = () => share({ title: restaurant.name, text, url });
+  const sharePlan = () => share({ title: restaurant.name, text, ...(demo ? {} : { url }) });
   const copyAddress = () =>
     restaurant.address
       ? copy({ text: `${restaurant.name}\n${restaurant.address}` }, false)
@@ -89,7 +99,7 @@ export function WinnerScreen({
   return (
     <div className="relative w-full">
       {celebrate && <Confetti />}
-      <h1 className="table-title">
+      <h1 ref={heading} tabIndex={-1} className="table-title">
         Dinner is handled<span className="sr-only">: {restaurant.name}</span>
       </h1>
       <div className="table-layout">
@@ -98,12 +108,18 @@ export function WinnerScreen({
             restaurant={restaurant}
             rightSwipes={rightSwipes}
             totalParticipants={totalParticipants}
-          />
-          <PlanDirections
-            restaurant={restaurant}
-            unavailable={unavailable}
-            onOpen={() => setDirectionsOpen(true)}
-            className="mt-3"
+            action={
+              demo ? (
+                <p className="mt-3 text-sm font-semibold">Sample restaurant. For demonstration only.</p>
+              ) : (
+                <PlanDirections
+                  restaurant={restaurant}
+                  unavailable={unavailable}
+                  onOpen={() => setDirectionsOpen(true)}
+                  className="mt-3"
+                />
+              )
+            }
           />
 
           <div className="table-plan-actions mt-3 grid gap-2">
@@ -111,16 +127,17 @@ export function WinnerScreen({
               type="button"
               onClick={() => void sharePlan()}
               disabled={shareResult === "sharing"}
+              aria-live="polite"
               aria-label={
                 shareResult === "sharing"
-                  ? "Opening dinner plan sharing"
+                  ? "Opening…"
                   : shareResult === "shared"
-                    ? "Dinner plan shared"
+                    ? "Plan shared"
                     : shareResult === "copied"
-                      ? "Dinner plan copied"
+                      ? "Plan copied"
                       : shareResult === "failed"
-                        ? "Couldn’t share dinner plan"
-                        : "Share dinner plan"
+                        ? "Couldn’t share"
+                        : "Send the plan"
               }
               className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
             >
@@ -135,10 +152,10 @@ export function WinnerScreen({
                       : "Send the plan"}
             </button>
             {shareResult === "failed" && (
-              <CopyFallback label="Dinner plan to copy" text={`${text}\n${url}`} />
+              <CopyFallback label="Dinner plan to copy" text={demo ? text : `${text}\n${url}`} />
             )}
-            <SavePlanImage key={restaurant.id} restaurant={restaurant} />
-            <PlaceLinks restaurant={restaurant} showMap={!unavailable} />
+            {!demo && <SavePlanImage key={restaurant.id} restaurant={restaurant} />}
+            {!demo && <PlaceLinks restaurant={restaurant} showMap={!unavailable} />}
           </div>
           <RestaurantHours hours={restaurant.hours} className="table-panel mt-4" />
 
@@ -152,7 +169,7 @@ export function WinnerScreen({
           </p>
           {tiedWith > 0 && totalParticipants <= 1 && (
             <p className="mt-2 text-xs text-muted">
-              You liked {tiedWith + 1}. This one was dealt first, so it takes it.
+              {tiedWith + 1} places tied on points. This one appeared first in the deck.
             </p>
           )}
           {tiedWith === 0 && nearMiss && (
@@ -277,7 +294,7 @@ export function WinnerScreen({
                    truncate inside it do its job, and the row ran out past the panel. */
                   <li key={choice.restaurant.id} className="grid grid-cols-[minmax(0,1fr)] gap-2">
                     <a
-                      href={mapsUrl(choice.restaurant)}
+                      href={demo ? undefined : mapsUrl(choice.restaurant)}
                       target="_blank"
                       aria-describedby="external-link-hint"
                       rel="noopener noreferrer"
@@ -287,9 +304,10 @@ export function WinnerScreen({
                         {index + 2}
                       </span>
                       <RestaurantPhoto
-                        imageUrl={choice.restaurant.imageUrl}
+                        imageUrl={choice.restaurant.source === "google" ? null : choice.restaurant.imageUrl}
+                        lazy
                         category={choice.restaurant.category}
-                        className="h-12 w-12 shrink-0 rounded-lg"
+                        className="relative h-12 w-12 shrink-0 rounded-lg"
                       />
                       <span className="min-w-0 flex-1">
                         <strong className="block text-sm text-cream [overflow-wrap:anywhere]">
@@ -310,6 +328,7 @@ export function WinnerScreen({
                     {isHost && (
                       <button
                         type="button"
+                        disabled={!online || pending}
                         // There is one of these per runner-up, so the visible label alone is heard as
                         // "Make Plan A" twice with nothing to tell them apart.
                         aria-label={`Make ${choice.restaurant.name} Plan A`}
@@ -346,7 +365,7 @@ export function WinnerScreen({
                 </button>
               </div>
             )}
-            <RoundAgain isHost={isHost} onAgain={onAgain} />
+            <RoundAgain isHost={isHost} online={online} pending={pending} onAgain={onAgain} />
           </div>
 
           <VisitedHistory visited={visited} onNeverAgain={onNeverAgain} />

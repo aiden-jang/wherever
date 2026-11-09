@@ -41,8 +41,20 @@ export async function createRoom(page: Page, name = "Alex") {
   await page.getByRole("button", { name: "Start a session", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Start a session" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill(name);
-  await dialog.getByRole("button", { name: "Deal the cards" }).click();
+  await dialog.getByRole("button", { name: "Create room" }).click();
   await expect(page.getByRole("heading", { name: "Dinner room" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start swiping", exact: true })).toBeEnabled();
   return page.url().split("/s/")[1]!;
+}
+
+/** Keeps real room traffic while exercising the live-result actions against synthetic restaurants. */
+export async function showLiveResultActions(page: Page) {
+  await page.routeWebSocket("**/ws/*", (socket) => {
+    const upstream = socket.connectToServer();
+    upstream.onMessage((raw) => {
+      const message = JSON.parse(String(raw)) as { type: string; demo?: string };
+      if (message.type === "deck" || message.type === "match") delete message.demo;
+      socket.send(JSON.stringify(message));
+    });
+  });
 }

@@ -1,10 +1,33 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { shouldOfferInstall } from "@wherever/shared";
 
 /** Chrome's install event. Not in lib.dom, because it is not in any spec. */
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+let captured: InstallPromptEvent | null = null;
+const listeners = new Set<() => void>();
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
+const snapshot = () => captured;
+
+function setCaptured(event: InstallPromptEvent | null) {
+  captured = event;
+  for (const listener of listeners) listener();
+}
+
+export function captureInstallPrompt(): void {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    setCaptured(event as InstallPromptEvent);
+  });
+  window.addEventListener("appinstalled", () => setCaptured(null));
 }
 
 const DISMISSED_KEY = "wherever:install-dismissed";
@@ -37,23 +60,8 @@ export function useInstallPrompt(decidedRounds: number): {
   install: () => Promise<void>;
   dismiss: () => void;
 } {
-  const [event, setEvent] = useState<InstallPromptEvent | null>(null);
+  const event = useSyncExternalStore(subscribe, snapshot);
   const [dismissed, setDismissed] = useState(() => readFlag(DISMISSED_KEY));
-
-  useEffect(() => {
-    const onPrompt = (e: Event) => {
-      // Hold onto it: without preventDefault Chrome shows its own bar at its own moment.
-      e.preventDefault();
-      setEvent(e as InstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    const onInstalled = () => setEvent(null);
-    window.addEventListener("appinstalled", onInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
-  }, []);
 
   const installed =
     typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches === true;
@@ -65,11 +73,14 @@ export function useInstallPrompt(decidedRounds: number): {
 
   const install = useCallback(async () => {
     if (!event) return;
-    await event.prompt();
-    await event.userChoice;
-    // Either way this event is spent, and a declined prompt is a no.
-    setEvent(null);
-    dismiss();
+    setCaptured(null);
+    try {
+      await event.prompt();
+      await event.userChoice;
+      dismiss();
+    } catch {
+      // The browser can revoke a previously offered prompt.
+    }
   }, [event, dismiss]);
 
   return {

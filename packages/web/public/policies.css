@@ -1,0 +1,29 @@
+:root {
+  color-scheme: dark;
+  background: #181b17;
+  color: #f4f1e7;
+  font:
+    1rem/1.6 system-ui,
+    sans-serif;
+}
+
+main {
+  max-inline-size: 43rem;
+  margin: 3rem auto;
+  padding-inline: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2 {
+  line-height: 1.2;
+}
+
+a {
+  color: #d5e8a0;
+}
+
+a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}

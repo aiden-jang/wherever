@@ -32,11 +32,23 @@ describe("mapGooglePlace", () => {
       userRatingCount: 1200,
       priceLevel: "PRICE_LEVEL_MODERATE",
       formattedAddress: "7 Carmine St",
-      photos: [{ name: "places/g1/photos/x" }],
+      photos: [
+        {
+          name: "places/g1/photos/x",
+          authorAttributions: [{ displayName: "Photographer", uri: "//maps.google.com/user" }],
+        },
+      ],
     };
     expect(mapGooglePlace(p, center, "https://api.example.com")).toEqual({
       id: "g1",
       name: "Joe's Pizza",
+      source: "google",
+      priceUnknown: false,
+      photoCredits: {
+        "https://api.example.com/api/photo?ref=places%2Fg1%2Fphotos%2Fx": [
+          { name: "Photographer", url: "https://maps.google.com/user" },
+        ],
+      },
       category: "Pizza restaurant",
       priceTier: 2,
       rating: 4.5, // Google is already 0-5

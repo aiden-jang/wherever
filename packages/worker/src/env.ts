@@ -10,7 +10,7 @@ export interface Env {
   /** Global monthly reservations for searches, photos, and geocoding. */
   USAGE_METER: DurableObjectNamespace<UsageMeter>;
   DB: D1Database;
-  /** Monthly cap on Google Nearby Search calls before the app stops calling Google. Default 950. */
+  /** Monthly cap on Google Nearby Search and Place Details calls before the app stops calling Google. Default 950. */
   SEARCH_MONTHLY_CAP?: string;
   /** Grace before a departed host is replaced. Configurable so a test need not wait it out. */
   HOST_GRACE_MS?: string;

@@ -79,7 +79,7 @@
   padding: 0 16px 10px;
   color: #59604f;
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 .table-vote-warning {
   color: #a13e31;
@@ -87,7 +87,7 @@
 .table-plan-actions > button {
   min-height: 44px;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 @media (min-width: 900px) {
   .table-room {
@@ -138,18 +138,18 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #59604f;
 }
 .meal-rating {
   margin-left: auto;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .meal-name {
   overflow-wrap: anywhere;
   margin-top: 8px;
-  font: 750 26px/1.05 var(--font-display);
+  font: 750 1.625rem/1.05 var(--font-display);
   letter-spacing: -0.7px;
 }
 .meal-facts {
@@ -157,7 +157,7 @@
   flex-wrap: wrap;
   gap: 6px 18px;
   margin-top: 10px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 650;
 }
 .meal-facts > span {
@@ -167,12 +167,12 @@
   display: block;
   margin-bottom: 3px;
   color: #59604f;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 500;
 }
 .meal-hours {
   margin-top: 10px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: #4d6037;
 }
@@ -183,25 +183,8 @@
   display: none;
   margin-top: 10px;
   color: #59604f;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.5;
-}
-.photo-tracks {
-  position: absolute;
-  inset: 10px 12px auto;
-  display: flex;
-  gap: 4px;
-  pointer-events: none;
-}
-.photo-tracks span {
-  flex: 1;
-  height: 4px;
-  border-radius: 4px;
-  background: rgb(0 0 0 / 30%);
-  border: 1px solid rgb(255 255 255 / 50%);
-}
-.photo-tracks .photo-current {
-  background: white;
 }
 .meal-revisit {
   position: absolute;
@@ -214,7 +197,7 @@
   border-radius: 7px;
   background: var(--color-cream);
   color: var(--color-ink);
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 .vote-controls {
   border-top: 1px solid rgb(24 27 23 / 18%);
@@ -228,7 +211,7 @@
 .vote-main button {
   min-height: 46px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 650;
   transition:
     transform 180ms var(--ease-spring),
@@ -265,7 +248,7 @@
   min-height: 44px;
   padding: 6px 10px;
   border-radius: 12px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #59604f;
   transition: background 180ms ease;
 }
@@ -273,10 +256,10 @@
   background: rgb(24 27 23 / 7%);
 }
 .vote-special button > span {
-  font-size: 19px;
+  font-size: 1.1875rem;
 }
 .vote-special small {
-  font-size: 10px;
+  font-size: 0.625rem;
   border: 1px solid rgb(24 27 23 / 24%);
   border-radius: 4px;
   padding: 3px 4px;
@@ -316,7 +299,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 13px 20px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 650;
 }
 .ticket-body {
@@ -324,14 +307,14 @@
 }
 .ticket-name {
   margin-top: 9px;
-  font: 750 clamp(25px, 3.2vw, 38px)/1.05 var(--font-display);
+  font: 750 clamp(1.5625rem, 3.2vw, 2.375rem)/1.05 var(--font-display);
   letter-spacing: -1px;
   overflow-wrap: anywhere;
 }
 .ticket-address {
   margin-top: 14px;
   color: #59604f;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 .ticket-tear {
@@ -341,7 +324,7 @@
   gap: 8px;
   padding: 16px 20px;
   border-top: 1px dashed rgb(24 27 23 / 35%);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 .ticket-tear > span:first-child {
   font-weight: 650;
@@ -351,7 +334,7 @@
 }
 @media (min-width: 1024px) {
   .meal-name {
-    font-size: 32px;
+    font-size: 2rem;
   }
   .meal-body {
     padding: 20px 24px;

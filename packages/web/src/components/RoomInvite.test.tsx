@@ -14,7 +14,7 @@ test("a blocked invite copy leaves a selectable link and an immediate retry", as
   render(<RoomInvite code="ABCDEF" isHost={false} send={vi.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
   const fallback = await screen.findByRole("textbox", { name: "Invite link to copy" });
-  expect((fallback as HTMLTextAreaElement).value).toBe(location.href);
+  expect((fallback as HTMLTextAreaElement).value).toBe(new URL("/s/ABCDEF", location.origin).href);
   const retry = screen.getByRole("button", { name: "Copy link" });
   expect(retry.hasAttribute("disabled")).toBe(false);
   fireEvent.click(retry);

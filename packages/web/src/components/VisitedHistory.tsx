@@ -13,7 +13,7 @@ export function VisitedHistory({
   const ordered = [...visited].sort(
     (a, b) => new Date(b.visitedAt).getTime() - new Date(a.visitedAt).getTime(),
   );
-  const text = `Already tried:\n${ordered.map((place) => `• ${place.name}`).join("\n")}`;
+  const text = `Past picks:\n${ordered.map((place) => `• ${place.name}`).join("\n")}`;
   const shareHistory = async () => {
     if (shareStatus === "sharing") return;
     await share({ title: "Wherever past picks", text });
@@ -21,11 +21,12 @@ export function VisitedHistory({
   return (
     <div className="mt-10 text-left">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">Already been dragged to</h3>
+        <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">Past picks</h3>
         <button
           type="button"
           onClick={() => void shareHistory()}
           disabled={shareStatus === "sharing"}
+          aria-live="polite"
           className="text-xs font-semibold text-muted transition hover:text-acid hover:underline disabled:cursor-default disabled:opacity-70"
         >
           {shareStatus === "sharing"
@@ -48,7 +49,7 @@ export function VisitedHistory({
               v.neverAgain ? "border-dashed border-white/15 bg-white/[0.02]" : "border-white/10 bg-white/5"
             }`}
           >
-            <span className="block text-cream/90">{v.name}</span>
+            <span className="block text-cream/90 [overflow-wrap:anywhere]">{v.name}</span>
             <time dateTime={v.visitedAt} className="block text-2xs text-muted">
               {new Date(v.visitedAt).toLocaleDateString(undefined, {
                 month: "short",
@@ -63,9 +64,10 @@ export function VisitedHistory({
               type="button"
               onClick={() => onNeverAgain(v.restaurantId, !v.neverAgain)}
               aria-pressed={v.neverAgain === true}
-              className="mt-0.5 block text-2xs font-semibold text-muted transition hover:text-acid"
+              aria-label={`Exclude ${v.name} from future rounds`}
+              className="mt-0.5 block min-h-11 px-2 text-sm font-semibold text-muted transition hover:text-acid"
             >
-              {v.neverAgain ? "never again ✓" : "never again"}
+              {v.neverAgain ? "Excluded" : "Exclude from future rounds"}
             </button>
           </span>
         ))}

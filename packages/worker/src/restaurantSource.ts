@@ -96,11 +96,54 @@ export class MockRestaurantSource implements RestaurantSource {
 
 // ---- Google Places (New) ----
 
+const PLACE_FIELDS = [
+  "id",
+  "displayName",
+  "primaryTypeDisplayName",
+  "location",
+  "rating",
+  "userRatingCount",
+  "priceLevel",
+  "formattedAddress",
+  "photos",
+  "currentOpeningHours",
+  "googleMapsUri",
+  "websiteUri",
+  "nationalPhoneNumber",
+  "businessStatus",
+  "priceRange",
+  "accessibilityOptions",
+  "editorialSummary",
+  "goodForGroups",
+  "servesVegetarianFood",
+  "outdoorSeating",
+  "allowsDogs",
+  "reservable",
+  "takeout",
+  "delivery",
+  "servesCocktails",
+  "servesBrunch",
+  "liveMusic",
+  "goodForChildren",
+];
+
 export class GooglePlacesRestaurantSource implements RestaurantSource {
   constructor(
     private readonly apiKey: string,
     private readonly publicApiBase = "",
   ) {}
+
+  async fetchPlace(id: string, filters: SessionFilters): Promise<Restaurant | null> {
+    const response = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`, {
+      signal: AbortSignal.timeout(12_000),
+      headers: { "X-Goog-Api-Key": this.apiKey, "X-Goog-FieldMask": PLACE_FIELDS.join(",") },
+    });
+    if (!response.ok) return null;
+    const place = (await response.json()) as GooglePlace;
+    return place.id === id && place.displayName?.text
+      ? mapGooglePlace(place, resolveSearchCenter(filters), this.publicApiBase)
+      : null;
+  }
 
   async fetchDeck(filters: SessionFilters): Promise<Restaurant[]> {
     const center = resolveSearchCenter(filters);
@@ -114,46 +157,21 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
       ),
     ];
 
+    const includedPrimaryTypes = googleTypesFor(filters.categories).filter(
+      (type) => !excludedGoogleTypes.includes(type),
+    );
+    if (includedPrimaryTypes.length === 0) return [];
     const res = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
+      signal: AbortSignal.timeout(12_000),
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": this.apiKey,
         // Card and detail fields determine the provider’s billing tier. Photo bytes use /api/photo.
-        "X-Goog-FieldMask": [
-          "places.id",
-          "places.displayName",
-          "places.primaryTypeDisplayName",
-          "places.location",
-          "places.rating",
-          "places.userRatingCount",
-          "places.priceLevel",
-          "places.formattedAddress",
-          "places.photos",
-          "places.currentOpeningHours",
-          "places.googleMapsUri",
-          "places.websiteUri",
-          "places.nationalPhoneNumber",
-          "places.businessStatus",
-          "places.priceRange",
-          // Requested fields determine the provider’s billing tier; quotas must match this mask.
-          "places.accessibilityOptions",
-          "places.editorialSummary",
-          "places.goodForGroups",
-          "places.servesVegetarianFood",
-          "places.outdoorSeating",
-          "places.allowsDogs",
-          "places.reservable",
-          "places.takeout",
-          "places.delivery",
-          "places.servesCocktails",
-          "places.servesBrunch",
-          "places.liveMusic",
-          "places.goodForChildren",
-        ].join(","),
+        "X-Goog-FieldMask": PLACE_FIELDS.map((field) => `places.${field}`).join(","),
       },
       body: JSON.stringify({
-        includedPrimaryTypes: googleTypesFor(filters.categories),
+        includedPrimaryTypes,
         // "Not that": exclude the cuisines the group vetoed, server-side, so they never appear.
         ...(excludedGoogleTypes.length > 0 ? { excludedPrimaryTypes: excludedGoogleTypes } : {}),
         maxResultCount: 20,
@@ -182,14 +200,20 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
     }
 
     const data = (await res.json()) as { places?: GooglePlace[] };
-    const places = (data.places ?? []).filter((p) => p.id && p.displayName?.text);
+    const places = (data.places ?? []).filter(
+      (place) => place.id && place.displayName?.text && !place.businessStatus?.startsWith("CLOSED_"),
+    );
     // Filter by live open-now status before normalization.
     const visible = filters.openNow ? places.filter((p) => p.currentOpeningHours?.openNow === true) : places;
     return (
       visible
         .map((p) => mapGooglePlace(p, center, this.publicApiBase))
         // Google filters by cuisine + radius server-side; the rest is filtered here.
-        .filter((r) => passesPrice(r.priceTier, filters.priceTiers, filters.maxPriceTier))
+        .filter((r) =>
+          r.priceUnknown
+            ? !filters.priceTiers?.length && filters.maxPriceTier === 4
+            : passesPrice(r.priceTier, filters.priceTiers, filters.maxPriceTier),
+        )
         .filter((r) => passesRating(r.rating, filters.minRating))
         .filter((r) => passesReviews(r.reviewCount, filters.minReviews))
         .filter((r) => passesAmenities(r.amenities, filters.amenities))

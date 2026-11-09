@@ -1,11 +1,13 @@
 import type { SwipeDirection } from "@wherever/shared";
 
 export function VoteControls({
+  disabled,
   vetoUsed,
   superUsed,
   onVote,
   onSpent,
 }: {
+  disabled: boolean;
   vetoUsed: boolean;
   superUsed: boolean;
   onVote: (direction: SwipeDirection, superLike?: boolean, veto?: boolean) => void;
@@ -14,10 +16,22 @@ export function VoteControls({
   return (
     <div className="vote-controls">
       <div className="vote-main">
-        <button data-deck-control type="button" onClick={() => onVote("left")} className="vote-no">
+        <button
+          data-deck-control
+          type="button"
+          disabled={disabled}
+          onClick={() => onVote("left")}
+          className="vote-no"
+        >
           <span aria-hidden>✕</span> Nope
         </button>
-        <button data-deck-control type="button" onClick={() => onVote("right")} className="vote-yes">
+        <button
+          data-deck-control
+          type="button"
+          disabled={disabled}
+          onClick={() => onVote("right")}
+          className="vote-yes"
+        >
           <span aria-hidden>♥</span> Yes, please
         </button>
       </div>
@@ -25,6 +39,7 @@ export function VoteControls({
         <button
           data-deck-control
           type="button"
+          disabled={disabled}
           aria-disabled={vetoUsed}
           aria-label={vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"}
           onClick={() => (vetoUsed ? onSpent("vetoSpent") : onVote("left", false, true))}
@@ -34,6 +49,7 @@ export function VoteControls({
         <button
           data-deck-control
           type="button"
+          disabled={disabled}
           aria-disabled={superUsed}
           aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}
           onClick={() => (superUsed ? onSpent("superSpent") : onVote("right", true))}

@@ -3,7 +3,7 @@ import type { Restaurant } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { distanceText } from "@wherever/shared";
 import { RestaurantGallery } from "./RestaurantGallery.js";
-import { RestaurantAmenities, RestaurantHours } from "./RestaurantFacts.js";
+import { availabilityLabel, RestaurantAmenities, RestaurantHours } from "./RestaurantFacts.js";
 import { useScrollLock } from "../useScrollLock.js";
 import { useDialogFocus } from "../useDialogFocus.js";
 import { useSwipeToDismiss } from "../useSwipeToDismiss.js";
@@ -38,13 +38,7 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
   }, [onClose]);
 
   const hasLinks = restaurant.website || restaurant.phone;
-  // A permanent/temporary closure is more important than open-now, so it takes the status slot.
-  const closedLabel =
-    restaurant.businessStatus === "CLOSED_PERMANENTLY"
-      ? "Permanently closed"
-      : restaurant.businessStatus === "CLOSED_TEMPORARILY"
-        ? "Temporarily closed"
-        : null;
+  const availability = availabilityLabel(restaurant);
 
   return (
     <div
@@ -82,18 +76,22 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
         <RestaurantGallery key={restaurant.id} restaurant={restaurant} />
 
         <div className="p-5">
-          <h2 className="font-display text-3xl font-bold leading-tight">{restaurant.name}</h2>
+          <h2 tabIndex={-1} className="font-display text-3xl font-bold leading-tight">
+            {restaurant.name}
+          </h2>
           <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted tabular-nums">
             <span className="whitespace-nowrap text-acid">
-              {restaurant.rating ? `★ ${restaurant.rating}` : "new"}
+              {restaurant.rating ? `★ ${restaurant.rating}` : "Unrated"}
               {restaurant.rating && restaurant.reviewCount
                 ? ` (${reviewCountLabel(restaurant.reviewCount)})`
                 : ""}
             </span>
             <span className="text-white/20">·</span>
-            <span className="whitespace-nowrap">{priceLabel(restaurant.priceTier)}</span>
+            <span className="whitespace-nowrap">
+              {restaurant.priceUnknown ? "Price unavailable" : priceLabel(restaurant.priceTier)}
+            </span>
             {restaurant.priceRange && (
               <>
                 <span className="text-white/20">·</span>
@@ -114,17 +112,14 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
             <p className="mt-3 text-sm leading-snug text-cream/90">{restaurant.editorialSummary}</p>
           )}
 
-          {closedLabel ? (
-            <p className="mt-3 text-sm font-semibold text-flare">{closedLabel}</p>
-          ) : (
-            restaurant.openNow != null && (
-              <p className={`mt-3 text-sm font-semibold ${restaurant.openNow ? "text-acid" : "text-flare"}`}>
-                {restaurant.openNow ? "Open now" : "Closed right now"}
-              </p>
-            )
-          )}
+          {availability && <p className="mt-3 text-sm font-semibold text-muted">{availability}</p>}
 
           <RestaurantAmenities restaurant={restaurant} />
+          {restaurant.source === "google" && (
+            <p className="mt-2 text-xs" translate="no">
+              Google Maps
+            </p>
+          )}
 
           {restaurant.address && <p className="mt-3 text-sm text-muted">{restaurant.address}</p>}
 

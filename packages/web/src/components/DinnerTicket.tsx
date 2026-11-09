@@ -2,19 +2,19 @@ import type { CSSProperties } from "react";
 import type { Restaurant } from "@wherever/shared";
 import { distanceText } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
-import { RestaurantPhoto } from "./RestaurantPhoto.js";
+import { RestaurantGallery } from "./RestaurantGallery.js";
+import { RestaurantAmenities } from "./RestaurantFacts.js";
 
 export function DinnerTicket({
   restaurant,
   rightSwipes,
   totalParticipants,
-  onOpen,
 }: {
   restaurant: Restaurant;
   rightSwipes: number;
   totalParticipants: number;
-  onOpen: () => void;
 }) {
+  const distance = distanceText(restaurant.distanceMeters);
   const closed =
     restaurant.businessStatus === "CLOSED_PERMANENTLY"
       ? "Permanently closed"
@@ -24,13 +24,7 @@ export function DinnerTicket({
           ? "Closed right now"
           : null;
   return (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.currentTarget.focus({ preventScroll: true });
-        onOpen();
-      }}
-      aria-label={`See details for ${restaurant.name}`}
+    <article
       className="dinner-ticket reveal"
       style={{ "--reveal-at": "90ms", viewTransitionName: "chosen-card" } as CSSProperties}
     >
@@ -38,11 +32,7 @@ export function DinnerTicket({
         <span>Tonight’s plan</span>
         <img src="/art/ticket.svg" alt="" width={26} height={26} />
       </div>
-      <RestaurantPhoto
-        imageUrl={restaurant.imageUrl}
-        category={restaurant.category}
-        className="ticket-photo"
-      />
+      <RestaurantGallery key={restaurant.id} restaurant={restaurant} className="ticket-photo" />
       <div className="ticket-body">
         <p className="meal-category">
           {categoryLabel(restaurant.category)}
@@ -53,16 +43,16 @@ export function DinnerTicket({
               : ""}
           </span>
         </p>
-        <div className="ticket-name">{restaurant.name}</div>
+        <h2 className="ticket-name">{restaurant.name}</h2>
         <div className="meal-facts">
           <span>
             <small>Price</small>
             {restaurant.priceRange ?? priceLabel(restaurant.priceTier)}
           </span>
-          {distanceText(restaurant.distanceMeters) && (
+          {distance && (
             <span>
               <small>Distance</small>
-              {distanceText(restaurant.distanceMeters)}
+              {distance}
             </span>
           )}
         </div>
@@ -72,6 +62,10 @@ export function DinnerTicket({
           <p className="meal-hours">● Open now</p>
         ) : null}
         {restaurant.address && <p className="ticket-address">{restaurant.address}</p>}
+        {restaurant.editorialSummary && (
+          <p className="mt-3 text-sm leading-relaxed">{restaurant.editorialSummary}</p>
+        )}
+        <RestaurantAmenities restaurant={restaurant} />
       </div>
       <div className="ticket-tear">
         <span>
@@ -79,9 +73,6 @@ export function DinnerTicket({
         </span>
         <span>{totalParticipants > 1 ? "An agreement. Historic." : "Your call. No committee."}</span>
       </div>
-      <div className="ticket-bottom">
-        Hours &amp; restaurant details <span aria-hidden>↗</span>
-      </div>
-    </button>
+    </article>
   );
 }

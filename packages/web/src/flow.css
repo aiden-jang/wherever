@@ -73,6 +73,7 @@
 }
 .detail-chip {
   background: rgb(24 27 23 / 6%);
+  color: #59604f;
 }
 .detail-secondary {
   border: 1px solid rgb(24 27 23 / 25%);
@@ -86,6 +87,9 @@
 }
 .hours-today {
   font-weight: 650;
+  color: var(--color-cream);
+}
+.restaurant-detail .hours-today {
   color: var(--color-ink);
 }
 .detail-actions {

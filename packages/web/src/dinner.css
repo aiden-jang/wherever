@@ -67,9 +67,12 @@
 }
 .table-face > [data-card-photo] {
   min-width: 0;
+  min-height: clamp(116px, 23dvh, 210px);
 }
 .table-photo {
-  height: clamp(116px, 23dvh, 210px);
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
 }
 .table-vote-feedback {
   min-height: 44px;
@@ -102,9 +105,8 @@
   .dinner-ticket {
     grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
   }
-  .table-face .table-photo {
-    height: 100%;
-    min-height: 240px;
+  .table-face > [data-card-photo] {
+    min-height: clamp(240px, 30dvh, 320px);
   }
   .table-face .meal-body {
     align-self: center;
@@ -114,8 +116,8 @@
   }
   .dinner-ticket .ticket-photo {
     grid-column: 1;
-    grid-row: 1 / 5;
-    height: 100%;
+    grid-row: 1 / 4;
+    height: auto;
     min-height: 255px;
   }
   .dinner-ticket > :not(.ticket-photo) {
@@ -288,8 +290,8 @@
   width: 100%;
   border-radius: 16px;
   overflow: hidden;
+  overflow-wrap: anywhere;
   text-align: left;
-  transition: transform 180ms var(--ease-spring);
 }
 @media (min-width: 900px) {
   .dinner-ticket {
@@ -299,11 +301,15 @@
 .ticket-photo {
   height: clamp(155px, 25dvh, 228px);
 }
-.dinner-ticket:hover {
-  transform: translateY(-2px);
+.ticket-photo .detail-photo {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  overflow: hidden;
 }
-.dinner-ticket:focus-visible {
-  outline-color: var(--color-ember);
+.ticket-photo .gallery-arrow:focus-visible {
+  outline-offset: -4px;
+  outline-color: var(--color-ink);
 }
 .ticket-top {
   display: flex;
@@ -312,9 +318,6 @@
   padding: 13px 20px;
   font-size: 12px;
   font-weight: 650;
-}
-.ticket-top > span:last-child {
-  font-size: 22px;
 }
 .ticket-body {
   padding: 20px;
@@ -338,7 +341,6 @@
   gap: 8px;
   padding: 16px 20px;
   border-top: 1px dashed rgb(24 27 23 / 35%);
-  border-bottom: 1px dashed rgb(24 27 23 / 35%);
   font-size: 11px;
 }
 .ticket-tear > span:first-child {
@@ -346,12 +348,6 @@
 }
 .ticket-tear > span:last-child {
   color: #59604f;
-}
-.ticket-bottom {
-  display: flex;
-  justify-content: space-between;
-  padding: 14px 20px;
-  font-size: 11px;
 }
 @media (min-width: 1024px) {
   .meal-name {
@@ -368,13 +364,11 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .vote-main button,
-  .dinner-ticket {
+  .vote-main button {
     transition: none;
   }
   .vote-main button:hover,
-  .vote-main button:active,
-  .dinner-ticket:hover {
+  .vote-main button:active {
     transform: none;
   }
 }

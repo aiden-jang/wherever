@@ -11,7 +11,7 @@ import { PlanDirections } from "./PlanDirections.js";
 import { DinnerTicket } from "./DinnerTicket.js";
 import { distanceText } from "@wherever/shared";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
-import { RestaurantDetail } from "./RestaurantDetail.js";
+import { RestaurantHours } from "./RestaurantFacts.js";
 import { Confetti } from "./Confetti.js";
 import { DirectionsDialog, mapsUrl } from "./DirectionsDialog.js";
 import { PlaceLinks } from "./PlaceLinks.js";
@@ -55,7 +55,6 @@ export function WinnerScreen({
     restaurant.openNow === false ||
     restaurant.businessStatus === "CLOSED_PERMANENTLY" ||
     restaurant.businessStatus === "CLOSED_TEMPORARILY";
-  const [detailOpen, setDetailOpen] = useState(false);
   const { status: shareResult, share } = useShareAction(restaurant.id);
   const [directionsOpen, setDirectionsOpen] = useState(false);
   const { status: addressStatus, share: copy } = useShareAction(restaurant.id);
@@ -99,7 +98,6 @@ export function WinnerScreen({
             restaurant={restaurant}
             rightSwipes={rightSwipes}
             totalParticipants={totalParticipants}
-            onOpen={() => setDetailOpen(true)}
           />
           <PlanDirections
             restaurant={restaurant}
@@ -140,8 +138,9 @@ export function WinnerScreen({
               <CopyFallback label="Dinner plan to copy" text={`${text}\n${url}`} />
             )}
             <SavePlanImage key={restaurant.id} restaurant={restaurant} />
-            <PlaceLinks restaurant={restaurant} />
+            <PlaceLinks restaurant={restaurant} showMap={!unavailable} />
           </div>
+          <RestaurantHours hours={restaurant.hours} className="table-panel mt-4" />
 
           <p
             className="reveal mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid"
@@ -354,7 +353,6 @@ export function WinnerScreen({
         </div>
       </div>
 
-      {detailOpen && <RestaurantDetail restaurant={restaurant} onClose={() => setDetailOpen(false)} />}
       {directionsOpen && (
         <DirectionsDialog
           restaurant={restaurant}

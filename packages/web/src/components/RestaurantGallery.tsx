@@ -2,7 +2,13 @@ import { useState } from "react";
 import type { Restaurant } from "@wherever/shared";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 
-export function RestaurantGallery({ restaurant }: { restaurant: Restaurant }) {
+export function RestaurantGallery({
+  restaurant,
+  className = "",
+}: {
+  restaurant: Restaurant;
+  className?: string;
+}) {
   const photos = restaurant.photos?.length
     ? restaurant.photos
     : restaurant.imageUrl
@@ -12,7 +18,7 @@ export function RestaurantGallery({ restaurant }: { restaurant: Restaurant }) {
   const current = Math.min(index, Math.max(0, photos.length - 1));
   return (
     <div
-      className="restaurant-gallery"
+      className={`restaurant-gallery ${className}`}
       role="group"
       aria-label={`${restaurant.name} photos`}
       onKeyDown={(event) => {

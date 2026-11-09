@@ -11,7 +11,7 @@ import { play } from "./sound.js";
 import { swipeAnnouncement, undoAnnouncement, revisitNote } from "@wherever/shared";
 import { useLine } from "../useLine.js";
 
-import { SwipeCard } from "./SwipeCard.js";
+import { ActiveSwipeCard } from "./ActiveSwipeCard.js";
 
 const HINT_KEY = "wherever:swipe-hint-seen";
 
@@ -39,17 +39,21 @@ const RAIL = "table-rail";
 export function SwipeDeck({
   restaurants,
   disabled = false,
+  demo = false,
   alreadyVoted = [],
   visited = [],
   superSpent = false,
   vetoSpent = false,
   onSwipe,
+  onLoadPlace,
   onUndo,
   onAnnounce,
   aside,
 }: {
   restaurants: Restaurant[];
   disabled?: boolean;
+  demo?: boolean;
+  onLoadPlace: (id: string) => void;
   alreadyVoted?: string[];
   /** Where the group has already been, so a place out of cooldown says so instead of arriving as new. */
   visited?: VisitedPlace[];
@@ -60,7 +64,6 @@ export function SwipeDeck({
   // The deck owns its status rail; the group panel joins it on desktop and follows it on phones.
   aside?: ReactNode;
   onUndo: (restaurantId: string) => void;
-  /** Feeds the page's live region, so voting is not silent for a screen reader. */
   onAnnounce?: (text: string) => void;
 }) {
   const restoredVotes = useMemo(() => new Set(alreadyVoted), [alreadyVoted]);
@@ -132,8 +135,16 @@ export function SwipeDeck({
       if (disabled) return;
       const i = indexRef.current;
       const current = restaurants[i];
-      if (!current) return;
+      if (
+        !current ||
+        current.detailsStatus === "pending" ||
+        (current.detailsStatus && (dir !== "left" || isVeto))
+      )
+        return;
       const next = nextUnvoted(i);
+      if (restaurants[next]?.detailsStatus === "pending") {
+        document.activeElement?.closest("main")?.focus({ preventScroll: true });
+      }
       indexRef.current = next;
       // A firmer triple-buzz for a super-like; light on a like, double on a pass.
       buzz(isVeto ? [20, 40, 20, 40] : isSuper ? [12, 30, 12] : dir === "right" ? 12 : [8, 20]);
@@ -324,7 +335,7 @@ export function SwipeDeck({
         </div>
         {/* Waiting on other people is exactly when their progress is worth looking at. */}
         {aside && <div className={RAIL}>{aside}</div>}
-        {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}
+        {detail && <RestaurantDetail restaurant={detail} demo={demo} onClose={() => setDetail(null)} />}
       </div>
     );
   }
@@ -335,8 +346,11 @@ export function SwipeDeck({
     <div className="table-layout">
       <div className="meal-card table-card" style={{ viewTransitionName: "chosen-card" } as CSSProperties}>
         <div className={dealing ? "deal-in" : undefined}>
-          <SwipeCard
+          <ActiveSwipeCard
             key={active.id}
+            disabled={disabled}
+            onLoadPlace={onLoadPlace}
+            onAnnounce={onAnnounce}
             restaurant={active}
             revisit={revisitNote(visited, active.id)}
             onCommit={commit}
@@ -345,6 +359,7 @@ export function SwipeDeck({
         </div>
         <VoteControls
           disabled={disabled}
+          detailsStatus={active.detailsStatus}
           vetoUsed={vetoUsed}
           superUsed={superUsed}
           onVote={commit}
@@ -354,7 +369,8 @@ export function SwipeDeck({
 
         {/* Reserve one feedback slot so vote controls stay under the user’s finger. */}
         <p className={`table-vote-feedback ${spentNote ? "table-vote-warning" : ""}`} aria-live="polite">
-          {spentNote ?? (showHint ? "Swipe or tap a vote. Tap the card for details." : "")}
+          {spentNote ??
+            (showHint && !active.detailsStatus ? "Swipe or tap a vote. Tap the card for details." : "")}
         </p>
       </div>
 
@@ -378,7 +394,7 @@ export function SwipeDeck({
         {aside}
       </div>
 
-      {detail && <RestaurantDetail restaurant={detail} onClose={() => setDetail(null)} />}
+      {detail && <RestaurantDetail restaurant={detail} demo={demo} onClose={() => setDetail(null)} />}
     </div>
   );
 }

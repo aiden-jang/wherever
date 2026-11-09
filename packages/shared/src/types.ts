@@ -34,6 +34,7 @@ export interface PhotoCredit {
 
 export interface Restaurant {
   source?: "google";
+  detailsStatus?: "pending" | "unavailable";
   photoCredits?: Record<string, PhotoCredit[]>;
   id: string;
   name: string;

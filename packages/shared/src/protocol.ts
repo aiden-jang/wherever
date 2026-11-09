@@ -24,6 +24,7 @@ export interface JoinMessage {
   displayName: string;
   /** Stable per-session id so a reconnecting client keeps its identity + votes. */
   clientId?: string;
+  lazyPlaces?: boolean;
 }
 
 export interface StartRoundMessage {
@@ -112,6 +113,7 @@ export type ClientMessage =
   | SetNeverAgainMessage
   | ReactMessage
   | NudgeThemMessage
+  | { type: "load_round_place"; roundId: number; restaurantId: string }
   | { type: "turn_off_timer"; roundId: number };
 
 // ---- Server -> Client ----
@@ -261,4 +263,5 @@ export type ServerMessage =
   | VibesMessage
   | ReactionMessage
   | NudgeMessage
+  | { type: "round_place"; roundId: number; restaurant: Restaurant }
   | { type: "round_clock"; roundEndsAt: null };

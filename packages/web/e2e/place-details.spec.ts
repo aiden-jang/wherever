@@ -27,12 +27,14 @@ test("long place details and missing photos stay readable", async ({ page }) => 
     server.onMessage((data) => {
       const message = JSON.parse(String(data)) as ServerMessage;
       if (message.type === "deck") {
+        delete message.demo;
         message.restaurants = message.restaurants.map((place) => ({
           ...place,
           name,
           address: "AnUnbrokenAddress".repeat(15),
           imageUrl: "/missing-review-photo.jpg",
           photos: ["/missing-review-photo.jpg"],
+          hours: ["Monday: 4–9 PM", "Tuesday: 4–9 PM", "Wednesday: 4–9 PM"],
         }));
       }
       socket.send(JSON.stringify(message));
@@ -56,6 +58,11 @@ test("long place details and missing photos stay readable", async ({ page }) => 
       animations: "disabled",
     });
   }
+  const hours = dialog.getByRole("button", { name: "See all hours" });
+  await hours.focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog.getByRole("button", { name: "See fewer hours" })).toBeFocused();
+  await expect(dialog.getByText("Wednesday: 4–9 PM")).toBeVisible();
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("button", { name: `See details for ${name}`, exact: true })).toBeFocused();
 });

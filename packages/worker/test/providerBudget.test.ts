@@ -1,12 +1,13 @@
 import { env } from "cloudflare:workers";
 import { createExecutionContext, runInDurableObject, waitOnExecutionContext } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Restaurant } from "@wherever/shared";
+import type { Restaurant, ServerMessage } from "@wherever/shared";
 import worker from "../src/index.js";
 import type { Env } from "../src/env.js";
 import type { UsageMeter } from "../src/usageMeter.js";
 import { fetchFreshDeck, readDemoMode } from "../src/deckSource.js";
-import { RoomPlaces } from "../src/roomPlaces.js";
+import { RoomPlaces, storedPlace } from "../src/roomPlaces.js";
+import { sendResumedDeck, sendRoundPlace } from "../src/roundResume.js";
 
 const bindings = { ...(env as unknown as Env), GOOGLE_PLACES_API_KEY: "budget-test-only" };
 const meter = () => bindings.USAGE_METER.get(bindings.USAGE_METER.idFromName("global"));
@@ -115,6 +116,65 @@ describe("provider budget enforcement", () => {
       expect(await readDemoMode(state.storage)).toBe("budget");
     });
     expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("looks up only the next unvoted place from an idle deck and coalesces concurrent requests", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      const id = String(url).split("/").at(-1)!;
+      return Response.json({ id, displayName: { text: `Restaurant ${id}` } });
+    });
+    const room = bindings.SESSION_ROOM.get(bindings.SESSION_ROOM.idFromName(crypto.randomUUID()));
+    await runInDurableObject(room, async (_instance, state) => {
+      const storage = state.storage;
+      const filters = { radiusMeters: 8000, maxPriceTier: 4 as const, categories: [] };
+      const deck = Array.from({ length: 10 }, (_, index) =>
+        storedPlace({ id: `place-${index}`, source: "google" } as Restaurant),
+      );
+      delete deck[1]!.detailsStatus;
+      const firstVote = { participantId: "guest", restaurantId: "place-0", direction: "right" };
+      await storage.put({
+        meta: { code: "BUDGET", status: "swiping", voteMode: "majority", filters },
+        roundNumber: 2,
+        deck,
+        votes: { "guest:place-0": firstVote },
+      });
+      const messages: ServerMessage[] = [];
+      const close = vi.fn();
+      const socket = {
+        readyState: WebSocket.OPEN,
+        deserializeAttachment: () => ({ participantId: "guest" }),
+        send: (raw: string) => messages.push(JSON.parse(raw)),
+        close,
+      } as unknown as WebSocket;
+      const places = new RoomPlaces(bindings);
+      const before = (await meter().stats()).search;
+      expect(await sendResumedDeck(storage, places, socket, "guest", false)).toBe(false);
+      expect(close).toHaveBeenCalledWith(1008, expect.stringContaining("Reload"));
+      expect(await sendResumedDeck(storage, places, socket, "guest", true)).toBe(true);
+      expect(messages.at(-1)).toMatchObject({ type: "deck", alreadyVoted: ["place-0"] });
+      expect(upstream).not.toHaveBeenCalled();
+
+      await sendRoundPlace(storage, places, socket, 1, "place-1");
+      await sendRoundPlace(storage, places, socket, 2, "place-7");
+      expect(upstream).not.toHaveBeenCalled();
+      const loadNext = () => sendRoundPlace(storage, places, socket, 2, "place-1");
+      await Promise.all([loadNext(), loadNext()]);
+      expect(upstream).toHaveBeenCalledTimes(1);
+      expect(messages.at(-1)).toMatchObject({
+        type: "round_place",
+        restaurant: { name: "Restaurant place-1" },
+      });
+      expect((await meter().stats()).search).toBe(before + 1);
+
+      await storage.put("votes", {
+        "guest:place-0": firstVote,
+        "guest:place-1": { ...firstVote, restaurantId: "place-1" },
+      });
+      await sendRoundPlace(storage, places, socket, 2, "place-2");
+      expect(upstream).toHaveBeenCalledTimes(2);
+      expect((await meter().stats()).search).toBe(before + 2);
+    });
   });
 
   it.each([

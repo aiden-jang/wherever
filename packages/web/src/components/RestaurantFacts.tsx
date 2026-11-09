@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { AMENITY_OPTIONS, type Restaurant } from "@wherever/shared";
 
 const chipClass = "inline-flex items-center gap-1.5 detail-chip rounded-full px-3 py-1 text-xs";
@@ -45,14 +45,15 @@ export function RestaurantHours({
   className: string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const hoursId = useId();
   if (!hours?.length) return null;
-  const compact = compactOnMobile && !expanded && hours.length > 2;
+  const compact = compactOnMobile && hours.length > 2;
   return (
     <section className={className}>
       <h3 className="text-sm font-semibold">Hours</h3>
-      <ul className="mt-1 space-y-0.5 text-sm text-muted">
+      <ul id={hoursId} className="mt-1 space-y-0.5 text-sm text-muted">
         {hours.map((line, index) => (
-          <li key={line} className={compact && index >= 2 ? "hidden sm:list-item" : undefined}>
+          <li key={line} className={compact && !expanded && index >= 2 ? "hidden sm:list-item" : undefined}>
             {line}
           </li>
         ))}
@@ -60,10 +61,12 @@ export function RestaurantHours({
       {compact && (
         <button
           type="button"
-          onClick={() => setExpanded(true)}
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          aria-controls={hoursId}
           className="mt-1 min-h-11 text-sm font-semibold text-ember sm:hidden"
         >
-          See all hours
+          {expanded ? "See fewer hours" : "See all hours"}
         </button>
       )}
     </section>

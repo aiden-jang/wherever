@@ -23,7 +23,15 @@ const actionClass =
  * stats, whether it's open, address, weekly hours, and links out (Maps / website / call). Renders as
  * a bottom sheet on phones and a centered card on wider screens. Backdrop and Escape both close it.
  */
-export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaurant; onClose: () => void }) {
+export function RestaurantDetail({
+  restaurant,
+  demo,
+  onClose,
+}: {
+  restaurant: Restaurant;
+  demo: boolean;
+  onClose: () => void;
+}) {
   useScrollLock();
   const { dragY, scrollRef, handlers } = useSwipeToDismiss(onClose);
 
@@ -79,6 +87,7 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
           <h2 tabIndex={-1} className="font-display text-3xl font-bold leading-tight">
             {restaurant.name}
           </h2>
+          {demo && <p className="mt-2 text-sm font-semibold">Sample restaurant. This place is fictional.</p>}
           <div className="mt-2 truncate text-sm text-muted">{categoryLabel(restaurant.category)}</div>
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted tabular-nums">
@@ -125,37 +134,39 @@ export function RestaurantDetail({ restaurant, onClose }: { restaurant: Restaura
 
           <RestaurantHours hours={restaurant.hours} compactOnMobile className="detail-hours mt-4" />
 
-          <div className="detail-actions mt-5 flex flex-col gap-2">
-            <a
-              href={mapsUrlFor(restaurant)}
-              target="_blank"
-              aria-describedby="external-link-hint"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-2xl bg-ember px-4 py-3 text-sm font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
-            >
-              Open in Google Maps ↗
-            </a>
-            {hasLinks && (
-              <div className="flex gap-2">
-                {restaurant.website && (
-                  <a
-                    href={restaurant.website}
-                    target="_blank"
-                    aria-describedby="external-link-hint"
-                    rel="noopener noreferrer"
-                    className={`${actionClass} flex-1`}
-                  >
-                    Website ↗
-                  </a>
-                )}
-                {restaurant.phone && (
-                  <a href={`tel:${restaurant.phone}`} className={`${actionClass} flex-1`}>
-                    Call ↗
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
+          {!demo && (
+            <div className="detail-actions mt-5 flex flex-col gap-2">
+              <a
+                href={mapsUrlFor(restaurant)}
+                target="_blank"
+                aria-describedby="external-link-hint"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-ember px-4 py-3 text-sm font-semibold text-ink hover:brightness-110 active:scale-[0.98] transition"
+              >
+                Open in Google Maps ↗
+              </a>
+              {hasLinks && (
+                <div className="flex gap-2">
+                  {restaurant.website && (
+                    <a
+                      href={restaurant.website}
+                      target="_blank"
+                      aria-describedby="external-link-hint"
+                      rel="noopener noreferrer"
+                      className={`${actionClass} flex-1`}
+                    >
+                      Website ↗
+                    </a>
+                  )}
+                  {restaurant.phone && (
+                    <a href={`tel:${restaurant.phone}`} className={`${actionClass} flex-1`}>
+                      Call ↗
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

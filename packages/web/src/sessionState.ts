@@ -127,6 +127,14 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
         error: null,
         reactions: [],
       };
+    case "round_place":
+      if (msg.roundId !== state.roundId || state.match || !state.deck) return state;
+      return {
+        ...state,
+        deck: state.deck.map((place) =>
+          place.id === msg.restaurant.id && place.detailsStatus === "pending" ? msg.restaurant : place,
+        ),
+      };
     case "round_clock":
       return { ...state, roundEndsAt: msg.roundEndsAt };
     case "vote_progress":

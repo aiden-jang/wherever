@@ -70,6 +70,7 @@ const joinSchema = z.object({
   code: z.string().trim().length(6),
   displayName: z.string().trim().min(1).max(24),
   clientId: clientIdSchema.optional(),
+  lazyPlaces: z.boolean().optional(),
 });
 
 const startRoundSchema = z.object({ type: z.literal("start_round") });
@@ -155,5 +156,6 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   setNeverAgainSchema,
   reactSchema,
   nudgeThemSchema,
+  z.object({ type: z.literal("load_round_place"), roundId: z.number().int().positive(), restaurantId }),
   z.object({ type: z.literal("turn_off_timer"), roundId: z.number().int().positive() }),
 ]);

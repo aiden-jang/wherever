@@ -9,6 +9,7 @@ export function storedPlace(place: Restaurant): Restaurant {
   return {
     id: place.id,
     source: "google",
+    detailsStatus: "unavailable",
     name: DISPLAY_UNAVAILABLE,
     category: "Restaurant",
     priceTier: 2,
@@ -70,11 +71,13 @@ export async function scrubLegacyPlaces(storage: DurableObjectStorage, env: Env)
 export class RoomPlaces {
   private current = new Map<string, Restaurant>();
   private pending = new Map<string, Promise<Restaurant>>();
+  private failedUntil = new Map<string, number>();
 
   constructor(private readonly env: Env) {}
 
   remember(places: Restaurant[]): void {
     this.current.clear();
+    this.failedUntil.clear();
     for (const place of places) if (place.source === "google") this.current.set(place.id, place);
   }
 
@@ -82,7 +85,7 @@ export class RoomPlaces {
     return this.current.get(id)?.name;
   }
 
-  async show(place: Restaurant, filters: SessionFilters): Promise<Restaurant> {
+  forDeck(place: Restaurant): Restaurant {
     if (place.source !== "google") return place;
     const held = this.current.get(place.id);
     if (
@@ -90,9 +93,23 @@ export class RoomPlaces {
       (held.availabilityCheckedAt === undefined || Date.now() - held.availabilityCheckedAt < 300_000)
     )
       return held;
+    const fallback = storedPlace(place);
+    return Date.now() < (this.failedUntil.get(place.id) ?? 0)
+      ? fallback
+      : { ...fallback, detailsStatus: "pending" };
+  }
+
+  async show(place: Restaurant, filters: SessionFilters): Promise<Restaurant> {
+    const cached = this.forDeck(place);
+    if (cached.detailsStatus !== "pending") return cached;
     const pending = this.pending.get(place.id);
     if (pending) return pending;
-    const lookup = this.load(place, filters).finally(() => this.pending.delete(place.id));
+    const lookup = this.load(storedPlace(place), filters)
+      .then((result) => {
+        if (result.detailsStatus === "unavailable") this.failedUntil.set(place.id, Date.now() + 60_000);
+        return result;
+      })
+      .finally(() => this.pending.delete(place.id));
     this.pending.set(place.id, lookup);
     return lookup;
   }

@@ -51,13 +51,13 @@ export function VibeDial({
               }}
               aria-pressed={picked}
               className={`relative overflow-hidden rounded-2xl border px-3 py-2.5 text-left transition ${
-                picked ? "border-white/70 bg-white/10" : "border-white/15 hover:border-white/35"
+                picked ? "border-white/70 bg-white/5" : "border-white/15 hover:border-white/35"
               }`}
             >
               {/* Behind the label rather than beside it: the count is context, not the content. */}
               <span
                 aria-hidden
-                className="absolute inset-y-0 left-0 bg-white/10 transition-[width] duration-500"
+                className="absolute inset-y-0 left-0 bg-white/5 transition-[width] duration-500 motion-reduce:transition-none"
                 style={{ width: `${share}%` }}
               />
               <span className="relative flex items-center gap-2">
@@ -72,10 +72,8 @@ export function VibeDial({
       </div>
 
       {reading.vibe && (
-        <p className="mt-2.5 text-2xs text-white/40">
-          {/* Said before the round starts, because the deck is about to change and a surprise deck reads
-              as a bug. */}
-          Starting the round will search for somewhere {vibeOption(reading.vibe).label}.
+        <p className="mt-2.5 text-xs text-muted">
+          The deck prioritizes {vibeOption(reading.vibe).label} places within your dinner filters.
         </p>
       )}
     </section>

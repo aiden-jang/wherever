@@ -157,7 +157,10 @@ export function WinnerScreen({
           {!demo && (
             <div className="table-plan-actions mt-3 grid gap-2">
               <SavePlanImage key={restaurant.id} restaurant={restaurant} />
-              <PlaceLinks restaurant={restaurant} showMap={!unavailable} />
+              <PlaceLinks
+                restaurant={restaurant}
+                showMap={!unavailable && Boolean(restaurant.address?.trim())}
+              />
             </div>
           )}
           <RestaurantHours hours={restaurant.hours} className="table-panel mt-4" />
@@ -373,7 +376,7 @@ export function WinnerScreen({
         </div>
       </div>
 
-      {directionsOpen && (
+      {directionsOpen && restaurant.address?.trim() && (
         <DirectionsDialog
           restaurant={restaurant}
           addressCopied={addressCopied}

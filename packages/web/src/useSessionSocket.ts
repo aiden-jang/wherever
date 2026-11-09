@@ -84,7 +84,15 @@ export function useSessionSocket(code: string, displayName: string) {
       ws.onopen = () => {
         if (disposed || ws !== wsRef.current) return;
         try {
-          ws.send(JSON.stringify({ type: "join", code, displayName, clientId: clientIdFor(code) }));
+          ws.send(
+            JSON.stringify({
+              type: "join",
+              code,
+              displayName,
+              clientId: clientIdFor(code),
+              lazyPlaces: true,
+            }),
+          );
         } catch {
           ws.close();
         }

@@ -10,7 +10,7 @@ export function PlanDirections({
   unavailable: boolean;
   onOpen: () => void;
 }) {
-  return unavailable ? (
+  return unavailable || !restaurant.address?.trim() ? (
     <a
       href={mapsUrl(restaurant)}
       target="_blank"

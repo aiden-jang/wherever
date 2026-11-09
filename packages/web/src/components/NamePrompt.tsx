@@ -20,11 +20,12 @@ export function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
           <input
             className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors"
             aria-label="Your name"
+            name="displayName"
             placeholder="Your name"
             autoComplete="name"
             value={name}
             maxLength={24}
-            autoFocus
+            autoFocus={window.matchMedia("(pointer: fine)").matches}
             onChange={(e) => setName(e.target.value)}
           />
         </label>

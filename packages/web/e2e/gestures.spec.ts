@@ -1,7 +1,8 @@
-import { test, expect, createRoom } from "./fixtures.js";
+import { test, expect, createRoom, showLiveResultActions } from "./fixtures.js";
 
 test("selecting text, focusing controls and cancelled presses do not vote", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await showLiveResultActions(page);
   await createRoom(page);
   await page.getByRole("button", { name: "Start swiping", exact: true }).click();
   const detail = page.getByRole("button", { name: /^See details for / });

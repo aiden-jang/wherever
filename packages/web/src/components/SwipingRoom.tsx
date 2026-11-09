@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentProps } from "react";
 import { MotionConfig } from "framer-motion";
 import { Link } from "react-router-dom";
 import { decideNowWarning, NUDGE_COOLDOWN_MS } from "@wherever/shared";
@@ -34,6 +34,11 @@ export function SwipingRoom({
     progress,
     send,
   } = state;
+  const roundId = state.roundId;
+  const loadPlace = useCallback(
+    (restaurantId: string) => send({ type: "load_round_place", restaurantId, roundId }),
+    [send, roundId],
+  );
   const main = useRef<HTMLElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -85,7 +90,9 @@ export function SwipingRoom({
             <SwipeDeck
               key={state.deckRevision}
               disabled={status !== "open"}
+              demo={Boolean(state.demo)}
               restaurants={deck}
+              onLoadPlace={loadPlace}
               alreadyVoted={alreadyVoted}
               visited={visited}
               superSpent={superUsed}

@@ -20,7 +20,9 @@ and amenities are enforced in the Worker before dealing. The sample source uses
 the same applicable filters; its restaurant details are stand-ins.
 
 Keep the dealt place IDs and reserve IDs in room storage. Live display data lives
-in the active object and can be fetched by place ID when that object resumes. An
+in the active object. A resumed round sends its saved ballot and card order first.
+The browser requests missing details for its current unvoted card as it advances.
+The room shares in-flight lookups for the same place and uses the shared search budget. An
 exhausted reserve widens the radius before a new search. Same-deck replay uses
 the same IDs and respects places the group excluded.
 

@@ -16,7 +16,9 @@ export function mapsUrl(r: Pick<Restaurant, "name" | "address" | "googleMapsUri"
 /** The result screen is the moment people leave, so an operational winner should open navigation—not just a listing. */
 function directionsUrl(r: Restaurant): string {
   const destination = `${r.name} ${r.address ?? ""}`.trim();
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+  const params = new URLSearchParams({ api: "1", destination });
+  if (r.source === "google") params.set("destination_place_id", r.id);
+  return `https://www.google.com/maps/dir/?${params}`;
 }
 
 function appleDirectionsUrl(r: Restaurant): string {

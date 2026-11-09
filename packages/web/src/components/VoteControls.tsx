@@ -1,8 +1,9 @@
-import type { SwipeDirection } from "@wherever/shared";
+import type { Restaurant, SwipeDirection } from "@wherever/shared";
 import type { ReactNode } from "react";
 
 export function VoteControls({
   disabled,
+  detailsStatus,
   vetoUsed,
   superUsed,
   onVote,
@@ -10,6 +11,7 @@ export function VoteControls({
   undo,
 }: {
   disabled: boolean;
+  detailsStatus?: Restaurant["detailsStatus"];
   vetoUsed: boolean;
   superUsed: boolean;
   onVote: (direction: SwipeDirection, superLike?: boolean, veto?: boolean) => void;
@@ -22,16 +24,16 @@ export function VoteControls({
         <button
           data-deck-control
           type="button"
-          disabled={disabled}
+          disabled={disabled || detailsStatus === "pending"}
           onClick={() => onVote("left")}
           className="vote-no"
         >
-          <span aria-hidden>✕</span> Nope
+          <span aria-hidden>✕</span> {detailsStatus === "unavailable" ? "Skip this place" : "Nope"}
         </button>
         <button
           data-deck-control
           type="button"
-          disabled={disabled}
+          disabled={disabled || Boolean(detailsStatus)}
           onClick={() => onVote("right")}
           className="vote-yes"
         >
@@ -43,7 +45,7 @@ export function VoteControls({
         <button
           data-deck-control
           type="button"
-          disabled={disabled}
+          disabled={disabled || Boolean(detailsStatus)}
           aria-disabled={vetoUsed}
           aria-label={vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"}
           onClick={() => (vetoUsed ? onSpent("vetoSpent") : onVote("left", false, true))}
@@ -53,7 +55,7 @@ export function VoteControls({
         <button
           data-deck-control
           type="button"
-          disabled={disabled}
+          disabled={disabled || Boolean(detailsStatus)}
           aria-disabled={superUsed}
           aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}
           onClick={() => (superUsed ? onSpent("superSpent") : onVote("right", true))}

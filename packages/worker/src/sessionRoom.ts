@@ -13,7 +13,6 @@ import {
   putLive,
 } from "./sessionRetention.js";
 import {
-  cardsBehind,
   finishedParticipantIds,
   vetoedRestaurantIds,
   type DecisionResult,
@@ -43,6 +42,7 @@ import { resolveIdentity } from "./roomIdentity.js";
 import { sendVibes, setVibe } from "./vibeTally.js";
 import { attachmentsOn, broadcastTo, resultMessage, sendTo, broadcastSessionState } from "./roomSockets.js";
 import { presentHistory, readDeck, readDemoMode } from "./deckSource.js";
+import { sendResumedDeck, sendRoundPlace } from "./roundResume.js";
 
 /** One room owns socket identity, presence, and host handover. RoundController enforces voting and verdict transitions using the same storage. */
 export class SessionRoom extends DurableObject<Env> {
@@ -135,7 +135,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (msg.type !== "join" && !socketIdentity(ws)) return;
     switch (msg.type) {
       case "join":
-        return this.handleJoin(ws, msg.displayName, msg.clientId);
+        return this.handleJoin(ws, msg.displayName, msg.clientId, msg.lazyPlaces ?? false);
       case "start_round":
         return this.rounds.handleStartRound(ws);
       case "swipe":
@@ -167,6 +167,8 @@ export class SessionRoom extends DurableObject<Env> {
         return this.handleNudge(ws);
       case "turn_off_timer":
         return turnOffTimer(this.ctx, msg.roundId);
+      case "load_round_place":
+        return sendRoundPlace(this.ctx.storage, this.rounds.places, ws, msg.roundId, msg.restaurantId);
     }
   }
 
@@ -300,7 +302,12 @@ export class SessionRoom extends DurableObject<Env> {
 
   // ---- handlers ----
 
-  private async handleJoin(ws: WebSocket, displayName: string, clientId?: string): Promise<void> {
+  private async handleJoin(
+    ws: WebSocket,
+    displayName: string,
+    clientId: string | undefined,
+    lazyPlaces: boolean,
+  ): Promise<void> {
     if (socketIdentity(ws)) return;
     if (attachmentsOn(this.ctx).length >= 32) {
       return sendTo(ws, { type: "error", message: "This room is full." });
@@ -337,29 +344,11 @@ export class SessionRoom extends DurableObject<Env> {
     if (meta.status === "lobby") await sendVibes(this.ctx);
 
     if (meta.status === "swiping") {
-      const deck = await readDeck(this.ctx.storage);
-      const votes = await readVotes(this.ctx.storage);
-      const mine = votes.filter((v) => v.participantId === identity.participantId);
-      const alreadyVoted = mine.map((v) => v.restaurantId);
-      const superUsed = mine.some((v) => v.super);
-      const vetoUsed = mine.some((v) => v.veto);
-      const behindBy = cardsBehind(votes, identity.participantId);
-      const roundId = await readRoundNumber(this.ctx.storage);
-      const restaurants = await this.rounds.places.showDeck(deck, meta.filters);
-      const current = await this.ctx.storage.get<SessionMeta>("meta");
-      if (current?.status !== "swiping" || roundId !== (await readRoundNumber(this.ctx.storage))) return;
-      sendTo(ws, {
-        type: "deck",
-        roundId,
-        restaurants,
-        alreadyVoted,
-        superUsed,
-        vetoUsed,
-        ...(behindBy > 0 ? { behindBy } : {}),
-        demo: await readDemoMode(this.ctx.storage),
-        roundEndsAt: (await this.ctx.storage.get<number>("roundEndsAt")) ?? undefined,
-      });
-      await this.rounds.evaluate(meta); // refresh progress for the new arrival
+      if (
+        !(await sendResumedDeck(this.ctx.storage, this.rounds.places, ws, identity.participantId, lazyPlaces))
+      )
+        return;
+      await this.rounds.evaluate(meta);
     } else if (meta.status === "decided") {
       await this.sendResult(ws, meta);
     }

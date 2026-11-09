@@ -38,13 +38,13 @@ export function JoinQr({ code, url }: JoinQrProps) {
   }, [failed, image, open, url]);
 
   return (
-    <div className="mt-3">
+    <div>
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="group inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-muted hover:bg-white/5 hover:text-cream active:scale-95 transition"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium text-muted hover:bg-white/5 hover:text-cream"
       >
         <svg
           aria-hidden="true"
@@ -69,7 +69,7 @@ export function JoinQr({ code, url }: JoinQrProps) {
         <div className="flex flex-col items-center rounded-3xl bg-[#fff8e8] px-5 py-5 text-[#18151f]">
           {failed ? (
             <div className="grid aspect-square w-full max-w-[14rem] place-items-center rounded-2xl border border-black/10 px-6 text-sm">
-              QR had a wobble. Share the link instead.
+              Couldn’t make the QR code. Share the invite link.
             </div>
           ) : image ? (
             <img
@@ -81,10 +81,14 @@ export function JoinQr({ code, url }: JoinQrProps) {
             />
           ) : (
             <div
-              aria-label="Making QR code"
+              role="status"
               className="grid aspect-square w-full max-w-[14rem] place-items-center rounded-2xl bg-black/5"
             >
-              <span className="h-7 w-7 animate-spin rounded-full border-2 border-black/15 border-t-[#18151f]" />
+              <span className="sr-only">Making QR code…</span>
+              <span
+                aria-hidden
+                className="h-7 w-7 animate-spin rounded-full border-2 border-black/15 border-t-[#18151f] motion-reduce:animate-none"
+              />
             </div>
           )}
           <p className="mt-3 font-display text-2xl font-extrabold tracking-[0.22em]">{code}</p>

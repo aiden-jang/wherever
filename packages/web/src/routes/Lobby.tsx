@@ -1,5 +1,6 @@
 import { RoomInvite } from "../components/RoomInvite.js";
-import { SwipingRoom } from "../components/SwipingRoom.js";
+import { FilterSummary } from "../components/FilterSummary.js";
+import { DeckSkeleton } from "../components/DeckSkeleton.js";
 import { PlateState } from "../components/PlateState.js";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -18,6 +19,9 @@ import { VibeDial } from "../components/VibeDial.js";
 const MatchScreen = lazy(() =>
   import("../components/MatchScreen.js").then((m) => ({ default: m.MatchScreen })),
 );
+const loadSwipingRoom = () =>
+  import("../components/SwipingRoom.js").then((m) => ({ default: m.SwipingRoom }));
+const SwipingRoom = lazy(loadSwipingRoom);
 import { ReactionBar } from "../components/Reactions.js";
 import { LiveRegion } from "../components/LiveRegion.js";
 import { RoomChrome } from "../components/RoomChrome.js";
@@ -243,8 +247,20 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     );
   }
 
-  if (session?.status === "swiping")
-    return <SwipingRoom state={state} chrome={chrome} onAnnounce={setAnnouncement} isHost={isHost} />;
+  if (session?.status === "swiping") {
+    return (
+      <Suspense
+        fallback={
+          <main id="main-content" tabIndex={-1} className="table-room table-voting">
+            <h1 className="table-title">Pick your dinner</h1>
+            <DeckSkeleton />
+          </main>
+        }
+      >
+        <SwipingRoom state={state} chrome={chrome} onAnnounce={setAnnouncement} isHost={isHost} />
+      </Suspense>
+    );
+  }
 
   if (!session) {
     return (
@@ -258,22 +274,46 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
   return (
     <main id="main-content" tabIndex={-1} className="table-room">
-      <h1 ref={lobbyHeading} tabIndex={-1} className="table-title">
-        Dinner room
-      </h1>
+      <header className="lobby-heading">
+        <h1 ref={lobbyHeading} tabIndex={-1} className="table-title">
+          Dinner room
+        </h1>
+        <p className="text-sm text-muted">
+          {isHost ? "You’re hosting. Start when your group is ready." : "You’re in. Waiting on the host."}
+        </p>
+      </header>
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <LiveRegion message={announcement} />
       <Toasts toasts={allToasts} />
       <div className="table-layout table-lobby">
-        <div className="min-w-0">
-          <RoomInvite
-            code={code}
+        <div className="lobby-main">
+          <RoomInvite code={code} />
+          <FilterSummary
             filters={session.filters}
-            isHost={isHost && status === "open"}
-            send={send}
+            editable={isHost && status === "open"}
+            onChange={(filters) => send({ type: "set_filters", filters })}
             onSearchPendingChange={setSearching}
             syncError={errorSeq}
           />
+          {isHost && (
+            <button
+              type="button"
+              onClick={() => {
+                void loadSwipingRoom().catch(() => undefined);
+                setStarting(true);
+                send({ type: "start_round" });
+              }}
+              disabled={starting || searching || status !== "open"}
+              className="lobby-start rounded-xl bg-ember px-4 py-3 font-semibold text-ink hover:brightness-110 disabled:opacity-60"
+            >
+              {starting ? "Finding places…" : "Start swiping"}
+            </button>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-flare">
+              {error}
+            </p>
+          )}
         </div>
         <div className="table-rail">
           <div className="min-w-0">
@@ -300,49 +340,15 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           </div>
         </div>
         <div className="min-w-0">
-          <VibeDial
-            counts={vibeCounts}
-            mine={myVibe}
-            groupSize={count}
-            onPick={(vibe) => send({ type: "set_vibe", vibe })}
-          />
-          <div className="mt-4">
-            {isHost && (
-              <p className="mb-3 text-center text-sm text-muted">Start voting once everyone is ready.</p>
-            )}
-            {isHost ? (
-              <button
-                onClick={() => {
-                  setStarting(true);
-                  send({ type: "start_round" });
-                }}
-                disabled={starting || searching || status !== "open"}
-                className="w-full rounded-xl bg-ember px-8 py-3 text-lg font-semibold text-ink transition-transform disabled:opacity-60 enabled:hover:scale-[1.02]"
-              >
-                {starting ? "Finding places…" : "Start swiping"}
-              </button>
-            ) : (
-              <div className="lobby-wait flex flex-col items-center gap-2 text-center text-muted">
-                <div className="flex items-center gap-2">
-                  <PlateState art="waiting" small />
-                  <span className="font-medium">
-                    {session
-                      ? "You’re in. Waiting on the host."
-                      : status === "closed"
-                        ? "The session is unavailable."
-                        : "Connecting to the session…"}
-                  </span>
-                </div>
-                <p className="text-sm">Gentle peer pressure is an option.</p>
-              </div>
-            )}
-          </div>
-
-          {error && (
-            <p role="alert" className="mt-4 text-sm text-flare">
-              {error}
-            </p>
-          )}
+          <details className="lobby-preferences table-panel">
+            <summary className="text-sm font-semibold">Group preferences</summary>
+            <VibeDial
+              counts={vibeCounts}
+              mine={myVibe}
+              groupSize={count}
+              onPick={(vibe) => send({ type: "set_vibe", vibe })}
+            />
+          </details>
           <HowItWorks />
         </div>
       </div>

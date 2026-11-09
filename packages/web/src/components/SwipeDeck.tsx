@@ -171,10 +171,17 @@ export function SwipeDeck({
     [disabled, restaurants, onSwipe, onAnnounce, dismissHint, nextUnvoted],
   );
 
+  const undoButton = useRef<HTMLButtonElement>(null);
   const undoLast = useCallback(() => {
     if (disabled) return;
     const previous = historyRef.current.pop();
     if (!previous) return;
+    if (
+      undoButton.current === document.activeElement &&
+      (historyRef.current.length === 0 || indexRef.current >= restaurants.length)
+    ) {
+      undoButton.current?.closest("main")?.focus({ preventScroll: true });
+    }
     indexRef.current = previous.index;
     setIndex(previous.index);
     if (previous.super) setSuperUsed(false);
@@ -253,10 +260,12 @@ export function SwipeDeck({
 
   const undoControl = canUndo && (
     <button
+      ref={undoButton}
       type="button"
       data-deck-control
       onClick={undoLast}
-      className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-muted transition hover:text-cream hover:underline"
+      disabled={disabled}
+      className="vote-undo inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium enabled:hover:underline disabled:opacity-60"
     >
       Undo last vote
     </button>
@@ -340,6 +349,7 @@ export function SwipeDeck({
           superUsed={superUsed}
           onVote={commit}
           onSpent={saySpent}
+          undo={undoControl}
         />
 
         {/* Reserve one feedback slot so vote controls stay under the user’s finger. */}
@@ -365,7 +375,6 @@ export function SwipeDeck({
             ⌫
           </Key>
         </p>
-        {undoControl}
         {aside}
       </div>
 

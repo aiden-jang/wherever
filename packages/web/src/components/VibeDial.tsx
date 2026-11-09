@@ -22,7 +22,7 @@ export function VibeDial({
   const total = reading.total;
 
   return (
-    <section className="mt-6" aria-label="Group vibe">
+    <section className="mt-2" aria-label="Group vibe">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-display text-sm font-bold text-cream">What kind of night</h2>
         {total > 0 && <span className="text-xs text-muted">{total} in</span>}

@@ -39,6 +39,7 @@ export function DinnerTicket({
           </span>
         </p>
         <h2 className="ticket-name">{restaurant.name}</h2>
+        {restaurant.address && <p className="ticket-address">{restaurant.address}</p>}
         {action}
         <div className="meal-facts">
           <span>
@@ -60,7 +61,6 @@ export function DinnerTicket({
             {availability}
           </p>
         )}
-        {restaurant.address && <p className="ticket-address">{restaurant.address}</p>}
         {restaurant.editorialSummary && (
           <p className="mt-3 text-sm leading-relaxed">{restaurant.editorialSummary}</p>
         )}

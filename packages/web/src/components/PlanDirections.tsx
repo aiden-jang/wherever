@@ -5,21 +5,18 @@ export function PlanDirections({
   restaurant,
   unavailable,
   onOpen,
-  className = "",
 }: {
   restaurant: Restaurant;
   unavailable: boolean;
   onOpen: () => void;
-  className?: string;
 }) {
-  const style = `plan-directions ${className}`;
   return unavailable ? (
     <a
       href={mapsUrl(restaurant)}
       target="_blank"
       aria-describedby="external-link-hint"
       rel="noopener noreferrer"
-      className={style}
+      className="plan-directions"
     >
       See it in Google Maps <span aria-hidden>↗</span>
     </a>
@@ -30,7 +27,7 @@ export function PlanDirections({
         event.currentTarget.focus({ preventScroll: true });
         onOpen();
       }}
-      className={style}
+      className="plan-directions"
     >
       Get directions <span aria-hidden>↗</span>
     </button>

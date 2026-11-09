@@ -1,23 +1,7 @@
-import type { ClientMessage, SessionFilters } from "@wherever/shared";
 import { useShareAction } from "../useShareAction.js";
-import { FilterSummary } from "./FilterSummary.js";
 import { JoinQr } from "./JoinQr.js";
 import { CopyFallback } from "./CopyFallback.js";
-export function RoomInvite({
-  code,
-  filters,
-  isHost,
-  send,
-  onSearchPendingChange,
-  syncError,
-}: {
-  syncError?: number;
-  onSearchPendingChange?: (pending: boolean) => void;
-  code: string;
-  filters?: SessionFilters;
-  isHost: boolean;
-  send: (message: ClientMessage) => void;
-}) {
+export function RoomInvite({ code }: { code: string }) {
   const { status: codeStatus, share: copy } = useShareAction(code);
   const { status: inviteStatus, share } = useShareAction(code);
   const copyCode = () => void copy({ text: code }, false);
@@ -26,62 +10,54 @@ export function RoomInvite({
   const shareInvite = () =>
     share({ title: "Wherever, Honestly", text: "Come help pick where we're eating.", url: invite });
   return (
-    <div className="lobby-invite w-full text-center">
-      <p className="text-sm text-muted">Share this code. Or the link. Whatever is less effort.</p>
-      <button
-        onClick={copyCode}
-        aria-label="Copy the session code"
-        className="mt-3 block w-full font-display session-code font-extrabold text-ember active:scale-95 transition"
-      >
-        {code}
-      </button>
-      <p role="status" className="mt-1 text-xs text-muted">
-        {codeStatus === "copied"
-          ? "Copied the code."
-          : codeStatus === "failed"
-            ? "Couldn’t copy it. Select the code instead."
-            : "Tap the code to copy it"}
-      </p>
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
+    <section className="lobby-invite" aria-label="Invite to this room">
+      <div className="lobby-code-row">
+        <div>
+          <h2 className="font-display text-lg font-bold">Room code</h2>
+          <p className="text-xs text-muted">Tap the code to copy</p>
+        </div>
+        <button
+          type="button"
+          onClick={copyCode}
+          aria-label={`Copy room code ${code}`}
+          className="session-code"
+          translate="no"
+        >
+          {code}
+        </button>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-2">
         <button
           type="button"
           onClick={() => void shareInvite()}
           disabled={inviteStatus === "sharing"}
-          aria-live="polite"
-          className="rounded-full border border-white/15 px-5 py-2 text-sm font-medium hover:bg-white/5 active:scale-95 transition disabled:cursor-default disabled:opacity-60"
+          className="min-h-11 rounded-xl border border-white/20 px-3 text-sm font-semibold hover:bg-white/10 disabled:opacity-60"
         >
-          {inviteStatus === "sharing"
-            ? "Opening…"
-            : inviteStatus === "shared"
-              ? "Invite shared"
-              : inviteStatus === "copied"
-                ? "Link copied"
-                : inviteStatus === "failed"
-                  ? "Couldn’t copy link"
-                  : "Invite the group"}
+          Invite the group
         </button>
         <button
           type="button"
           onClick={() => void copyInviteLink()}
           disabled={inviteStatus === "sharing"}
-          className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-muted hover:border-white/20 hover:text-cream transition disabled:cursor-default disabled:opacity-60"
+          className="min-h-11 rounded-xl px-2 text-sm font-medium text-muted hover:text-cream hover:underline disabled:opacity-60"
         >
           Copy link
         </button>
       </div>
+      <p role="status" className="text-xs text-muted">
+        {inviteStatus === "sharing"
+          ? "Opening…"
+          : inviteStatus === "shared"
+            ? "Invite shared."
+            : inviteStatus === "copied"
+              ? "Link copied."
+              : codeStatus === "copied"
+                ? "Room code copied."
+                : ""}
+      </p>
       {codeStatus === "failed" && <CopyFallback label="Session code to copy" text={code} />}
       {inviteStatus === "failed" && <CopyFallback label="Invite link to copy" text={invite} />}
       <JoinQr code={code} url={invite} />
-      {/* Everyone sees the shared deck's filters; only its host can change them. */}
-      {filters && (
-        <FilterSummary
-          filters={filters}
-          editable={isHost}
-          onSearchPendingChange={onSearchPendingChange}
-          syncError={syncError}
-          onChange={(filters) => send({ type: "set_filters", filters })}
-        />
-      )}
-    </div>
+    </section>
   );
 }

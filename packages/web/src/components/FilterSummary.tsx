@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { SessionFilters } from "@wherever/shared";
 import { FilterFields } from "./FilterFields";
 import {
@@ -11,12 +11,17 @@ import {
   SORT_OPTIONS,
 } from "@wherever/shared";
 
+function searchArea(filters: SessionFilters): string {
+  return (
+    filters.locationLabel ??
+    (filters.area ? neighborhoodLabel(filters.area) : undefined) ??
+    (filters.lat != null && filters.lng != null ? "Current location" : "New York City")
+  );
+}
+
 /** Human-sized evidence of the rules a restaurant survived. */
 export function filterSummaryChips(filters: SessionFilters): string[] {
-  const place = filters.locationLabel ?? (filters.area ? neighborhoodLabel(filters.area) : undefined);
-  const chips: string[] = [
-    place ? `${place} · ${radiusLabel(filters.radiusMeters)}` : radiusLabel(filters.radiusMeters),
-  ];
+  const chips = [`${searchArea(filters)} · ${radiusLabel(filters.radiusMeters)}`];
   const priceLabelFor = (tier: number) => PRICE_OPTIONS.find((option) => option.tier === tier)?.label ?? "$";
   if (filters.priceTiers && filters.priceTiers.length > 0) {
     chips.push(filters.priceTiers.map(priceLabelFor).join(", "));
@@ -67,6 +72,7 @@ export function FilterSummary({
   onChange?: (next: SessionFilters) => void;
   syncError?: number;
 }) {
+  const editorId = useId();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<SessionFilters | null>(null);
   const pending = useRef<string[]>([]);
@@ -86,43 +92,47 @@ export function FilterSummary({
     setDraft(next);
     onChange?.(next);
   }
-  const chips = (
-    <div className="flex flex-wrap justify-center gap-2">
-      {filterSummaryChips(draft ?? filters).map((chip) => (
-        <span
-          key={chip}
-          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-muted"
-        >
-          {chip}
-        </span>
-      ))}
-    </div>
-  );
-
-  if (!editable || !onChange) return <div className="filter-summary mt-6">{chips}</div>;
-
+  const active = draft ?? filters;
   return (
-    <div className="filter-summary mt-6">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="w-full rounded-2xl border border-transparent px-2 py-2 transition hover:border-white/10"
-      >
-        {chips}
-        <span className="mt-2 block text-xs font-semibold text-muted">
-          {open ? "Done editing" : "Edit dinner filters"}
-        </span>
-      </button>
-      {open && (
-        <div className="filter-editor mt-3 rounded-2xl border border-white/10 p-4 text-left">
-          <FilterFields
-            filters={draft ?? filters}
-            onChange={update}
-            onSearchPendingChange={onSearchPendingChange}
-          />
+    <section className="lobby-search">
+      <div className="lobby-search-row">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold">Search area</h2>
+          <p className="text-sm text-muted [overflow-wrap:anywhere]">
+            {searchArea(active)} · {radiusLabel(active.radiusMeters)}
+          </p>
         </div>
-      )}
-    </div>
+        {editable && onChange && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls={editorId}
+            className="min-h-11 rounded-xl px-2 text-left text-xs font-semibold text-muted hover:bg-white/5 hover:text-cream"
+          >
+            {open ? "Done editing" : "Edit dinner filters"}
+          </button>
+        )}
+      </div>
+      <ul aria-label="Dinner filters" className="mt-2 flex flex-wrap gap-1.5">
+        {filterSummaryChips(active)
+          .slice(1)
+          .map((chip) => (
+            <li
+              key={chip}
+              className="rounded-full bg-white/5 px-2.5 py-1 text-xs text-muted [overflow-wrap:anywhere]"
+            >
+              {chip}
+            </li>
+          ))}
+      </ul>
+      <div id={editorId} hidden={!open || !editable}>
+        {open && editable && (
+          <div className="filter-editor mt-3 border-t border-white/10 pt-4">
+            <FilterFields filters={active} onChange={update} onSearchPendingChange={onSearchPendingChange} />
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

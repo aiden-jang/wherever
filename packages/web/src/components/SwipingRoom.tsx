@@ -35,8 +35,9 @@ export function SwipingRoom({
     send,
   } = state;
   const main = useRef<HTMLElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    main.current?.focus({ preventScroll: true });
+    (heading.current ?? main.current)?.focus();
   }, []);
   const showBanner = everConnected && status !== "open";
   const [confirmDecide, setConfirmDecide] = useState(false);
@@ -59,8 +60,12 @@ export function SwipingRoom({
   const hurryWait = Math.max(0, NUDGE_COOLDOWN_MS / 1000 - Math.floor((now - hurriedAt) / 1000));
 
   return (
-    <main ref={main} id="main-content" tabIndex={-1} className="table-room">
-      {(!deck || deck.length > 0) && <h1 className="table-title">Pick your dinner</h1>}
+    <main ref={main} id="main-content" tabIndex={-1} className="table-room table-voting">
+      {(!deck || deck.length > 0) && (
+        <h1 ref={heading} tabIndex={-1} className="table-title">
+          Pick your dinner
+        </h1>
+      )}
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <RoomChrome {...chrome} />
       {roundEndsAt && (

@@ -29,7 +29,7 @@ test("create, vote, decide, and run the same deck again", async ({ page }) => {
     });
   });
   await page.getByRole("button", { name: "Send the plan", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Couldn’t share" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try sharing again" })).toBeVisible();
   const imageDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Save plan image", exact: true }).click();
   const image = await imageDownload;
@@ -69,25 +69,61 @@ test("create, vote, decide, and run the same deck again", async ({ page }) => {
 });
 
 test("a second person joins and participates in a shared anonymous round", async ({ page, browser }) => {
+  const viewport = { width: 320, height: 640 };
+  await page.setViewportSize(viewport);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await showLiveResultActions(page);
+  const votingBundles: string[] = [];
+  page.on("request", (request) => {
+    if (/\/assets\/SwipingRoom-[^/]+\.js$/.test(request.url())) votingBundles.push(request.url());
+  });
   const code = await createRoom(page);
-  const guest = await browser.newContext({ baseURL: new URL(page.url()).origin, serviceWorkers: "block" });
+  const start = page.getByRole("button", { name: "Start swiping", exact: true });
+  await expect(start).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole("heading", { name: "Search area" })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole("button", { name: `Copy room code ${code}` })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole("button", { name: "Invite the group" })).toHaveCSS("min-height", "44px");
+  const guest = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+    viewport,
+    reducedMotion: "reduce",
+    serviceWorkers: "block",
+  });
   try {
     const friend = await guest.newPage();
     await friend.goto(`/s/${code}`);
     await friend.getByRole("textbox", { name: "Your name" }).fill("Alex");
     await friend.getByRole("button", { name: "Join the session" }).click();
     await expect(page.getByText("2 people", { exact: true })).toBeVisible();
+    await expect(friend.getByText("You’re in. Waiting on the host.")).toBeInViewport({ ratio: 1 });
     await expect(friend.getByRole("button", { name: "Start swiping", exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "Start swiping", exact: true }).click();
-    await expect(friend.getByRole("heading", { name: "Pick your dinner" })).toBeVisible();
+    expect(votingBundles).toEqual([]);
+    await start.click();
+    const like = page.getByRole("button", { name: "Yes, please", exact: true });
+    const pass = friend.getByRole("button", { name: "Nope", exact: true });
+    await expect(like).toBeInViewport({ ratio: 1 });
+    await expect(pass).toBeInViewport({ ratio: 1 });
+    expect(votingBundles).toHaveLength(1);
     await page.keyboard.press("ArrowRight");
+    const undo = page.getByRole("button", { name: "Undo last vote" });
+    await expect(undo).toBeInViewport({ ratio: 1 });
+    await undo.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("main")).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(undo).toBeVisible();
     await friend.keyboard.press("ArrowLeft");
+    await expect(friend.getByText(/Place 2 of \d+/)).toBeVisible();
+    await friend.reload();
+    await expect(friend.getByText(/Place 2 of \d+/)).toBeVisible();
     await page.getByRole("button", { name: "just decide now" }).click();
     await page.getByRole("button", { name: "Decide anyway" }).click();
     await expect(friend.getByRole("heading", { name: /Dinner is handled/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Dinner is handled/ })).toHaveText(
       (await friend.getByRole("heading", { name: /Dinner is handled/ }).textContent()) ?? "",
     );
+    await expect(page.getByRole("button", { name: "Get directions" })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("button", { name: "Send the plan" })).toBeInViewport({ ratio: 1 });
   } finally {
     await guest.close();
   }

@@ -11,13 +11,13 @@ afterEach(() => {
 test("a blocked invite copy leaves a selectable link and an immediate retry", async () => {
   const writeText = vi.fn().mockRejectedValueOnce(new Error("Blocked")).mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
-  render(<RoomInvite code="ABCDEF" isHost={false} send={vi.fn()} />);
+  render(<RoomInvite code="ABCDEF" />);
   fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
   const fallback = await screen.findByRole("textbox", { name: "Invite link to copy" });
   expect((fallback as HTMLTextAreaElement).value).toBe(new URL("/s/ABCDEF", location.origin).href);
   const retry = screen.getByRole("button", { name: "Copy link" });
   expect(retry.hasAttribute("disabled")).toBe(false);
   fireEvent.click(retry);
-  await screen.findByRole("button", { name: "Link copied" });
+  expect(await screen.findByText("Link copied.")).toBe(screen.getByRole("status"));
   expect(screen.queryByRole("textbox", { name: "Invite link to copy" })).toBeNull();
 });

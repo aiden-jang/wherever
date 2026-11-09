@@ -1,4 +1,5 @@
 import type { SwipeDirection } from "@wherever/shared";
+import type { ReactNode } from "react";
 
 export function VoteControls({
   disabled,
@@ -6,12 +7,14 @@ export function VoteControls({
   superUsed,
   onVote,
   onSpent,
+  undo,
 }: {
   disabled: boolean;
   vetoUsed: boolean;
   superUsed: boolean;
   onVote: (direction: SwipeDirection, superLike?: boolean, veto?: boolean) => void;
   onSpent: (key: "vetoSpent" | "superSpent") => void;
+  undo: ReactNode;
 }) {
   return (
     <div className="vote-controls">
@@ -35,6 +38,7 @@ export function VoteControls({
           <span aria-hidden>♥</span> Yes, please
         </button>
       </div>
+      {undo && <div className="text-center">{undo}</div>}
       <div className="vote-special">
         <button
           data-deck-control
@@ -44,7 +48,7 @@ export function VoteControls({
           aria-label={vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"}
           onClick={() => (vetoUsed ? onSpent("vetoSpent") : onVote("left", false, true))}
         >
-          <span aria-hidden>⊘</span> Veto <small>{vetoUsed ? "Used" : "1 per round"}</small>
+          <span aria-hidden>⊘</span> Veto <small>{vetoUsed ? "Used" : "1 left"}</small>
         </button>
         <button
           data-deck-control
@@ -54,7 +58,7 @@ export function VoteControls({
           aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}
           onClick={() => (superUsed ? onSpent("superSpent") : onVote("right", true))}
         >
-          <span aria-hidden>✦</span> Super-like <small>{superUsed ? "Used" : "1 per round"}</small>
+          <span aria-hidden>✦</span> Super-like <small>{superUsed ? "Used" : "1 left"}</small>
         </button>
       </div>
     </div>

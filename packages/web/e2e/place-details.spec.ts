@@ -60,9 +60,13 @@ test("long place details and missing photos stay readable", async ({ page }) => 
   await expect(page.getByRole("button", { name: `See details for ${name}`, exact: true })).toBeFocused();
 });
 
-for (const width of [1440, 390]) {
-  test(`dealing preserves the card and photo dimensions at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 900 });
+for (const viewport of [
+  { width: 1440, height: 900 },
+  { width: 390, height: 900 },
+  { width: 320, height: 640 },
+]) {
+  test(`dealing preserves the card and photo dimensions at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
     let release: (() => void) | undefined;
     await page.routeWebSocket("**/ws/**", (socket) => {
@@ -80,7 +84,10 @@ for (const width of [1440, 390]) {
     await expect(placeholder).toBeVisible();
     const cardBefore = (await placeholder.boundingBox())!;
     const photoBefore = (await placeholder.locator("[data-card-photo]").boundingBox())!;
-    await page.screenshot({ path: test.info().outputPath(`dealing-${width}.png`), animations: "disabled" });
+    await page.screenshot({
+      path: test.info().outputPath(`dealing-${viewport.width}.png`),
+      animations: "disabled",
+    });
     release!();
     await expect(page.getByRole("button", { name: /^See details for / })).toBeVisible();
     const cardAfter = (await page.locator(".meal-card").last().boundingBox())!;
@@ -88,7 +95,10 @@ for (const width of [1440, 390]) {
     expect(Math.abs(cardBefore.width - cardAfter.width)).toBeLessThanOrEqual(1);
     expect(Math.abs(cardBefore.height - cardAfter.height)).toBeLessThanOrEqual(1);
     expect(Math.abs(photoBefore.height - photoAfter.height)).toBeLessThanOrEqual(1);
-    await page.screenshot({ path: test.info().outputPath(`dealt-${width}.png`), animations: "disabled" });
+    await page.screenshot({
+      path: test.info().outputPath(`dealt-${viewport.width}.png`),
+      animations: "disabled",
+    });
   });
 }
 

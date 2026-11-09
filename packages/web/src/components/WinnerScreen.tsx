@@ -73,7 +73,7 @@ export function WinnerScreen({
   const [celebrate, setCelebrate] = useState(true);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    heading.current?.focus({ preventScroll: true });
+    heading.current?.focus();
     buzz([18, 40, 18]);
     play("match");
     const t = setTimeout(() => setCelebrate(false), 4000);
@@ -91,6 +91,14 @@ export function WinnerScreen({
       );
   const url = mapsUrl(restaurant);
   const sharePlan = () => share({ title: restaurant.name, text, ...(demo ? {} : { url }) });
+  const shareMessage =
+    shareResult === "sharing"
+      ? "Opening…"
+      : shareResult === "shared"
+        ? "Plan shared."
+        : shareResult === "copied"
+          ? "Plan copied."
+          : "";
   const copyAddress = () =>
     restaurant.address
       ? copy({ text: `${restaurant.name}\n${restaurant.address}` }, false)
@@ -109,54 +117,49 @@ export function WinnerScreen({
             rightSwipes={rightSwipes}
             totalParticipants={totalParticipants}
             action={
-              demo ? (
-                <p className="mt-3 text-sm font-semibold">Sample restaurant. For demonstration only.</p>
-              ) : (
-                <PlanDirections
-                  restaurant={restaurant}
-                  unavailable={unavailable}
-                  onOpen={() => setDirectionsOpen(true)}
-                  className="mt-3"
-                />
-              )
+              <div className="ticket-actions">
+                {demo && (
+                  <p className="mb-2 text-sm font-semibold">Sample pick. You can share the sample plan.</p>
+                )}
+                {unavailable && !demo && (
+                  <p className="meal-hours meal-closed mb-2">
+                    This place is closed.{" "}
+                    {alternatives.length ? "See the backups below." : "Check Maps before heading out."}
+                  </p>
+                )}
+                <div className="ticket-action-buttons">
+                  {!demo && (
+                    <PlanDirections
+                      restaurant={restaurant}
+                      unavailable={unavailable}
+                      onOpen={() => setDirectionsOpen(true)}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void sharePlan()}
+                    disabled={shareResult === "sharing"}
+                    className="ticket-share"
+                  >
+                    {shareResult === "failed" ? "Try sharing again" : "Send the plan"}
+                  </button>
+                </div>
+                <p role="status" className="text-sm font-medium">
+                  {shareMessage}
+                </p>
+                {shareResult === "failed" && (
+                  <CopyFallback label="Dinner plan to copy" text={demo ? text : `${text}\n${url}`} />
+                )}
+              </div>
             }
           />
 
-          <div className="table-plan-actions mt-3 grid gap-2">
-            <button
-              type="button"
-              onClick={() => void sharePlan()}
-              disabled={shareResult === "sharing"}
-              aria-live="polite"
-              aria-label={
-                shareResult === "sharing"
-                  ? "Opening…"
-                  : shareResult === "shared"
-                    ? "Plan shared"
-                    : shareResult === "copied"
-                      ? "Plan copied"
-                      : shareResult === "failed"
-                        ? "Couldn’t share"
-                        : "Send the plan"
-              }
-              className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold hover:bg-white/5 active:scale-[0.98] transition disabled:cursor-default disabled:opacity-70"
-            >
-              {shareResult === "sharing"
-                ? "Opening…"
-                : shareResult === "shared"
-                  ? "Plan shared"
-                  : shareResult === "copied"
-                    ? "Plan copied"
-                    : shareResult === "failed"
-                      ? "Couldn’t share"
-                      : "Send the plan"}
-            </button>
-            {shareResult === "failed" && (
-              <CopyFallback label="Dinner plan to copy" text={demo ? text : `${text}\n${url}`} />
-            )}
-            {!demo && <SavePlanImage key={restaurant.id} restaurant={restaurant} />}
-            {!demo && <PlaceLinks restaurant={restaurant} showMap={!unavailable} />}
-          </div>
+          {!demo && (
+            <div className="table-plan-actions mt-3 grid gap-2">
+              <SavePlanImage key={restaurant.id} restaurant={restaurant} />
+              <PlaceLinks restaurant={restaurant} showMap={!unavailable} />
+            </div>
+          )}
           <RestaurantHours hours={restaurant.hours} className="table-panel mt-4" />
 
           <p
@@ -197,9 +200,7 @@ export function WinnerScreen({
             className="reveal mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.025] p-3 text-left"
             style={{ "--reveal-at": "290ms" } as CSSProperties}
           >
-            <p className="px-1 text-2xs font-bold uppercase tracking-[0.16em] text-muted">
-              Why this one works
-            </p>
+            <h2 className="px-1 text-sm font-semibold text-cream">Why this one works</h2>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {reasons.map((reason) => (
                 <div
@@ -331,9 +332,9 @@ export function WinnerScreen({
                         disabled={!online || pending}
                         // There is one of these per runner-up, so the visible label alone is heard as
                         // "Make Plan A" twice with nothing to tell them apart.
-                        aria-label={`Make ${choice.restaurant.name} Plan A`}
+                        aria-label={`Make Plan A: ${choice.restaurant.name}`}
                         onClick={() => onChooseAlternative(choice.restaurant.id)}
-                        className="rounded-xl border border-acid/25 bg-acid/10 px-4 py-2 text-xs font-bold text-acid transition hover:border-acid/50 hover:bg-acid/15 active:scale-[0.98]"
+                        className="min-h-11 rounded-xl border border-acid/25 bg-acid/10 px-4 py-2 text-sm font-semibold text-acid hover:border-acid/50 hover:bg-acid/15"
                       >
                         Make Plan A
                       </button>

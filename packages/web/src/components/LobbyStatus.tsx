@@ -9,21 +9,19 @@ import type { DemoReason } from "@wherever/shared";
 export function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
   if (reconnecting) {
     return (
-      <div
-        role="status"
-        className="fixed top-0 inset-x-0 z-40 bg-white/10 backdrop-blur text-cream text-center text-sm font-medium py-2 pad-safe-top [--pad:0.5rem]"
-      >
+      <div role="status" className="room-connection bg-white/10 text-sm font-medium text-cream">
         Connection dropped. Voting pauses until you reconnect.
       </div>
     );
   }
   return (
-    <div
-      role="status"
-      className="fixed top-0 inset-x-0 z-40 bg-flare/90 text-ink text-center text-sm font-medium py-2 pad-safe-top [--pad:0.5rem]"
-    >
+    <div role="status" className="room-connection bg-flare text-sm font-medium text-ink">
       Still can&apos;t reach the session.{" "}
-      <button onClick={() => location.reload()} className="underline font-semibold">
+      <button
+        type="button"
+        onClick={() => location.reload()}
+        className="inline-flex min-h-11 items-center font-semibold underline"
+      >
         Reload to rejoin
       </button>
     </div>
@@ -38,14 +36,12 @@ export function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
  */
 export function DemoBanner({ reason }: { reason: DemoReason }) {
   return (
-    <div className="w-full max-w-sm mx-auto mb-5 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-center text-sm">
-      <p className="font-semibold text-cream">Demo mode: sample restaurants.</p>
-      <p className="mt-0.5 text-muted">
-        {reason === "budget"
-          ? "This project hit its monthly Google API budget, so the live data is off. Everything still works; real spots are back on the 1st."
-          : "No live restaurant source is configured, so these are stand-ins. Everything else works exactly the same."}
-      </p>
-    </div>
+    <p className="room-demo rounded-xl border border-white/15 px-3 py-2 text-sm text-muted">
+      <strong className="text-cream">Sample restaurants.</strong>{" "}
+      {reason === "budget"
+        ? "Live places return when the monthly limit resets."
+        : "You can still try a round."}
+    </p>
   );
 }
 

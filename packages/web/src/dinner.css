@@ -7,6 +7,8 @@
   padding: 24px clamp(14px, 4vw, 32px) 44px;
 }
 .table-title {
+  width: fit-content;
+  max-width: 100%;
   margin-bottom: 16px;
   font: 750 clamp(32px, 5vw, 54px)/1.06 var(--font-display);
   letter-spacing: -0.04em;
@@ -312,7 +314,7 @@
   overflow-wrap: anywhere;
 }
 .ticket-address {
-  margin-top: 14px;
+  margin-top: 8px;
   color: #59604f;
   font-size: 0.75rem;
   line-height: 1.5;

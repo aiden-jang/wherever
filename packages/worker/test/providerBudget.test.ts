@@ -1,10 +1,12 @@
 import { env } from "cloudflare:workers";
 import { createExecutionContext, runInDurableObject, waitOnExecutionContext } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Restaurant } from "@wherever/shared";
 import worker from "../src/index.js";
 import type { Env } from "../src/env.js";
 import type { UsageMeter } from "../src/usageMeter.js";
 import { fetchFreshDeck, readDemoMode } from "../src/deckSource.js";
+import { RoomPlaces } from "../src/roomPlaces.js";
 
 const bindings = { ...(env as unknown as Env), GOOGLE_PLACES_API_KEY: "budget-test-only" };
 const meter = () => bindings.USAGE_METER.get(bindings.USAGE_METER.idFromName("global"));
@@ -50,38 +52,48 @@ describe("provider budget enforcement", () => {
     expect(await response.json()).toEqual({ error: "Couldn't find that place." });
   });
 
-  it("persists place IDs without Google display data or photo references", async () => {
-    const upstream = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
-      Response.json({
-        places: [
-          {
-            id: "provider-id",
-            displayName: { text: "Provider place" },
-            formattedAddress: "Provider address",
-            photos: [{ name: "places/provider-id/photos/photo-ref" }],
-          },
-        ],
-      }),
-    );
+  it("stores only place IDs and restores details within the shared search cap", async () => {
+    const place = {
+      id: "provider-id",
+      displayName: { text: "Provider place" },
+      formattedAddress: "Provider address",
+      photos: [{ name: "places/provider-id/photos/photo-ref" }],
+    };
+    const filters = { radiusMeters: 8000, maxPriceTier: 4 as const, categories: [] };
+    const upstream = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () => Response.json({ places: [place] }))
+      .mockImplementationOnce(async () => Response.json(place));
     const room = bindings.SESSION_ROOM.get(bindings.SESSION_ROOM.idFromName(crypto.randomUUID()));
-    await runInDurableObject(room, async (_instance, state) => {
+    const stored = await runInDurableObject(room, async (_instance, state) => {
       const deck = await fetchFreshDeck({
         storage: state.storage,
         env: { ...bindings, RESTAURANT_SOURCE: "google" },
-        meta: {
-          code: "BUDGET",
-          status: "lobby",
-          voteMode: "majority",
-          filters: { radiusMeters: 8000, maxPriceTier: 4, categories: [] },
-        },
+        meta: { code: "BUDGET", status: "lobby", voteMode: "majority", filters },
         vibeCounts: {},
       });
       expect(deck[0]?.name).toBe("Provider place");
-      const stored = await state.storage.get("deck");
-      expect(stored).toEqual([expect.objectContaining({ id: "provider-id", imageUrl: null, address: null })]);
-      expect(JSON.stringify(stored)).not.toMatch(/Provider place|Provider address|photo-ref/);
+      return (await state.storage.get<Restaurant[]>("deck"))!;
     });
-    expect(upstream).toHaveBeenCalledTimes(1);
+    expect(stored).toEqual([expect.objectContaining({ id: "provider-id", imageUrl: null, address: null })]);
+    expect(JSON.stringify(stored)).not.toMatch(/Provider place|Provider address|photo-ref/);
+
+    const before = (await meter().stats()).search;
+    const cold = new RoomPlaces(bindings);
+    await expect(cold.showDeck(stored, filters)).resolves.toEqual([
+      expect.objectContaining({ id: "provider-id", name: "Provider place", address: "Provider address" }),
+    ]);
+    expect(upstream).toHaveBeenLastCalledWith(
+      "https://places.googleapis.com/v1/places/provider-id",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "X-Goog-Api-Key": bindings.GOOGLE_PLACES_API_KEY }),
+      }),
+    );
+    expect((await meter().stats()).search).toBe(before + 1);
+
+    await exhaust("search");
+    await expect(new RoomPlaces(bindings).showDeck(stored, filters)).resolves.toEqual(stored);
+    expect(upstream).toHaveBeenCalledTimes(2);
   });
 
   it("uses labeled sample restaurants without contacting Google after the search cap", async () => {

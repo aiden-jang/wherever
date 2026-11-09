@@ -71,4 +71,29 @@ describe("Google restaurant searches", () => {
     await expect(new GooglePlacesRestaurantSource(key).fetchDeck(filters)).resolves.toEqual([]);
     expect(log).not.toHaveBeenCalled();
   });
+
+  it("records a Place Details quota rejection without exposing provider data", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json(
+        {
+          error: {
+            status: "RESOURCE_EXHAUSTED",
+            message: `Quota exceeded for ${key}`,
+            details: [{ reason: "RATE_LIMIT_EXCEEDED", metadata: { consumer: "private-project" } }],
+          },
+        },
+        { status: 429 },
+      ),
+    );
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(
+      new GooglePlacesRestaurantSource(key).fetchPlace("provider-id", filters),
+    ).resolves.toBeNull();
+    expect(log).toHaveBeenCalledExactlyOnceWith("places_details_failed", {
+      httpStatus: 429,
+      status: "RESOURCE_EXHAUSTED",
+      reasons: ["RATE_LIMIT_EXCEEDED"],
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/private-test-key|private-project|Quota exceeded/);
+  });
 });

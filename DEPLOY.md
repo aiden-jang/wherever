@@ -72,12 +72,12 @@ provide. Keep the key secret; API restrictions do not bind it to this Worker.
 
 The recorded project quotas allow 950 requests per day each for Nearby Search,
 GetPhotoMedia, and Geocoding v3, so the full monthly allowance can be used in one
-day. The application enforces the 950 monthly limit; Google's daily quotas do not
-enforce a monthly total. Requests outside the Worker bypass its monthly counter
-and could incur charges. Unused Places methods and Geocoding v4 methods have
-daily quotas of zero. Other projects added to the billing account can consume
-the same free allowances; these settings are not a spending limit for the whole
-billing account.
+day. Room recovery also needs the Places API (New) GetPlace method. Set its daily
+quota to 30, at most 930 requests in a 31-day month. The Worker still counts each
+GetPlace request against the same 950 monthly reservations as Nearby Search.
+Keep unused Places and Geocoding v4 methods at zero. Requests outside the Worker
+bypass its monthly counter, and other projects on the same billing account can
+consume the same free allowances.
 
 Photo URLs are relative by default. `PUBLIC_API_BASE` is an optional alternate
 photo origin; leave it empty for normal same-origin operation.
@@ -101,6 +101,11 @@ not credentials, locations, or raw provider messages. `BILLING_DISABLED`,
 waiting or loosening dinner filters will not resolve them. A successful search
 with no matching restaurants is a separate outcome. The health route checks the
 Worker, not whether Google will accept a live search.
+
+If a winning restaurant's details are missing after an idle room resumes, check
+Workers Logs for `places_details_failed`. A quota rejection such as
+`RESOURCE_EXHAUSTED` can indicate a zero or exhausted GetPlace quota. Check the
+GetPlace quota separately from Nearby Search in the Google Cloud console.
 
 `geocode_failed` records a bounded provider rejection code, without the search
 query, key, or raw provider message. A true zero-result response returns 404;

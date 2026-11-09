@@ -11,6 +11,19 @@ function diagnosticCode(value: unknown): string | undefined {
   return typeof value === "string" && /^[A-Z][A-Z_0-9]{0,99}$/.test(value) ? value : undefined;
 }
 
+async function logPlacesFailure(operation: "search" | "details", response: Response): Promise<void> {
+  const data = (await response.json().catch(() => null)) as {
+    error?: { status?: unknown; details?: { reason?: unknown }[] };
+  } | null;
+  console.error(`places_${operation}_failed`, {
+    httpStatus: response.status,
+    status: diagnosticCode(data?.error?.status),
+    reasons: Array.isArray(data?.error?.details)
+      ? data.error.details.flatMap((detail) => diagnosticCode(detail?.reason) ?? [])
+      : [],
+  });
+}
+
 /**
  * Resolve the search center: a picked neighborhood wins, then the host's shared location, then
  * the default. Exported for unit testing.
@@ -138,7 +151,10 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
       signal: AbortSignal.timeout(12_000),
       headers: { "X-Goog-Api-Key": this.apiKey, "X-Goog-FieldMask": PLACE_FIELDS.join(",") },
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      await logPlacesFailure("details", response);
+      return null;
+    }
     const place = (await response.json()) as GooglePlace;
     return place.id === id && place.displayName?.text
       ? mapGooglePlace(place, resolveSearchCenter(filters), this.publicApiBase)
@@ -185,17 +201,7 @@ export class GooglePlacesRestaurantSource implements RestaurantSource {
       }),
     });
     if (!res.ok) {
-      const data = (await res.json().catch(() => null)) as {
-        error?: { status?: unknown; details?: { reason?: unknown }[] };
-      } | null;
-      // Provider messages can contain credentials or request data; record only diagnostic codes.
-      console.error("places_search_failed", {
-        httpStatus: res.status,
-        status: diagnosticCode(data?.error?.status),
-        reasons: Array.isArray(data?.error?.details)
-          ? data.error.details.flatMap((detail) => diagnosticCode(detail?.reason) ?? [])
-          : [],
-      });
+      await logPlacesFailure("search", res);
       throw new Error("places_fetch_failed");
     }
 

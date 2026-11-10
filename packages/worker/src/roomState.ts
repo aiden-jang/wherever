@@ -38,7 +38,9 @@ export async function readVotes(storage: DurableObjectStorage): Promise<Vote[]> 
   return Object.values(map);
 }
 
-export async function readRoundNumber(storage: DurableObjectStorage): Promise<number> {
+export async function readRoundNumber(
+  storage: DurableObjectStorage | DurableObjectTransaction,
+): Promise<number> {
   return (await storage.get<number>("roundNumber")) ?? ((await storage.get<number>("againRounds")) ?? 0) + 1;
 }
 

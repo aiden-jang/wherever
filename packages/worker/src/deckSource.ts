@@ -19,7 +19,7 @@ import { createRestaurantSource, isDemoSource, MockRestaurantSource } from "./re
 import { visitedPlaces } from "./db/schema.js";
 import type { Env } from "./env.js";
 import type { SessionMeta } from "./roomState.js";
-import { storedPlace, type RoomPlaces } from "./roomPlaces.js";
+import { googlePlaceListing, storedPlace, type RoomPlaces } from "./roomPlaces.js";
 import { assertRoomLive, ExpiredRoomError, putLive, SESSION_TTL_MS } from "./sessionRetention.js";
 
 /* Deck sourcing combines the provider, monthly search budget, vibe filters, and visited history. It does not own sockets. */
@@ -49,9 +49,14 @@ export async function visitedFor(env: Env, code: string): Promise<VisitedPlace[]
 }
 
 export async function presentHistory(env: Env, code: string, places: RoomPlaces): Promise<VisitedPlace[]> {
-  return (await visitedFor(env, code)).map((entry) => ({
+  const visited = await visitedFor(env, code);
+  visited.sort(
+    (a, b) => a.visitedAt.localeCompare(b.visitedAt) || a.restaurantId.localeCompare(b.restaurantId),
+  );
+  return visited.map((entry, index) => ({
     ...entry,
-    name: entry.name || places.name(entry.restaurantId) || "Restaurant details unavailable",
+    name: entry.name || places.name(entry.restaurantId) || `Past pick ${index + 1}`,
+    ...(!entry.name ? { mapsUrl: googlePlaceListing(entry.restaurantId) } : {}),
   }));
 }
 

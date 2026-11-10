@@ -1,5 +1,6 @@
 import { line, type Restaurant } from "@wherever/shared";
 import { mapsUrl } from "./DirectionsDialog.js";
+import { availabilityLabel } from "./RestaurantFacts.js";
 /*
  * Same line for everybody in the room: the seed comes from the winner's id, not a clock or a random,
  * so two phones looking at the same result never disagree about what just happened.
@@ -26,19 +27,12 @@ export function planText(
   totalParticipants: number,
   reasons: string[] = [],
   backup?: Restaurant,
+  hostPicked = false,
 ): string {
   const where = r.address ? `\n${r.address}` : "";
-  const availability =
-    r.businessStatus === "CLOSED_PERMANENTLY"
-      ? " Permanently closed."
-      : r.businessStatus === "CLOSED_TEMPORARILY"
-        ? " Temporarily closed."
-        : r.openNow == null
-          ? ""
-          : r.openNow
-            ? " Open now."
-            : " Closed right now.";
-  const why = reasons.length > 0 ? `\nWhy it won: ${reasons.join(" · ")}` : "";
+  const availability = availabilityLabel(r);
+  const why = reasons.length > 0 ? `\nAbout this pick: ${reasons.join(" · ")}` : "";
   const fallback = backup ? `\nPlan B: ${backup.name}\n${mapsUrl(backup)}` : "";
-  return `Dinner plan: ${r.name}${where}\nPicked by ${rightSwipes} of ${totalParticipants}.${availability}${why}${fallback}`;
+  const support = hostPicked ? "The host chose this backup. " : "";
+  return `Dinner plan: ${r.name}${where}\n${support}${rightSwipes} of ${totalParticipants} voted yes.${availability ? ` ${availability}.` : ""}${why}${fallback}`;
 }

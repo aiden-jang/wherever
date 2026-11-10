@@ -32,6 +32,8 @@ import {
 } from "./roomState.js";
 import type { SessionMeta, VoteMap } from "./roomState.js";
 import {
+  allowReturn,
+  updateReturnGrace,
   beginHostGraceIfNeeded,
   hasLiveSocketFor,
   reassignHostAway,
@@ -136,6 +138,8 @@ export class SessionRoom extends DurableObject<Env> {
     switch (msg.type) {
       case "join":
         return this.handleJoin(ws, msg.displayName, msg.clientId, msg.lazyPlaces ?? false);
+      case "edit_search":
+        return this.rounds.editSearch(ws);
       case "start_round":
         return this.rounds.handleStartRound(ws);
       case "swipe":
@@ -146,9 +150,10 @@ export class SessionRoom extends DurableObject<Env> {
           msg.super ?? false,
           msg.veto ?? false,
           msg.roundId,
+          msg.choiceId,
         );
       case "undo_swipe":
-        return this.rounds.handleUndoSwipe(ws, msg.restaurantId, msg.roundId);
+        return this.rounds.handleUndoSwipe(ws, msg.restaurantId, msg.roundId, msg.choiceId);
       case "decide_now":
         return this.rounds.handleDecideNow(ws);
       case "again":
@@ -259,12 +264,10 @@ export class SessionRoom extends DurableObject<Env> {
   }
 
   private async closed(ws: WebSocket): Promise<void> {
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    if (meta?.status === "swiping") await allowReturn(this.ctx, this.env, ws);
     await beginHostGraceIfNeeded(this.ctx, this.env, ws);
     await broadcastSessionState(this.ctx, ws);
-    // A departure drops the participant count — re-check completion (excluding the closing socket,
-    // which getWebSockets still returns here) so a finished group decides instead of stalling on
-    // the person who just left.
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (meta?.status === "swiping") await this.rounds.evaluate(meta, ws);
   }
 
@@ -296,6 +299,10 @@ export class SessionRoom extends DurableObject<Env> {
       if (meta?.status === "swiping") await this.rounds.decide(meta); // time's up → tally decides
     }
 
+    if (await updateReturnGrace(this.ctx)) {
+      const meta = await this.ctx.storage.get<SessionMeta>("meta");
+      if (meta?.status === "swiping") await this.rounds.evaluate(meta);
+    }
     await rescheduleAlarm(this.ctx);
     if (hostChanged) await broadcastSessionState(this.ctx);
   }
@@ -329,6 +336,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (!identity)
       return sendTo(ws, { type: "error", message: "This room has reached its participant limit." });
     ws.serializeAttachment({ ...identity, displayName });
+    if (await updateReturnGrace(this.ctx, identity.participantId)) await rescheduleAlarm(this.ctx);
 
     // If the host is (back) online — this socket may be their reconnect — cancel the host-grace
     // deadline so a refresh never hands off host. Keep any round timer running (rescheduleAlarm).
@@ -376,8 +384,11 @@ export class SessionRoom extends DurableObject<Env> {
     const stored = (await this.ctx.storage.get<DecisionResult | null>("winner")) ?? null;
     const { total, vetoedCount, round } = await this.resultContext();
     const result = stored ? await this.rounds.places.showVerdict(stored, meta.filters) : null;
+    const demo = await readDemoMode(this.ctx.storage);
     const current = await this.ctx.storage.get<SessionMeta>("meta");
     if (current?.status !== "decided" || round !== (await readRoundNumber(this.ctx.storage))) return;
-    sendTo(ws, resultMessage(result, total, vetoedCount, round, await readDemoMode(this.ctx.storage)));
+    const winner = await this.ctx.storage.get<DecisionResult>("winner");
+    if (winner?.restaurant.id === stored?.restaurant.id && ws.readyState === WebSocket.OPEN)
+      sendTo(ws, resultMessage(result, total, vetoedCount, round, demo));
   }
 }

@@ -6,12 +6,10 @@ import { useShareAction } from "../useShareAction.js";
 import { useInstallPrompt } from "../useInstallPrompt.js";
 import { line, matchReasons, nearMissLine, type SessionFilters, type VisitedPlace } from "@wherever/shared";
 import type { MatchState } from "../sessionState.js";
-import { priceLabel } from "./cardStyle.js";
 import { PlanDirections } from "./PlanDirections.js";
 import { DinnerTicket } from "./DinnerTicket.js";
-import { distanceText } from "@wherever/shared";
-import { RestaurantPhoto } from "./RestaurantPhoto.js";
-import { RestaurantHours } from "./RestaurantFacts.js";
+import { RestaurantHours, isUnavailable } from "./RestaurantFacts.js";
+import { BackupPlaces } from "./BackupPlaces.js";
 import { Confetti } from "./Confetti.js";
 import { DirectionsDialog, mapsUrl } from "./DirectionsDialog.js";
 import { PlaceLinks } from "./PlaceLinks.js";
@@ -32,6 +30,8 @@ export function WinnerScreen({
   pending,
   demo,
   onAgain,
+  onEditSearch,
+  resultError,
   onChooseAlternative,
   onNeverAgain,
 }: {
@@ -42,6 +42,8 @@ export function WinnerScreen({
   online: boolean;
   pending: boolean;
   demo: boolean;
+  onEditSearch: () => void;
+  resultError?: string | null;
   onAgain: (deck: "new" | "same") => void;
   onChooseAlternative: (restaurantId: string) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
@@ -53,21 +55,19 @@ export function WinnerScreen({
     totalParticipants,
     vetoedCount,
     round,
+    hostPicked = false,
     tiedWith = 0,
     vetoedTop = false,
     superTipped = false,
   } = match;
-  const unavailable =
-    restaurant.openNow === false ||
-    restaurant.businessStatus === "CLOSED_PERMANENTLY" ||
-    restaurant.businessStatus === "CLOSED_TEMPORARILY";
+  const unavailable = isUnavailable(restaurant);
   const { status: shareResult, share } = useShareAction(restaurant.id);
   const [directionsOpen, setDirectionsOpen] = useState(false);
   const { status: addressStatus, share: copy } = useShareAction(restaurant.id);
   const addressCopied = addressStatus === "copied";
-  const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants);
+  const reasons = matchReasons(restaurant, filters, rightSwipes, totalParticipants, hostPicked);
   const { offer: installOffer, install, dismiss: dismissInstall } = useInstallPrompt(round);
-  const nearMiss = nearMissLine(restaurant.name, rightSwipes, alternatives);
+  const nearMiss = hostPicked ? null : nearMissLine(restaurant.name, rightSwipes, alternatives);
 
   // Celebrate once when the verdict lands: confetti, a victory buzz, and the fanfare.
   const [celebrate, setCelebrate] = useState(true);
@@ -87,7 +87,8 @@ export function WinnerScreen({
         rightSwipes,
         totalParticipants,
         reasons.map((reason) => reason.label),
-        alternatives[0]?.restaurant,
+        alternatives.find((choice) => !isUnavailable(choice.restaurant))?.restaurant,
+        hostPicked,
       );
   const url = mapsUrl(restaurant);
   const sharePlan = () => share({ title: restaurant.name, text, ...(demo ? {} : { url }) });
@@ -104,6 +105,17 @@ export function WinnerScreen({
       ? copy({ text: `${restaurant.name}\n${restaurant.address}` }, false)
       : Promise.resolve();
 
+  const backups = (
+    <BackupPlaces
+      alternatives={alternatives}
+      unavailable={unavailable}
+      demo={demo}
+      online={online}
+      pending={pending}
+      isHost={isHost}
+      onChooseAlternative={onChooseAlternative}
+    />
+  );
   return (
     <div className="relative w-full">
       {celebrate && <Confetti />}
@@ -115,6 +127,7 @@ export function WinnerScreen({
           <DinnerTicket
             restaurant={restaurant}
             rightSwipes={rightSwipes}
+            hostPicked={hostPicked}
             totalParticipants={totalParticipants}
             action={
               <div className="ticket-actions">
@@ -123,8 +136,16 @@ export function WinnerScreen({
                 )}
                 {unavailable && !demo && (
                   <p className="meal-hours meal-closed mb-2">
-                    This place is closed.{" "}
-                    {alternatives.length ? "See the backups below." : "Check Maps before heading out."}
+                    {restaurant.availabilityCheckedAt
+                      ? "This place was closed when checked."
+                      : "This place is closed."}{" "}
+                    {alternatives.length ? (
+                      <a href="#dinner-backups" className="inline-flex min-h-6 items-center underline">
+                        See backups
+                      </a>
+                    ) : (
+                      "Check Maps before heading out."
+                    )}
                   </p>
                 )}
                 <div className="ticket-action-buttons">
@@ -154,9 +175,10 @@ export function WinnerScreen({
             }
           />
 
+          {unavailable && backups}
           {!demo && (
             <div className="table-plan-actions mt-3 grid gap-2">
-              <SavePlanImage key={restaurant.id} restaurant={restaurant} />
+              <SavePlanImage key={restaurant.id} restaurant={restaurant} hostPicked={hostPicked} />
               <PlaceLinks
                 restaurant={restaurant}
                 showMap={!unavailable && Boolean(restaurant.address?.trim())}
@@ -169,9 +191,11 @@ export function WinnerScreen({
             className="reveal mt-2 inline-flex rounded-full border border-acid/20 bg-acid/10 px-3 py-1 text-xs font-semibold text-acid"
             style={{ "--reveal-at": "190ms" } as CSSProperties}
           >
-            {tiedWith > 0 && totalParticipants > 1
-              ? line("tie", seedFrom(restaurant.id))
-              : consensusLine(rightSwipes, totalParticipants, seedFrom(restaurant.id))}
+            {hostPicked
+              ? "The host chose this backup."
+              : tiedWith > 0 && totalParticipants > 1
+                ? line("tie", seedFrom(restaurant.id))
+                : consensusLine(rightSwipes, totalParticipants, seedFrom(restaurant.id))}
           </p>
           {tiedWith > 0 && totalParticipants <= 1 && (
             <p className="mt-2 text-xs text-muted">
@@ -272,81 +296,7 @@ export function WinnerScreen({
             </details>
           )}
 
-          {alternatives.length > 0 && (
-            <details
-              className="group mt-3 rounded-2xl border border-white/10 bg-white/[0.035] text-left"
-              open={unavailable || undefined}
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:content-none">
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-cream">
-                    {unavailable ? "The doors are shut. Try a backup." : "If the wait is ridiculous"}
-                  </span>
-                  <span className="block text-xs text-muted [overflow-wrap:anywhere]">
-                    Plan B: {alternatives[0]!.restaurant.name}
-                  </span>
-                </span>
-                <span className="shrink-0 text-xs text-muted transition group-open:rotate-180" aria-hidden>
-                  ⌄
-                </span>
-              </summary>
-              <ol className="space-y-2 border-t border-white/10 p-3">
-                {alternatives.map((choice, index) => (
-                  /* minmax(0,1fr) in both templates, and the base one is not optional: grid columns floor
-                   at min-content, whether they are a bare 1fr or the implicit auto column a single-column
-                   grid gets. Either way a long restaurant name widened the column instead of letting the
-                   truncate inside it do its job, and the row ran out past the panel. */
-                  <li key={choice.restaurant.id} className="grid grid-cols-[minmax(0,1fr)] gap-2">
-                    <a
-                      href={demo ? undefined : mapsUrl(choice.restaurant)}
-                      target="_blank"
-                      aria-describedby="external-link-hint"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/15 p-2 transition hover:border-white/25 hover:bg-white/5 active:scale-[0.99]"
-                    >
-                      <span className="w-5 shrink-0 text-center font-display text-sm font-bold text-ember">
-                        {index + 2}
-                      </span>
-                      <RestaurantPhoto
-                        imageUrl={choice.restaurant.source === "google" ? null : choice.restaurant.imageUrl}
-                        lazy
-                        category={choice.restaurant.category}
-                        className="relative h-12 w-12 shrink-0 rounded-lg"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <strong className="block text-sm text-cream [overflow-wrap:anywhere]">
-                          {choice.restaurant.name}
-                        </strong>
-                        <span className="block text-xs text-muted [overflow-wrap:anywhere]">
-                          {choice.rightSwipes} liked it
-                          {distanceText(choice.restaurant.distanceMeters)
-                            ? ` · ${distanceText(choice.restaurant.distanceMeters)}`
-                            : ""}{" "}
-                          · {priceLabel(choice.restaurant.priceTier)}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-sm text-muted" aria-hidden>
-                        ↗
-                      </span>
-                    </a>
-                    {isHost && (
-                      <button
-                        type="button"
-                        disabled={!online || pending}
-                        // There is one of these per runner-up, so the visible label alone is heard as
-                        // "Make Plan A" twice with nothing to tell them apart.
-                        aria-label={`Make Plan A: ${choice.restaurant.name}`}
-                        onClick={() => onChooseAlternative(choice.restaurant.id)}
-                        className="min-h-11 rounded-xl border border-acid/25 bg-acid/10 px-4 py-2 text-sm font-semibold text-acid hover:border-acid/50 hover:bg-acid/15"
-                      >
-                        Make Plan A
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </details>
-          )}
+          {!unavailable && backups}
 
           <div className="mt-5 flex flex-col gap-3">
             {installOffer && (
@@ -369,10 +319,17 @@ export function WinnerScreen({
                 </button>
               </div>
             )}
-            <RoundAgain isHost={isHost} online={online} pending={pending} onAgain={onAgain} />
+            <RoundAgain
+              isHost={isHost}
+              online={online}
+              pending={pending}
+              onAgain={onAgain}
+              onEditSearch={onEditSearch}
+              resultError={resultError}
+            />
           </div>
 
-          <VisitedHistory visited={visited} onNeverAgain={onNeverAgain} />
+          <VisitedHistory visited={visited} online={online} onNeverAgain={onNeverAgain} />
         </div>
       </div>
 

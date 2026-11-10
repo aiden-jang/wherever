@@ -149,7 +149,8 @@ input:focus-visible {
 }
 
 /* The skip link focuses this landmark for navigation. Controls carry their own visible focus. */
-#main-content:focus {
+#main-content:focus,
+:is(h1, h2)[tabindex="-1"]:focus {
   outline: none;
 }
 

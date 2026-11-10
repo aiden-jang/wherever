@@ -8,6 +8,7 @@ export function useSessionSocket(code: string, displayName: string) {
   const [state, dispatch] = useReducer(sessionReducer, initialSessionState);
   const wsRef = useRef<WebSocket | null>(null);
   const activeRound = useRef<number | null>(null);
+  const deadline = useRef<number | undefined>(undefined);
   const joined = useRef(false);
   const terminalRef = useRef(false);
 
@@ -33,6 +34,7 @@ export function useSessionSocket(code: string, displayName: string) {
 
     const reactionTimers = new Set<ReturnType<typeof setTimeout>>();
     let phaseFrame = 0;
+    let latestRound = 0;
     const handleMessage = (event: MessageEvent, socket: WebSocket) => {
       if (disposed) return;
       let msg: ServerMessage;
@@ -42,9 +44,17 @@ export function useSessionSocket(code: string, displayName: string) {
         return;
       }
       if (!msg || typeof msg !== "object" || typeof msg.type !== "string") return;
+      const receivedRound =
+        msg.type === "deck"
+          ? (msg.roundId ?? 1)
+          : msg.type === "match" || msg.type === "no_match"
+            ? msg.round
+            : undefined;
+      if (receivedRound !== undefined && receivedRound < latestRound) return;
+      if (receivedRound !== undefined) latestRound = receivedRound;
       if (
         !joined.current &&
-        ((msg.type === "session_state" && msg.session.status === "lobby") ||
+        ((msg.type === "session_state" && msg.session.status !== "swiping") ||
           msg.type === "deck" ||
           msg.type === "match" ||
           msg.type === "no_match")
@@ -54,7 +64,12 @@ export function useSessionSocket(code: string, displayName: string) {
         joined.current = true;
         dispatch({ type: "connection", status: "open" });
       }
-      if (msg.type === "deck") activeRound.current = msg.roundId ?? 1;
+      if (msg.type === "deck") {
+        activeRound.current = msg.roundId ?? 1;
+        deadline.current = msg.roundEndsAt;
+      }
+      if (msg.type === "round_clock") deadline.current = undefined;
+      if (msg.type === "session_state" && msg.session.status !== "swiping") activeRound.current = null;
       if (msg.type === "match" || msg.type === "no_match") activeRound.current = null;
       if (msg.type === "reaction" && reactionTimers.size >= 24) return;
       const reactionId = msg.type === "reaction" ? crypto.randomUUID() : undefined;
@@ -155,13 +170,19 @@ export function useSessionSocket(code: string, displayName: string) {
 
   const send = useCallback((message: ClientMessage) => {
     const ws = wsRef.current;
-    if (!joined.current || !ws || ws.readyState !== WebSocket.OPEN) return;
+    if (!joined.current || !ws || ws.readyState !== WebSocket.OPEN) return false;
     const isVote = message.type === "swipe" || message.type === "undo_swipe";
-    if (isVote && activeRound.current === null) return;
+    if (
+      isVote &&
+      (activeRound.current === null || (deadline.current !== undefined && Date.now() >= deadline.current))
+    )
+      return false;
     try {
       ws.send(JSON.stringify(isVote ? { ...message, roundId: activeRound.current } : message));
+      return true;
     } catch {
       ws.close();
+      return false;
     }
   }, []);
 

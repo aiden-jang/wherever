@@ -3,7 +3,7 @@ import type { Restaurant } from "@wherever/shared";
 import { saveDinnerImage } from "../lib/dinnerImage.js";
 import { SharePlanImage } from "./SharePlanImage.js";
 
-export function SavePlanImage({ restaurant }: { restaurant: Restaurant }) {
+export function SavePlanImage({ restaurant, hostPicked }: { restaurant: Restaurant; hostPicked: boolean }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   return (
@@ -17,7 +17,7 @@ export function SavePlanImage({ restaurant }: { restaurant: Restaurant }) {
           setBusy(true);
           setMessage("");
           try {
-            await saveDinnerImage(restaurant);
+            await saveDinnerImage(restaurant, hostPicked);
             setMessage("Download started. The plan travels well.");
           } catch {
             setMessage("Couldn’t save the image. Try again, or send the plan above.");
@@ -31,7 +31,7 @@ export function SavePlanImage({ restaurant }: { restaurant: Restaurant }) {
       <p role="status" className="mt-2 text-center text-xs text-muted">
         {message}
       </p>
-      <SharePlanImage restaurant={restaurant} />
+      <SharePlanImage restaurant={restaurant} hostPicked={hostPicked} />
     </div>
   );
 }

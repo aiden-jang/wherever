@@ -7,7 +7,8 @@ import { sessionCodeFromShare } from "@wherever/shared";
 export default function Share() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const code = sessionCodeFromShare(params.get("url") ?? params.get("text") ?? "");
+  const code =
+    sessionCodeFromShare(params.get("url") ?? "") || sessionCodeFromShare(params.get("text") ?? "");
   const joinable = code !== "";
 
   useEffect(() => {

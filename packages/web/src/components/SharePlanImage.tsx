@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import type { Restaurant } from "@wherever/shared";
 import { createDinnerImage } from "../lib/dinnerImage.js";
 
-export function SharePlanImage({ restaurant }: { restaurant: Restaurant }) {
+export function SharePlanImage({
+  restaurant,
+  hostPicked = false,
+}: {
+  restaurant: Restaurant;
+  hostPicked?: boolean;
+}) {
   const [ready, setReady] = useState<{ restaurant: Restaurant; file: File } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -11,8 +17,15 @@ export function SharePlanImage({ restaurant }: { restaurant: Restaurant }) {
     let active = true;
     setMessage("");
     if (!navigator.share || !navigator.canShare) return;
+    const samplePng = atob(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jQioAAAAASUVORK5CYII=",
+    );
+    const probe = new File([Uint8Array.from(samplePng, (byte) => byte.charCodeAt(0))], "dinner.png", {
+      type: "image/png",
+    });
+    if (!navigator.canShare({ files: [probe] })) return;
     // File rendering must finish before the gesture that opens the native share sheet.
-    void createDinnerImage(restaurant)
+    void createDinnerImage(restaurant, hostPicked)
       .then((file) => {
         if (active && navigator.canShare({ files: [file] })) setReady({ restaurant, file });
       })
@@ -22,7 +35,7 @@ export function SharePlanImage({ restaurant }: { restaurant: Restaurant }) {
     return () => {
       active = false;
     };
-  }, [restaurant]);
+  }, [restaurant, hostPicked]);
   if (!ready || ready.restaurant !== restaurant) return null;
   return (
     <div className="mt-3">

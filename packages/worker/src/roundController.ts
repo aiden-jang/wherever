@@ -7,10 +7,11 @@ import {
   type DecisionResult,
   type Restaurant,
   type SwipeDirection,
+  type SessionStatus,
 } from "@wherever/shared";
 import type { Env } from "./env.js";
 import type { SessionMeta, VoteMap } from "./roomState.js";
-import { isRoomHost, readRoundNumber, readVotes, socketIdentity } from "./roomState.js";
+import { isRoomHost, readRoundNumber, readVotes } from "./roomState.js";
 import { writeEvent } from "./events.js";
 import { rescheduleAlarm } from "./hostHandover.js";
 import { vibeCounts } from "./vibeTally.js";
@@ -26,6 +27,9 @@ import {
 } from "./deckSource.js";
 import { RoomPlaces, storedPlace, storedVerdict } from "./roomPlaces.js";
 import { assertRoomLive, ExpiredRoomError, putLive } from "./sessionRetention.js";
+
+import { changeBallot } from "./roomBallot.js";
+import { returningSeats } from "./hostHandover.js";
 
 const MAX_AGAIN_ROUNDS = 20;
 
@@ -53,15 +57,15 @@ export class RoundController {
   }
 
   async handleStartRound(ws: WebSocket): Promise<void> {
-    await this.transition(() => this.startRound(ws));
+    await this.transition(ws, () => this.startRound(ws));
   }
 
   async handleAgain(ws: WebSocket, mode: "new" | "same"): Promise<void> {
-    await this.transition(() => this.again(ws, mode));
+    await this.transition(ws, () => this.again(ws, mode));
   }
 
-  private async transition(run: () => Promise<void>): Promise<void> {
-    if (this.transitioning) return;
+  private async transition(ws: WebSocket, run: () => Promise<void>): Promise<void> {
+    if (this.transitioning) return sendTo(ws, { type: "error", message: "The deal is already in progress." });
     this.transitioning = true;
     try {
       await run();
@@ -101,8 +105,15 @@ export class RoundController {
         message: "No places matched. Widen the distance or remove a filter, then start again.",
       });
     }
+    const roundNumber = await this.ctx.storage.get<number>("roundNumber");
     meta.status = "swiping";
-    await putLive(this.ctx.storage, { meta });
+    await putLive(this.ctx.storage, {
+      meta,
+      roundNumber: (roundNumber ?? 0) + 1,
+      votes: {},
+      winner: null,
+      returnGrace: {},
+    });
     const roundEndsAt = await this.setRoundDeadline(meta);
     const vibeEffect = await this.ctx.storage.get<string>("vibeEffect");
     broadcastTo(this.ctx, {
@@ -121,70 +132,29 @@ export class RoundController {
     ws: WebSocket,
     restaurantId: string,
     direction: SwipeDirection,
-    isSuper: boolean,
-    isVeto: boolean,
+    superLike: boolean,
+    veto: boolean,
     roundId?: number,
+    choiceId?: string,
   ): Promise<void> {
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta || !(await this.acceptsVotes(meta, roundId))) return;
-    const att = socketIdentity(ws);
-    if (!att) return;
-
-    const deck = (await this.ctx.storage.get<Restaurant[]>("deck")) ?? [];
-    if (!deck.some((r) => r.id === restaurantId)) return;
-
-    const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
-    const key = `${att.participantId}:${restaurantId}`;
-    const prior = votes[key];
-    const otherVotes = Object.values(votes).filter(
-      (vote) => vote.participantId === att.participantId && vote.restaurantId !== restaurantId,
-    );
-    let superLike = isSuper && direction === "right";
-    if (superLike) {
-      const spent = otherVotes.some((vote) => vote.super);
-      if (spent) superLike = false;
-      else if (!prior?.super) writeEvent(this.env, "super_like_used");
-    }
-    let vetoing = isVeto && direction === "left";
-    if (vetoing) {
-      const spent = otherVotes.some((vote) => vote.veto);
-      if (spent) vetoing = false;
-    }
-    if (
-      prior?.direction === direction &&
-      Boolean(prior.super) === superLike &&
-      Boolean(prior.veto) === vetoing
-    ) {
-      return;
-    }
-    votes[key] = {
-      participantId: att.participantId,
-      restaurantId,
+    const update = await changeBallot(this.ctx, ws, restaurantId, roundId, {
       direction,
-      ...(superLike ? { super: true } : {}),
-      ...(vetoing ? { veto: true } : {}),
-    };
-    await putLive(this.ctx.storage, { votes });
-
-    if (superLike && !prior?.super) sendTo(ws, { type: "reaction", emoji: "⭐", from: "", kind: "super" });
-    if (vetoing && !prior?.veto && attachmentsOn(this.ctx).length >= 3) {
-      broadcastTo(this.ctx, { type: "reaction", emoji: "🚫", from: "", kind: "veto" });
-    }
-
-    await this.evaluate(meta);
+      choiceId,
+      super: superLike,
+      veto,
+    });
+    if (update?.super) writeEvent(this.env, "super_like_used");
+    if (update?.meta) await this.evaluate(update.meta);
   }
 
-  async handleUndoSwipe(ws: WebSocket, restaurantId: string, roundId?: number): Promise<void> {
-    const meta = await this.ctx.storage.get<SessionMeta>("meta");
-    if (!meta || !(await this.acceptsVotes(meta, roundId))) return;
-    const att = socketIdentity(ws);
-    if (!att) return;
-    const votes = (await this.ctx.storage.get<VoteMap>("votes")) ?? {};
-    const key = `${att.participantId}:${restaurantId}`;
-    if (!votes[key]) return;
-    delete votes[key];
-    await putLive(this.ctx.storage, { votes });
-    await this.evaluate(meta);
+  async handleUndoSwipe(
+    ws: WebSocket,
+    restaurantId: string,
+    roundId?: number,
+    choiceId?: string | null,
+  ): Promise<void> {
+    const update = await changeBallot(this.ctx, ws, restaurantId, roundId, undefined, choiceId);
+    if (update?.meta) await this.evaluate(update.meta);
   }
 
   async handleDecideNow(ws: WebSocket): Promise<void> {
@@ -197,6 +167,23 @@ export class RoundController {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "swiping") return;
     await this.decide(meta);
+  }
+
+  async editSearch(ws: WebSocket): Promise<void> {
+    await this.transition(ws, async () => {
+      if (!(await isRoomHost(this.ctx, ws))) return;
+      const meta = await this.ctx.storage.get<SessionMeta>("meta");
+      if (meta?.status !== "decided") return;
+      const roundNumber = await readRoundNumber(this.ctx.storage);
+      await putLive(this.ctx.storage, {
+        meta: { ...meta, status: "lobby" },
+        roundNumber,
+        reserve: [],
+        seenIds: [],
+        lastSearchRadius: null,
+      });
+      await broadcastSessionState(this.ctx);
+    });
   }
 
   async handleChooseAlternative(ws: WebSocket, restaurantId: string): Promise<void> {
@@ -212,17 +199,24 @@ export class RoundController {
       return sendTo(ws, { type: "error", message: "That place is no longer a finalist." });
     }
 
+    const round = await readRoundNumber(this.ctx.storage);
     await putLive(this.ctx.storage, { winner: storedVerdict(promoted) });
     const votes = await readVotes(this.ctx.storage);
-    const round = await readRoundNumber(this.ctx.storage);
+    const [restaurantResult, total, demo] = await Promise.all([
+      this.places.showVerdict(promoted, meta.filters),
+      this.ctx.storage.get<number>("verdictTotal"),
+      readDemoMode(this.ctx.storage),
+    ]);
+    const winner = await this.ctx.storage.get<DecisionResult>("winner");
+    if (!(await this.isCurrentRound(round, "decided")) || winner?.restaurant.id !== restaurantId) return;
     broadcastTo(
       this.ctx,
       resultMessage(
-        await this.places.showVerdict(promoted, meta.filters),
-        (await this.ctx.storage.get<number>("verdictTotal")) ?? attachmentsOn(this.ctx).length,
+        restaurantResult,
+        total ?? attachmentsOn(this.ctx).length,
         vetoedRestaurantIds(votes).size,
         round,
-        await readDemoMode(this.ctx.storage),
+        demo,
       ),
     );
     await recordVisit(
@@ -238,12 +232,11 @@ export class RoundController {
     const deck = await readDeck(this.ctx.storage);
     const votes = await readVotes(this.ctx.storage);
     const participants = attachmentsOn(this.ctx, excludeWs);
-    const total = participants.length;
-    const finishedIds = finishedParticipantIds(
-      votes,
-      participants.map((p) => p.participantId),
-      deck.length,
-    );
+    const ids = participants.map((p) => p.participantId);
+    const returning = await returningSeats(this.ctx.storage);
+    const eligible = [...new Set([...ids, ...returning])];
+    const total = eligible.length;
+    const finishedIds = finishedParticipantIds(votes, eligible, deck.length);
     const pulse =
       total >= 3 && deck.every((place) => place.source !== "google") ? tastePulse(deck, votes) : null;
 
@@ -256,7 +249,7 @@ export class RoundController {
       ...(meta.filters.revealVoters ? { finishedIds } : {}),
     });
 
-    if (total > 0 && finishedIds.length >= total) {
+    if (ids.length > 0 && finishedIds.length >= total) {
       await this.decide(meta);
     }
   }
@@ -281,25 +274,22 @@ export class RoundController {
         verdictTotal: total,
       });
       await transaction.delete("roundEndsAt");
-      return { result, total, votes };
+      return { result, total, votes, round: await readRoundNumber(transaction) };
     });
     if (!verdict) return;
-    const { result, total, votes } = verdict;
+    const { result, total, votes, round } = verdict;
     writeEvent(this.env, "session_decided", "", "", total);
     await rescheduleAlarm(this.ctx);
 
-    const round = await readRoundNumber(this.ctx.storage);
-    broadcastTo(
-      this.ctx,
-      resultMessage(
-        result ? await this.places.showVerdict(result, meta.filters) : null,
-        total,
-        vetoedRestaurantIds(votes).size,
-        round,
-        await readDemoMode(this.ctx.storage),
-      ),
-    );
     await broadcastSessionState(this.ctx);
+    const [displayResult, demo] = await Promise.all([
+      result ? this.places.showVerdict(result, meta.filters) : null,
+      readDemoMode(this.ctx.storage),
+    ]);
+    if (!(await this.isCurrentRound(round, "decided"))) return;
+    const winner = await storage.get<DecisionResult>("winner");
+    if (winner?.hostPicked) return;
+    broadcastTo(this.ctx, resultMessage(displayResult, total, vetoedRestaurantIds(votes).size, round, demo));
     if (result)
       await recordVisit(
         this.env,
@@ -353,16 +343,17 @@ export class RoundController {
     }
     const { deck, paid, note: searchNote } = next;
 
-    await this.ctx.storage.delete("votes");
-    await this.ctx.storage.delete("winner");
     const roundNumber = ((await this.ctx.storage.get<number>("roundNumber")) ?? rounds + 1) + 1;
     await putLive(this.ctx.storage, {
       deck: deck.map(storedPlace),
       roundNumber,
+      votes: {},
+      winner: null,
+      returnGrace: {},
+      meta: { ...meta, status: "swiping" },
       ...(paid ? { againRounds: rounds + 1 } : {}),
     });
     meta.status = "swiping";
-    await putLive(this.ctx.storage, { meta });
     const roundEndsAt = await this.setRoundDeadline(meta);
     const vibeEffect = await this.ctx.storage.get<string>("vibeEffect");
     broadcastTo(this.ctx, {
@@ -378,17 +369,9 @@ export class RoundController {
     await this.evaluate(meta);
   }
 
-  private async acceptsVotes(meta: SessionMeta, roundId?: number): Promise<boolean> {
-    if (
-      meta.status !== "swiping" ||
-      (roundId !== undefined && roundId !== (await readRoundNumber(this.ctx.storage)))
-    ) {
-      return false;
-    }
-    const deadline = await this.ctx.storage.get<number>("roundEndsAt");
-    if (deadline === undefined || Date.now() < deadline) return true;
-    await this.decide(meta);
-    return false;
+  private async isCurrentRound(round: number, status: SessionStatus): Promise<boolean> {
+    const meta = await this.ctx.storage.get<SessionMeta>("meta");
+    return meta?.status === status && (await readRoundNumber(this.ctx.storage)) === round;
   }
 
   private deckRequest(meta: SessionMeta, exclude?: ReadonlySet<string>) {

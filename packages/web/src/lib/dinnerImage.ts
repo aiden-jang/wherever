@@ -5,7 +5,10 @@ import { mapsUrl } from "../components/DirectionsDialog.js";
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 const charactersOf = (text: string) => Array.from(segmenter.segment(text), ({ segment }) => segment);
 
-export async function createDinnerImage(restaurant: Pick<Restaurant, "name" | "address" | "googleMapsUri">) {
+export async function createDinnerImage(
+  restaurant: Pick<Restaurant, "name" | "address" | "googleMapsUri">,
+  hostPicked = false,
+) {
   await document.fonts.ready;
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
@@ -51,7 +54,11 @@ export async function createDinnerImage(restaurant: Pick<Restaurant, "name" | "a
   ctx.fillText("Scan to open the map.", 362, 1000);
   ctx.fillStyle = "#f4f1e7";
   ctx.font = "400 28px Inter, sans-serif";
-  ctx.fillText("The group has made a decision. Allegedly.", 76, 1246);
+  ctx.fillText(
+    hostPicked ? "The host chose this backup." : "The group has made a decision. Allegedly.",
+    76,
+    1246,
+  );
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(
       (result) => (result ? resolve(result) : reject(new Error("Couldn’t create the image."))),
@@ -69,8 +76,11 @@ export async function createDinnerImage(restaurant: Pick<Restaurant, "name" | "a
   });
 }
 
-export async function saveDinnerImage(restaurant: Pick<Restaurant, "name" | "address" | "googleMapsUri">) {
-  const file = await createDinnerImage(restaurant);
+export async function saveDinnerImage(
+  restaurant: Pick<Restaurant, "name" | "address" | "googleMapsUri">,
+  hostPicked = false,
+) {
+  const file = await createDinnerImage(restaurant, hostPicked);
   const url = URL.createObjectURL(file);
   const anchor = document.createElement("a");
   anchor.download = file.name;
@@ -90,20 +100,29 @@ function lines(
   height: number,
   max: number,
 ) {
-  let line = "",
-    row = 0;
-  for (const character of charactersOf(text)) {
-    if (ctx.measureText(line + character).width > width) {
-      if (row === max - 1) {
-        while (ctx.measureText(line + "…").width > width) line = charactersOf(line).slice(0, -1).join("");
-        ctx.fillText(line + "…", x, y + row * height);
-        return;
-      }
-      ctx.fillText(line, x, y + row * height);
-      row++;
-      line = "";
+  const rows: string[] = [];
+  let line = "";
+  for (const word of text.trim().split(/\s+/)) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (ctx.measureText(candidate).width <= width) {
+      line = candidate;
+      continue;
     }
-    line += character;
+    if (line) rows.push(line);
+    line = "";
+    for (const character of charactersOf(word)) {
+      if (line && ctx.measureText(line + character).width > width) {
+        rows.push(line);
+        line = "";
+      }
+      line += character;
+    }
   }
-  ctx.fillText(line, x, y + row * height);
+  if (line) rows.push(line);
+  if (rows.length > max) {
+    let last = rows[max - 1]!;
+    while (ctx.measureText(last + "…").width > width) last = charactersOf(last).slice(0, -1).join("");
+    rows[max - 1] = last.trimEnd() + "…";
+  }
+  rows.slice(0, max).forEach((row, index) => ctx.fillText(row, x, y + index * height));
 }

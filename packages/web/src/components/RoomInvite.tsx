@@ -1,14 +1,23 @@
+import { useState } from "react";
 import { useShareAction } from "../useShareAction.js";
 import { JoinQr } from "./JoinQr.js";
 import { CopyFallback } from "./CopyFallback.js";
 export function RoomInvite({ code }: { code: string }) {
-  const { status: codeStatus, share: copy } = useShareAction(code);
+  const [lastAction, setLastAction] = useState<"code" | "link" | "share">("link");
   const { status: inviteStatus, share } = useShareAction(code);
-  const copyCode = () => void copy({ text: code }, false);
+  const copyCode = () => {
+    setLastAction("code");
+    void share({ text: code }, false);
+  };
   const invite = new URL(`/s/${code}`, location.origin).href;
-  const copyInviteLink = () => share({ url: invite }, false);
-  const shareInvite = () =>
-    share({ title: "Wherever, Honestly", text: "Come help pick where we're eating.", url: invite });
+  const copyInviteLink = () => {
+    setLastAction("link");
+    void share({ url: invite }, false);
+  };
+  const shareInvite = () => {
+    setLastAction("share");
+    void share({ title: "Wherever, Honestly", text: "Come help pick where we're eating.", url: invite });
+  };
   return (
     <section className="lobby-invite" aria-label="Invite to this room">
       <div className="lobby-code-row">
@@ -19,6 +28,7 @@ export function RoomInvite({ code }: { code: string }) {
         <button
           type="button"
           onClick={copyCode}
+          disabled={inviteStatus === "sharing"}
           aria-label={`Copy room code ${code}`}
           className="session-code"
           translate="no"
@@ -50,13 +60,17 @@ export function RoomInvite({ code }: { code: string }) {
           : inviteStatus === "shared"
             ? "Invite shared."
             : inviteStatus === "copied"
-              ? "Link copied."
-              : codeStatus === "copied"
+              ? lastAction === "code"
                 ? "Room code copied."
-                : ""}
+                : "Link copied."
+              : ""}
       </p>
-      {codeStatus === "failed" && <CopyFallback label="Session code to copy" text={code} />}
-      {inviteStatus === "failed" && <CopyFallback label="Invite link to copy" text={invite} />}
+      {inviteStatus === "failed" &&
+        (lastAction === "code" ? (
+          <CopyFallback label="Session code to copy" text={code} />
+        ) : (
+          <CopyFallback label="Invite link to copy" text={invite} />
+        ))}
       <JoinQr code={code} url={invite} />
     </section>
   );

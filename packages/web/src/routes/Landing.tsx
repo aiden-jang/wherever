@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTransitionNavigate } from "../useViewTransition.js";
 import { FieldLabel } from "../components/FilterControls.js";
@@ -212,13 +212,23 @@ function JoinForm() {
 
 export default function Landing() {
   const [params, setParams] = useSearchParams();
+  const { state } = useLocation();
+  const navigate = useNavigate();
   const modal = params.has("new") ? "create" : params.has("join") ? "join" : null;
   function setModal(next: "create" | "join" | null) {
+    if (next === null && state?.landingDialog === true) {
+      navigate(-1);
+      return;
+    }
     const updated = new URLSearchParams(params);
     updated.delete("new");
     updated.delete("join");
     if (next) updated.set(next === "create" ? "new" : "join", "1");
-    setParams(updated, { replace: next === null, preventScrollReset: true });
+    setParams(updated, {
+      replace: next === null,
+      preventScrollReset: true,
+      state: { landingDialog: next !== null },
+    });
   }
 
   return (

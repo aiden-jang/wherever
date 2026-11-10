@@ -4,6 +4,10 @@ import { GooglePlacesRestaurantSource } from "./restaurantSource.js";
 
 const DISPLAY_UNAVAILABLE = "Restaurant details unavailable";
 
+export function googlePlaceListing(id: string) {
+  return `https://www.google.com/maps/search/?api=1&query=restaurant&query_place_id=${encodeURIComponent(id)}`;
+}
+
 export function storedPlace(place: Restaurant): Restaurant {
   if (place.source !== "google") return place;
   return {
@@ -19,7 +23,7 @@ export function storedPlace(place: Restaurant): Restaurant {
     reviewCount: null,
     address: null,
     imageUrl: null,
-    googleMapsUri: `https://www.google.com/maps/search/?api=1&query=restaurant&query_place_id=${encodeURIComponent(place.id)}`,
+    googleMapsUri: googlePlaceListing(place.id),
   };
 }
 
@@ -76,9 +80,14 @@ export class RoomPlaces {
   constructor(private readonly env: Env) {}
 
   remember(places: Restaurant[]): void {
-    this.current.clear();
     this.failedUntil.clear();
-    for (const place of places) if (place.source === "google") this.current.set(place.id, place);
+    for (const place of places) if (place.source === "google") this.cache(place);
+  }
+
+  private cache(place: Restaurant) {
+    this.current.delete(place.id);
+    this.current.set(place.id, place);
+    if (this.current.size > 25) this.current.delete(this.current.keys().next().value!);
   }
 
   name(id: string): string | undefined {
@@ -140,7 +149,7 @@ export class RoomPlaces {
       const source = new GooglePlacesRestaurantSource(key, this.env.PUBLIC_API_BASE);
       const fresh = await source.fetchPlace(place.id, filters);
       if (!fresh) return place;
-      if (this.current.size < 25) this.current.set(place.id, fresh);
+      this.cache(fresh);
       return fresh;
     } catch {
       return place;

@@ -14,6 +14,8 @@ export function MatchScreen({
   pending,
   demo,
   onAgain,
+  onEditSearch,
+  resultError,
   onChooseAlternative,
   onNeverAgain,
 }: {
@@ -24,6 +26,8 @@ export function MatchScreen({
   online: boolean;
   pending: boolean;
   demo: boolean;
+  onEditSearch: () => void;
+  resultError?: string | null;
   onAgain: (deck: "new" | "same") => void;
   onChooseAlternative: (restaurantId: string) => void;
   onNeverAgain: (restaurantId: string, neverAgain: boolean) => void;
@@ -47,9 +51,16 @@ export function MatchScreen({
         </p>
         <div className="mt-8">
           {!isHost && <p className="mb-3 text-muted">The host can start another round.</p>}
-          <RoundAgain isHost={isHost} online={online} pending={pending} onAgain={onAgain} />
+          <RoundAgain
+            isHost={isHost}
+            online={online}
+            pending={pending}
+            onAgain={onAgain}
+            onEditSearch={onEditSearch}
+            resultError={resultError}
+          />
         </div>
-        <VisitedHistory visited={visited} onNeverAgain={onNeverAgain} />
+        <VisitedHistory visited={visited} online={online} onNeverAgain={onNeverAgain} />
       </div>
     );
   }
@@ -64,6 +75,8 @@ export function MatchScreen({
       pending={pending}
       demo={demo}
       onAgain={onAgain}
+      onEditSearch={onEditSearch}
+      resultError={resultError}
       onChooseAlternative={onChooseAlternative}
       onNeverAgain={onNeverAgain}
     />

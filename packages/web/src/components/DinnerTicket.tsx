@@ -9,11 +9,13 @@ export function DinnerTicket({
   restaurant,
   rightSwipes,
   totalParticipants,
+  hostPicked = false,
   action,
 }: {
   restaurant: Restaurant;
   rightSwipes: number;
   totalParticipants: number;
+  hostPicked?: boolean;
   action?: ReactNode;
 }) {
   const distance = distanceText(restaurant.distanceMeters);
@@ -73,9 +75,15 @@ export function DinnerTicket({
       </div>
       <div className="ticket-tear">
         <span>
-          {rightSwipes} / {totalParticipants} picked it
+          {rightSwipes} / {totalParticipants} {hostPicked ? "voted yes" : "picked it"}
         </span>
-        <span>{totalParticipants > 1 ? "An agreement. Historic." : "Your call. No committee."}</span>
+        <span>
+          {hostPicked
+            ? "Host’s choice."
+            : totalParticipants > 1
+              ? "An agreement. Historic."
+              : "Your call. No committee."}
+        </span>
       </div>
     </article>
   );

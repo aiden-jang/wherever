@@ -2,14 +2,17 @@
 // API and WebSocket traffic always go to the network, never the cache.
 
 // Clear older shells and asset entries when the caching boundaries change.
-const CACHE = "wherever-v6";
+const CACHE = "wherever-v7";
 const SHELL = "/";
+const LEGAL = new Set(["/privacy", "/terms"]);
 const MAX_ASSETS = 48;
 
 async function storeAsset(request, response) {
   const cache = await caches.open(CACHE);
   await cache.put(request, response);
-  const assets = (await cache.keys()).filter((entry) => new URL(entry.url).pathname !== SHELL);
+  const assets = (await cache.keys()).filter(
+    (entry) => new URL(entry.url).pathname !== SHELL && !LEGAL.has(new URL(entry.url).pathname),
+  );
   await Promise.all(
     assets.slice(0, Math.max(0, assets.length - MAX_ASSETS)).map((entry) => cache.delete(entry)),
   );
@@ -45,17 +48,33 @@ self.addEventListener("fetch", (event) => {
 
   // Shared room and share-target responses cannot replace the public offline shell.
   if (request.mode === "navigate") {
+    const path = url.pathname.replace(/\.html$/, "");
+    const legal = LEGAL.has(path);
     event.respondWith(
       fetch(request)
         .then((res) => {
           // Only a good response. Caching a 500 here freezes the error page as the offline shell.
-          if (url.pathname === SHELL && res.ok && res.headers.get("content-type")?.includes("text/html")) {
+          if (
+            (url.pathname === SHELL || legal) &&
+            res.ok &&
+            res.headers.get("content-type")?.includes("text/html")
+          ) {
             const copy = res.clone();
-            event.waitUntil(caches.open(CACHE).then((c) => c.put(SHELL, copy)));
+            event.waitUntil(caches.open(CACHE).then((c) => c.put(legal ? path : SHELL, copy)));
           }
           return res;
         })
         .catch(async () => {
+          if (legal) {
+            const page = await caches.match(path);
+            return (
+              page ??
+              new Response(
+                '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Offline | Wherever</title><main><h1>You’re offline</h1><p>Reconnect and reload to read this page.</p><a href="/">Back to Wherever</a></main></html>',
+                { status: 503, headers: { "content-type": "text/html; charset=utf-8" } },
+              )
+            );
+          }
           const hit = await caches.match(SHELL);
           // respondWith(undefined) is a network error, not a fallback. First visit offline lands here.
           return (

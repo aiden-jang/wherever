@@ -73,14 +73,26 @@ export function RestaurantDetail({
         aria-modal="true"
         aria-label={`${restaurant.name} details`}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 z-10 grid h-11 w-11 place-items-center rounded-full bg-black/45 text-lg text-white/90 backdrop-blur-sm hover:bg-black/65 transition-colors"
-        >
-          ✕
-        </button>
+        <div className="pointer-events-none sticky top-0 z-10 flex h-0 justify-end px-3">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="pointer-events-auto mt-3 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-white hover:bg-ink-soft transition-colors"
+          >
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
         <RestaurantGallery key={restaurant.id} restaurant={restaurant} />
 
         <div className="p-5">

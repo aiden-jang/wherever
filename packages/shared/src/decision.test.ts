@@ -158,6 +158,7 @@ describe("promoteAlternative", () => {
     };
 
     expect(promoteAlternative(result, "b")).toEqual({
+      hostPicked: true,
       restaurant: deck[1],
       rightSwipes: 2,
       tiedWith: 0,

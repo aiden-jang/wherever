@@ -62,6 +62,9 @@ function filterKey(filters: SessionFilters): string {
 export function FilterSummary({
   filters,
   editable = false,
+  locked = false,
+  initiallyOpen = false,
+  onSavingChange,
   onChange,
   onSearchPendingChange,
   syncError,
@@ -69,28 +72,36 @@ export function FilterSummary({
   onSearchPendingChange?: (pending: boolean) => void;
   filters: SessionFilters;
   editable?: boolean;
-  onChange?: (next: SessionFilters) => void;
+  locked?: boolean;
+  initiallyOpen?: boolean;
+  onSavingChange?: (saving: boolean) => void;
+  onChange?: (next: SessionFilters) => boolean;
   syncError?: number;
 }) {
   const editorId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [draft, setDraft] = useState<SessionFilters | null>(null);
   const pending = useRef<string[]>([]);
   useEffect(() => {
     const acknowledged = pending.current.indexOf(filterKey(filters));
     if (acknowledged >= 0) pending.current.splice(0, acknowledged + 1);
-    if (!pending.current.length) setDraft(null);
-  }, [filters]);
+    if (!pending.current.length) {
+      setDraft(null);
+      onSavingChange?.(false);
+    }
+  }, [filters, onSavingChange]);
   useEffect(() => {
     pending.current = [];
     setDraft(null);
-  }, [editable, syncError]);
+    onSavingChange?.(false);
+  }, [editable, locked, syncError, onSavingChange]);
 
   function update(next: SessionFilters) {
     if (filterKey(next) === filterKey(draft ?? filters)) return;
+    if (locked || !onChange?.(next)) return;
     pending.current.push(filterKey(next));
     setDraft(next);
-    onChange?.(next);
+    onSavingChange?.(true);
   }
   const active = draft ?? filters;
   return (
@@ -128,9 +139,9 @@ export function FilterSummary({
       </ul>
       <div id={editorId} hidden={!open || !editable}>
         {open && editable && (
-          <div className="filter-editor mt-3 border-t border-white/10 pt-4">
+          <fieldset disabled={locked} className="filter-editor mt-3 min-w-0 border-t border-white/10 pt-4">
             <FilterFields filters={active} onChange={update} onSearchPendingChange={onSearchPendingChange} />
-          </div>
+          </fieldset>
         )}
       </div>
     </section>

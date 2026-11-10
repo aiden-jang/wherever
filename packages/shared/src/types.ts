@@ -143,6 +143,7 @@ export interface VisitedPlace {
   restaurantId: string;
   name: string;
   visitedAt: string;
+  mapsUrl?: string;
   /** Excluded from all subsequent rounds in this room, including replay. */
   neverAgain?: boolean;
 }

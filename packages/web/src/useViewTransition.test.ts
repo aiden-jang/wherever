@@ -21,7 +21,7 @@ test("navigation continues if the browser refuses to start a view transition", (
   });
   const hook = renderHook(() => useTransitionNavigate());
   expect(() => act(() => hook.result.current("/s/ABCDEF"))).not.toThrow();
-  expect(navigate).toHaveBeenCalledExactlyOnceWith("/s/ABCDEF");
+  expect(navigate).toHaveBeenCalledExactlyOnceWith("/s/ABCDEF", { replace: true });
 });
 
 test("a transition failure after its update cannot navigate twice", () => {
@@ -34,5 +34,5 @@ test("a transition failure after its update cannot navigate twice", () => {
   });
   const hook = renderHook(() => useTransitionNavigate());
   expect(() => act(() => hook.result.current("/s/ABCDEF"))).not.toThrow();
-  expect(navigate).toHaveBeenCalledExactlyOnceWith("/s/ABCDEF");
+  expect(navigate).toHaveBeenCalledExactlyOnceWith("/s/ABCDEF", { replace: true });
 });

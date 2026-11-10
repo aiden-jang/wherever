@@ -2,13 +2,13 @@ import { RoomInvite } from "../components/RoomInvite.js";
 import { FilterSummary } from "../components/FilterSummary.js";
 import { DeckSkeleton } from "../components/DeckSkeleton.js";
 import { PlateState } from "../components/PlateState.js";
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type Ref } from "react";
 import { Link, useParams } from "react-router-dom";
 import { line } from "@wherever/shared";
 import { Toasts, useHostPromotionToasts, useJoinLeaveToasts, useOneShotToast } from "../components/toasts.js";
 import { recallName, rememberName } from "../api.js";
 import { useSessionSocket } from "../useSessionSocket.js";
-import { useAppBadge } from "../useAppBadge.js";
+import { isCompleteCode } from "@wherever/shared";
 import { useWakeLock } from "../useWakeLock.js";
 import { VibeDial } from "../components/VibeDial.js";
 
@@ -37,6 +37,9 @@ export default function Lobby() {
 
   const [name, setName] = useState(recallName);
 
+  if (!isCompleteCode(code))
+    return <InvalidRoom message="Check the six-character invite code and try again." />;
+
   if (!name) {
     return (
       <NamePrompt
@@ -59,7 +62,6 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     deckNote,
     behindBy,
     nudges,
-    alreadyVoted,
     match,
     vibeCounts,
     myVibe,
@@ -92,14 +94,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   const [resultPending, setResultPending] = useState(false);
   useEffect(() => setResultPending(false), [errorSeq, match, status, session?.status]);
   const [searching, setSearching] = useState(false);
+  const [savingFilters, setSavingFilters] = useState(false);
   useEffect(() => setStarting(false), [session?.status, errorSeq, status]);
 
-  /* Cards this person still owes the room, on the icon while they are looking at something else.
-     Cleared once decided: a badge for a decision already made is a lie on the home screen. */
-  useAppBadge(match ? 0 : Math.max(0, (deck?.length ?? 0) - alreadyVoted.length));
   /* Awake while there is a deck and no answer yet. Not in the lobby before the cards are dealt, and
      not after: holding the screen on for a decision already made is just draining a battery. */
-  useWakeLock(Boolean(deck?.length) && !match);
+  useWakeLock(session?.status === "swiping" && Boolean(deck?.length) && !match);
   const toasts = useJoinLeaveToasts(session?.participants, setAnnouncement);
 
   // Announce the verdict to screen readers when it lands.
@@ -187,26 +187,11 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     online: status === "open",
   };
   const count = session?.participants.length ?? 0;
+  const hostPresent = session?.participants.some((participant) => participant.isHost);
 
   // An error before any session state means a bad or expired code.
   if (error && !session && !match) {
-    return (
-      <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
-        <div className="table-panel max-w-sm">
-          <PlateState />
-          <h1 ref={lobbyHeading} tabIndex={-1} className="mt-4 font-display text-state font-bold">
-            This code leads nowhere.
-          </h1>
-          <p className="mt-3 text-muted">{error}</p>
-          <Link
-            to="/"
-            className="mt-8 inline-block rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
-          >
-            Start a fresh session
-          </Link>
-        </div>
-      </main>
-    );
+    return <InvalidRoom message={error} headingRef={lobbyHeading} />;
   }
 
   // The match outcome wins over everything else once it arrives.
@@ -226,12 +211,12 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             pending={resultPending}
             demo={Boolean(demo)}
             onAgain={(deck) => {
-              setResultPending(true);
-              send({ type: "again", deck });
+              setResultPending(send({ type: "again", deck }));
             }}
+            onEditSearch={() => setResultPending(send({ type: "edit_search" }))}
+            resultError={error}
             onChooseAlternative={(restaurantId) => {
-              setResultPending(true);
-              send({ type: "choose_alternative", restaurantId });
+              setResultPending(send({ type: "choose_alternative", restaurantId }));
             }}
             onNeverAgain={(restaurantId, neverAgain) =>
               send({ type: "set_never_again", restaurantId, neverAgain })
@@ -243,6 +228,18 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <div className="mt-4">
           <ReactionBar disabled={status !== "open"} onReact={(emoji) => send({ type: "react", emoji })} />
         </div>
+      </main>
+    );
+  }
+
+  if (session?.status === "decided") {
+    return (
+      <main id="main-content" tabIndex={-1} className="table-room">
+        <h1 className="table-title">Loading the dinner result</h1>
+        <p role="status" className="text-muted">
+          The votes are in. Getting the result…
+        </p>
+        {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       </main>
     );
   }
@@ -281,6 +278,15 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
         <p className="text-sm text-muted">
           {isHost ? "You’re hosting. Start when your group is ready." : "You’re in. Waiting on the host."}
         </p>
+        {!isHost && !hostPresent && (
+          <p className="mt-2 text-sm text-muted">
+            The host is away. You can wait for them to return or{" "}
+            <Link to="/?new=1" className="underline">
+              start a new room
+            </Link>
+            .
+          </p>
+        )}
       </header>
       {showBanner && <DisconnectBanner reconnecting={status === "connecting"} />}
       <LiveRegion message={announcement} />
@@ -290,7 +296,10 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           <RoomInvite code={code} />
           <FilterSummary
             filters={session.filters}
-            editable={isHost && status === "open"}
+            editable={isHost}
+            locked={starting || status !== "open"}
+            initiallyOpen={state.roundId > 0 && isHost}
+            onSavingChange={setSavingFilters}
             onChange={(filters) => send({ type: "set_filters", filters })}
             onSearchPendingChange={setSearching}
             syncError={errorSeq}
@@ -300,10 +309,9 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               type="button"
               onClick={() => {
                 void loadSwipingRoom().catch(() => undefined);
-                setStarting(true);
-                send({ type: "start_round" });
+                setStarting(send({ type: "start_round" }));
               }}
-              disabled={starting || searching || status !== "open"}
+              disabled={starting || searching || savingFilters || status !== "open"}
               className="lobby-start rounded-xl bg-ember px-4 py-3 font-semibold text-ink hover:brightness-110 disabled:opacity-60"
             >
               {starting ? "Finding places…" : "Start swiping"}
@@ -343,6 +351,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           <details className="lobby-preferences table-panel">
             <summary className="text-sm font-semibold">Group preferences</summary>
             <VibeDial
+              disabled={starting || status !== "open"}
               counts={vibeCounts}
               mine={myVibe}
               groupSize={count}
@@ -351,6 +360,26 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           </details>
           <HowItWorks />
         </div>
+      </div>
+    </main>
+  );
+}
+
+function InvalidRoom({ message, headingRef }: { message: string; headingRef?: Ref<HTMLHeadingElement> }) {
+  return (
+    <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
+      <div className="table-panel max-w-sm">
+        <PlateState />
+        <h1 ref={headingRef} tabIndex={-1} className="mt-4 font-display text-state font-bold">
+          This code leads nowhere.
+        </h1>
+        <p className="mt-3 text-muted">{message}</p>
+        <Link
+          to="/"
+          className="mt-8 inline-block rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
+        >
+          Start a fresh session
+        </Link>
       </div>
     </main>
   );

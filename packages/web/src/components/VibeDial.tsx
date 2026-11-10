@@ -3,16 +3,17 @@ import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 
 /*
- * The bar shows that three people want quick without showing which three. Nothing is disabled and nothing
- * is final: the moment a vote feels committing, people stop casting honest ones.
+ * The bar shows that three people want quick without showing which three.
  */
 
 export function VibeDial({
+  disabled = false,
   counts,
   mine,
   groupSize,
   onPick,
 }: {
+  disabled?: boolean;
   counts: Partial<Record<Vibe, number>>;
   mine: Vibe | null;
   groupSize: number;
@@ -43,6 +44,7 @@ export function VibeDial({
             <button
               key={option.id}
               type="button"
+              disabled={disabled}
               // Tapping your own pick again clears it, so there is a way out of an accidental tap.
               onClick={() => {
                 buzz(8);
@@ -50,7 +52,7 @@ export function VibeDial({
                 onPick(picked ? null : option.id);
               }}
               aria-pressed={picked}
-              className={`relative overflow-hidden rounded-2xl border px-3 py-2.5 text-left transition ${
+              className={`relative overflow-hidden rounded-2xl border px-3 py-2.5 text-left transition disabled:opacity-60 ${
                 picked ? "border-white/70 bg-white/5" : "border-white/15 hover:border-white/35"
               }`}
             >

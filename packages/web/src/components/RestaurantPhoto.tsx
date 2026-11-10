@@ -11,12 +11,14 @@ export function RestaurantPhoto({
   imageUrl,
   credits,
   lazy = false,
+  thumbnail = false,
   category,
   className = "",
 }: {
   imageUrl: string | null;
   credits?: PhotoCredit[];
   lazy?: boolean;
+  thumbnail?: boolean;
   category: string;
   className?: string;
 }) {
@@ -26,7 +28,7 @@ export function RestaurantPhoto({
 
   return (
     <div
-      className={`flex items-center justify-center text-7xl ${className}`}
+      className={`flex items-center justify-center ${thumbnail ? "overflow-hidden text-2xl" : "text-7xl"} ${className}`}
       style={{ background: showImage ? undefined : s.gradient }}
     >
       {showImage ? (

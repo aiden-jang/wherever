@@ -79,6 +79,7 @@ const roundId = z.number().int().positive().optional();
 
 const swipeSchema = z.object({
   type: z.literal("swipe"),
+  choiceId: z.uuidv4().optional(),
   roundId,
   restaurantId,
   direction: z.union([z.literal("left"), z.literal("right")]),
@@ -88,6 +89,7 @@ const swipeSchema = z.object({
 
 const undoSwipeSchema = z.object({
   type: z.literal("undo_swipe"),
+  choiceId: z.uuidv4().nullable().optional(),
   roundId,
   restaurantId,
 });
@@ -145,6 +147,7 @@ const nudgeThemSchema = z.object({ type: z.literal("nudge_them") });
 export const clientMessageSchema = z.discriminatedUnion("type", [
   joinSchema,
   startRoundSchema,
+  z.object({ type: z.literal("edit_search") }),
   swipeSchema,
   undoSwipeSchema,
   decideNowSchema,

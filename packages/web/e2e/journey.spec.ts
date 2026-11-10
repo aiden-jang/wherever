@@ -265,7 +265,7 @@ test("special votes can be undone and restaurant details suspend keyboard voting
   await page.keyboard.press("ArrowDown");
   await expect(active).toHaveAttribute("aria-label", first!);
   await page.locator("main").focus();
-  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("v");
   await expect(page.getByRole("button", { name: "Veto, already used this round" })).toHaveAttribute(
     "aria-disabled",
     "true",

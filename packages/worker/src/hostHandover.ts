@@ -1,7 +1,7 @@
 import { hostCredentialSchema } from "@wherever/shared/schemas";
 import { socketIdentity, type ClientMap } from "./roomState.js";
 import type { Env } from "./env.js";
-import { putLive } from "./sessionRetention.js";
+import { assertRoomLive, putLive } from "./sessionRetention.js";
 
 // Handover must update hostId, the persisted clientMap, and live socket attachments together.
 
@@ -34,6 +34,7 @@ export async function rescheduleAlarm(ctx: DurableObjectState): Promise<void> {
   const roundEnd = await ctx.storage.get<number>("roundEndsAt");
   const expires = await ctx.storage.get<number>("expiresAt");
   if (grace) times.push(grace);
+  times.push(...Object.values(await readReturnGrace(ctx.storage)));
   if (roundEnd) times.push(roundEnd);
   if (expires) times.push(expires);
   if (times.length === 0) {
@@ -86,5 +87,39 @@ export async function reassignHostAway(ctx: DurableObjectState, oldHostId: strin
     if (att && att.isHost !== (att.participantId === newHostId)) {
       socket.serializeAttachment({ ...att, isHost: att.participantId === newHostId });
     }
+  }
+}
+
+function readReturnGrace(storage: DurableObjectStorage | DurableObjectTransaction) {
+  return storage.get<Record<string, number>>("returnGrace").then((value) => value ?? {});
+}
+
+export async function returningSeats(storage: DurableObjectStorage) {
+  const now = Date.now();
+  return Object.entries(await readReturnGrace(storage))
+    .filter(([, until]) => until > now)
+    .map(([id]) => id);
+}
+
+export async function updateReturnGrace(ctx: DurableObjectState, participantId?: string, until?: number) {
+  return ctx.storage.transaction(async (storage) => {
+    const held = await readReturnGrace(storage);
+    const live = Object.fromEntries(
+      Object.entries(held).filter(([id, end]) => end > Date.now() && id !== participantId),
+    );
+    if (participantId && until) live[participantId] = until;
+    if (Object.keys(live).length === Object.keys(held).length && !until) return false;
+    await assertRoomLive(storage);
+    if (Object.keys(live).length) await storage.put("returnGrace", live);
+    else await storage.delete("returnGrace");
+    return true;
+  });
+}
+
+export async function allowReturn(ctx: DurableObjectState, env: Env, ws: WebSocket) {
+  const id = socketIdentity(ws)?.participantId;
+  if (id && !hasLiveSocketFor(ctx, id, ws)) {
+    await updateReturnGrace(ctx, id, Date.now() + hostGraceMs(env));
+    await rescheduleAlarm(ctx);
   }
 }

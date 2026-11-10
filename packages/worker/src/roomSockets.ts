@@ -47,7 +47,7 @@ export function resultMessage(
   round: number,
   demo?: DemoReason,
 ): ServerMessage {
-  if (!result) return { type: "no_match", vetoedCount, ...(demo ? { demo } : {}) };
+  if (!result) return { type: "no_match", round, vetoedCount, ...(demo ? { demo } : {}) };
   return {
     type: "match",
     ...(demo ? { demo } : {}),
@@ -60,6 +60,7 @@ export function resultMessage(
     vetoedTop: result.vetoedTop,
     superTipped: result.superTipped,
     round,
+    ...(result.hostPicked ? { hostPicked: true } : {}),
   };
 }
 

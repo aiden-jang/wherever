@@ -29,9 +29,12 @@ export function matchReasons(
   filters: SessionFilters | undefined,
   rightSwipes: number,
   totalParticipants: number,
+  hostPicked = false,
 ): MatchReason[] {
   const reasons: MatchReason[] = [];
-  if (totalParticipants > 1 && rightSwipes === totalParticipants) {
+  if (hostPicked) {
+    reasons.push({ icon: "✓", label: "Host’s choice" });
+  } else if (totalParticipants > 1 && rightSwipes === totalParticipants) {
     reasons.push({ icon: "✦", label: "Everyone said yes" });
   } else if (totalParticipants > 1) {
     reasons.push({ icon: "♥", label: `${rightSwipes} of ${totalParticipants} backed it` });
@@ -39,7 +42,11 @@ export function matchReasons(
     reasons.push({ icon: "✓", label: "Your top pick" });
   }
 
-  if (restaurant.openNow === true) reasons.push({ icon: "◷", label: "Open right now" });
+  if (restaurant.openNow === true)
+    reasons.push({
+      icon: "◷",
+      label: restaurant.availabilityCheckedAt ? "Open when checked" : "Open right now",
+    });
 
   const requestedCategory = filters ? categoryMatched(restaurant.category, filters.categories) : null;
   if (requestedCategory) reasons.push({ icon: "⌁", label: `${requestedCategory} craving matched` });
@@ -64,6 +71,7 @@ export function matchReasons(
     reasons.push({ icon: "★", label: `${restaurant.rating}★ crowd favorite` });
   }
 
-  reasons.push({ icon: "↗", label: distanceReason(restaurant.distanceMeters) });
+  if (Number.isFinite(restaurant.distanceMeters) && restaurant.distanceMeters > 0)
+    reasons.push({ icon: "↗", label: distanceReason(restaurant.distanceMeters) });
   return reasons.slice(0, 4);
 }

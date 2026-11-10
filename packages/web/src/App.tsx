@@ -96,8 +96,9 @@ export default function App() {
 }
 
 function LandingUpdate() {
-  const { pathname } = useLocation();
-  return <AppUpdate safe={pathname === "/"} />;
+  const { pathname, search } = useLocation();
+  const params = new URLSearchParams(search);
+  return <AppUpdate safe={pathname === "/" && !params.has("new") && !params.has("join")} />;
 }
 
 function AnalyticsPage() {

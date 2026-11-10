@@ -63,7 +63,10 @@ export function LocationPicker({
     onChange(next);
   }
 
-  const nearMe = !filters.area && !filters.locationLabel;
+  const nearMe =
+    !filters.area &&
+    !filters.locationLabel &&
+    (deviceLocation != null || (filters.lat != null && filters.lng != null));
   /* Only offer NYC shortcuts while the location is unknown or inside their coverage area. Keep a chosen neighborhood visible so it can be cleared. */
   const showNyc =
     Boolean(filters.area) || filters.lat == null || filters.lng == null || isInNYC(filters.lat, filters.lng);

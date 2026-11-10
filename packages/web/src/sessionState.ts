@@ -1,4 +1,5 @@
 import type {
+  BallotChoice,
   DecisionAlternative,
   DemoReason,
   Restaurant,
@@ -28,6 +29,7 @@ export type MatchState =
       vetoedTop: boolean;
       superTipped: boolean;
       round: number;
+      hostPicked?: boolean;
     }
   | { kind: "none"; vetoedCount: number }
   | null;
@@ -43,6 +45,7 @@ export interface SessionState {
   deck: Restaurant[] | null;
   demo: DemoReason | null;
   alreadyVoted: string[];
+  ballot: BallotChoice[];
   superUsed: boolean;
   deckNote: string | null;
   behindBy: number;
@@ -68,6 +71,7 @@ export const initialSessionState: SessionState = {
   deck: null,
   demo: null,
   alreadyVoted: [],
+  ballot: [],
   superUsed: false,
   deckNote: null,
   behindBy: 0,
@@ -108,7 +112,9 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
   const msg = action.message;
   switch (msg.type) {
     case "session_state":
-      return { ...state, session: msg.session };
+      return msg.session.status === "lobby"
+        ? { ...state, session: msg.session, deck: null, match: null, progress: null, demo: null, error: null }
+        : { ...state, session: msg.session };
     case "deck":
       return {
         ...state,
@@ -124,8 +130,25 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
         vetoUsed: msg.vetoUsed ?? false,
         roundEndsAt: msg.roundEndsAt ?? null,
         alreadyVoted: msg.alreadyVoted ?? [],
+        ballot: msg.ballot ?? [],
         error: null,
         reactions: [],
+      };
+    case "ballot":
+      if (state.roundId !== msg.roundId || state.match) return state;
+      return {
+        ...state,
+        ballot: msg.choices,
+        alreadyVoted: msg.choices.map((choice) => choice.restaurantId),
+        superUsed: msg.choices.some((choice) => choice.super),
+        vetoUsed: msg.choices.some((choice) => choice.veto),
+        deckRevision: state.deckRevision + 1,
+        ...(msg.conflict
+          ? {
+              error: "Your ballot changed in another tab. It’s up to date here now.",
+              errorSeq: state.errorSeq + 1,
+            }
+          : {}),
       };
     case "round_place":
       if (msg.roundId !== state.roundId || state.match || !state.deck) return state;
@@ -151,6 +174,8 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
     case "match":
       return {
         ...state,
+        roundId: msg.round ?? state.roundId,
+        error: null,
         demo: msg.demo ?? state.demo,
         match: {
           kind: "match",
@@ -163,6 +188,7 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
           vetoedTop: msg.vetoedTop ?? false,
           superTipped: msg.superTipped ?? false,
           round: msg.round ?? 1,
+          hostPicked: msg.hostPicked,
         },
       };
     case "nudge":
@@ -170,6 +196,8 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
     case "no_match":
       return {
         ...state,
+        roundId: msg.round ?? state.roundId,
+        error: null,
         demo: msg.demo ?? state.demo,
         match: { kind: "none", vetoedCount: msg.vetoedCount ?? 0 },
       };

@@ -36,6 +36,7 @@ export interface SwipeMessage {
   roundId?: number;
   restaurantId: string;
   direction: SwipeDirection;
+  choiceId?: string;
   /** A super-like (weighted right-swipe). Server enforces one per participant per round. */
   super?: boolean;
   /** Kills the place whatever the majority wanted. One per person per round, enforced by the server:
@@ -46,6 +47,7 @@ export interface SwipeMessage {
 /** Remove this participant's most recent local vote before the round is decided. */
 export interface UndoSwipeMessage {
   type: "undo_swipe";
+  choiceId?: string | null;
   roundId?: number;
   restaurantId: string;
 }
@@ -114,7 +116,8 @@ export type ClientMessage =
   | ReactMessage
   | NudgeThemMessage
   | { type: "load_round_place"; roundId: number; restaurantId: string }
-  | { type: "turn_off_timer"; roundId: number };
+  | { type: "turn_off_timer"; roundId: number }
+  | { type: "edit_search" };
 
 // ---- Server -> Client ----
 
@@ -123,12 +126,21 @@ export interface SessionStateMessage {
   session: Session;
 }
 
+export interface BallotChoice {
+  choiceId?: string;
+  restaurantId: string;
+  direction: SwipeDirection;
+  super?: boolean;
+  veto?: boolean;
+}
+
 export interface DeckMessage {
   type: "deck";
   roundId?: number;
   restaurants: Restaurant[];
   /** Restaurant ids this client already voted on, for resume after reconnect. */
   alreadyVoted?: string[];
+  ballot?: BallotChoice[];
   /** Whether this client already spent its one super-like this round (for resume after reconnect). */
   superUsed?: boolean;
   /** Whether this client already spent its one veto this round (for resume after reconnect). */
@@ -185,11 +197,13 @@ export interface MatchMessage {
   /** Which round decided it, 1-based. Worth saying out loud: how many tries it took is the thing this
    *  app exists to shorten. */
   round?: number;
+  hostPicked?: boolean;
 }
 
 // Distinguish no positive votes from positive choices that were all vetoed.
 export interface NoMatchMessage {
   type: "no_match";
+  round?: number;
   demo?: DemoReason;
   vetoedCount?: number;
 }
@@ -264,4 +278,5 @@ export type ServerMessage =
   | ReactionMessage
   | NudgeMessage
   | { type: "round_place"; roundId: number; restaurant: Restaurant }
-  | { type: "round_clock"; roundEndsAt: null };
+  | { type: "round_clock"; roundEndsAt: null }
+  | { type: "ballot"; roundId: number; choices: BallotChoice[]; conflict?: boolean };

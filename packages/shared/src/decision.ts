@@ -8,6 +8,7 @@ export interface Vote {
   participantId: string;
   restaurantId: string;
   direction: SwipeDirection;
+  choiceId?: string;
   /** A super-like: a right-swipe that counts extra toward winning (see SUPER_WEIGHT). */
   super?: boolean;
   /**
@@ -54,6 +55,7 @@ export function tastePulse(deck: Restaurant[], votes: Vote[]): TastePulse | null
 }
 
 export interface DecisionResult {
+  hostPicked?: boolean;
   restaurant: Restaurant;
   rightSwipes: number;
   /** The next two non-vetoed choices by the same tally, ready when the winner is impractical. */
@@ -90,6 +92,7 @@ export function promoteAlternative(result: DecisionResult, restaurantId: string)
   return {
     // A promoted backup was chosen by hand, so whatever the original vote tied on no longer applies,
     // and neither does what a veto or a super-like did: the host has overridden the vote either way.
+    hostPicked: true,
     tiedWith: 0,
     vetoedTop: false,
     superTipped: false,

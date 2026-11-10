@@ -28,6 +28,7 @@ export function SwipingRoom({
     deck,
     roundEndsAt,
     alreadyVoted,
+    ballot,
     visited,
     superUsed,
     vetoUsed,
@@ -44,6 +45,15 @@ export function SwipingRoom({
   useEffect(() => {
     (heading.current ?? main.current)?.focus();
   }, []);
+  const [expiredDeadline, setExpiredDeadline] = useState<number | null>(null);
+  useEffect(() => {
+    if (!roundEndsAt) return;
+    const timer = setTimeout(() => setExpiredDeadline(roundEndsAt), Math.max(0, roundEndsAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [roundEndsAt]);
+  const votingPaused =
+    status !== "open" ||
+    (roundEndsAt !== null && (expiredDeadline === roundEndsAt || Date.now() >= roundEndsAt));
   const showBanner = everConnected && status !== "open";
   const [confirmDecide, setConfirmDecide] = useState(false);
   /*
@@ -77,7 +87,7 @@ export function SwipingRoom({
         <RoundCountdown
           endsAt={roundEndsAt}
           onTurnOff={
-            status === "open" ? () => send({ type: "turn_off_timer", roundId: state.roundId }) : undefined
+            !votingPaused ? () => send({ type: "turn_off_timer", roundId: state.roundId }) : undefined
           }
         />
       )}
@@ -89,18 +99,23 @@ export function SwipingRoom({
           <MotionConfig reducedMotion="user">
             <SwipeDeck
               key={state.deckRevision}
-              disabled={status !== "open"}
+              disabled={votingPaused}
               demo={Boolean(state.demo)}
               restaurants={deck}
               onLoadPlace={loadPlace}
               alreadyVoted={alreadyVoted}
+              ballot={ballot}
               visited={visited}
               superSpent={superUsed}
               vetoSpent={vetoUsed}
-              onSwipe={(restaurantId, direction, isSuper, isVeto) =>
-                send({ type: "swipe", restaurantId, direction, super: isSuper, veto: isVeto })
+              onSwipe={(choice) => send({ type: "swipe", ...choice })}
+              onUndo={(choice) =>
+                send({
+                  type: "undo_swipe",
+                  restaurantId: choice.restaurantId,
+                  choiceId: choice.choiceId ?? null,
+                })
               }
-              onUndo={(restaurantId) => send({ type: "undo_swipe", restaurantId })}
               onAnnounce={onAnnounce}
               aside={
                 <>
@@ -118,9 +133,9 @@ export function SwipingRoom({
                           phone, and these hurry or end a round. The negative margin keeps the line as it was. */}
                       {isHost && progress.finishedCount < progress.totalParticipants && !confirmDecide && (
                         <button
-                          disabled={hurryWait > 0 || status !== "open"}
+                          disabled={hurryWait > 0 || votingPaused}
                           onClick={() => {
-                            send({ type: "nudge_them" });
+                            if (!send({ type: "nudge_them" })) return;
                             setHurriedAt(Date.now());
                             setNow(Date.now());
                           }}
@@ -139,11 +154,11 @@ export function SwipingRoom({
                               {decideNowWarning(progress.finishedCount, progress.totalParticipants)}
                             </span>
                             <button
+                              disabled={votingPaused}
                               onClick={() => {
-                                setConfirmDecide(false);
-                                send({ type: "decide_now" });
+                                if (send({ type: "decide_now" })) setConfirmDecide(false);
                               }}
-                              className="ml-3 font-semibold text-acid underline hover:text-cream transition-colors"
+                              className="ml-3 font-semibold text-acid underline enabled:hover:text-cream disabled:opacity-60 transition-colors"
                             >
                               Decide anyway
                             </button>
@@ -156,8 +171,9 @@ export function SwipingRoom({
                           </>
                         ) : (
                           <button
+                            disabled={votingPaused}
                             onClick={() => setConfirmDecide(true)}
-                            className="ml-3 -my-2 py-2 underline hover:text-cream transition-colors"
+                            className="ml-3 -my-2 py-2 underline enabled:hover:text-cream disabled:opacity-60 transition-colors"
                           >
                             just decide now
                           </button>

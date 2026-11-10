@@ -23,8 +23,18 @@ test("the installed shell stays public and reopens offline", async ({
   await page.goto("/s/ABCDEF");
   await expect(page.getByRole("heading", { name: "And you are?" })).toBeVisible();
   expect(await page.evaluate(async () => (await caches.match("/"))?.url)).toBe(`${baseURL}/`);
+  for (const name of ["Privacy", "Terms"]) {
+    await page.getByRole("link", { name, exact: true }).click();
+    await expect(page.getByRole("heading", { name: new RegExp(name, "i") })).toBeVisible();
+    await page.goto("/");
+  }
   await context.setOffline(true);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Big appetites/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start a session", exact: true })).toBeEnabled();
+  for (const name of ["Privacy", "Terms"]) {
+    await page.getByRole("link", { name, exact: true }).click();
+    await expect(page.getByRole("heading", { name: new RegExp(name, "i") })).toBeVisible();
+    await page.goto("/");
+  }
 });

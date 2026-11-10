@@ -9,7 +9,7 @@ export function useTransitionNavigate() {
 
   return useCallback(
     (to: string) => {
-      withViewTransition(() => navigate(to));
+      withViewTransition(() => navigate(to, { replace: true }));
     },
     [navigate],
   );

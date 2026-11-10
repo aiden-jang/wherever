@@ -3,6 +3,14 @@ import { AMENITY_OPTIONS, type Restaurant } from "@wherever/shared";
 
 const chipClass = "inline-flex items-center gap-1.5 detail-chip rounded-full px-3 py-1 text-xs";
 
+export function isUnavailable(restaurant: Restaurant) {
+  return (
+    restaurant.openNow === false ||
+    restaurant.businessStatus === "CLOSED_PERMANENTLY" ||
+    restaurant.businessStatus === "CLOSED_TEMPORARILY"
+  );
+}
+
 export function availabilityLabel(restaurant: Restaurant): string | null {
   if (restaurant.businessStatus === "CLOSED_PERMANENTLY") return "Permanently closed";
   if (restaurant.businessStatus === "CLOSED_TEMPORARILY") return "Temporarily closed";
@@ -48,12 +56,31 @@ export function RestaurantHours({
   const hoursId = useId();
   if (!hours?.length) return null;
   const compact = compactOnMobile && hours.length > 2;
+  const now = new Date();
+  const day = (offset: number) =>
+    new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset),
+    );
+  const today = hours.findIndex((line) => line.startsWith(day(0) + ":"));
+  const tomorrow = hours.findIndex((line) => line.startsWith(day(1) + ":"));
+  const preview = new Set([today < 0 ? 0 : today, tomorrow < 0 ? (today === 0 ? 1 : 0) : tomorrow]);
   return (
     <section className={className}>
       <h3 className="text-sm font-semibold">Hours</h3>
-      <ul id={hoursId} className="mt-1 space-y-0.5 text-sm text-muted">
+      <ul id={hoursId} className="mt-1 flex flex-col gap-0.5 text-sm text-muted">
         {hours.map((line, index) => (
-          <li key={line} className={compact && !expanded && index >= 2 ? "hidden sm:list-item" : undefined}>
+          <li
+            key={line}
+            className={
+              compact && !expanded
+                ? !preview.has(index)
+                  ? "hidden sm:list-item"
+                  : index === today
+                    ? "order-first font-semibold sm:order-none"
+                    : undefined
+                : undefined
+            }
+          >
             {line}
           </li>
         ))}

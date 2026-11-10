@@ -1,7 +1,13 @@
 import type { CSSProperties } from "react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { line, type Restaurant, type SwipeDirection, type VisitedPlace } from "@wherever/shared";
+import {
+  line,
+  type BallotChoice,
+  type Restaurant,
+  type SwipeDirection,
+  type VisitedPlace,
+} from "@wherever/shared";
 
 import { VoteControls } from "./VoteControls.js";
 import { RestaurantDetail } from "./RestaurantDetail.js";
@@ -10,8 +16,10 @@ import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 import { swipeAnnouncement, undoAnnouncement, revisitNote } from "@wherever/shared";
 import { useLine } from "../useLine.js";
+import { useAppBadge } from "../useAppBadge.js";
 
 import { ActiveSwipeCard } from "./ActiveSwipeCard.js";
+import { PrivateShortlist } from "./PrivateShortlist.js";
 
 const HINT_KEY = "wherever:swipe-hint-seen";
 
@@ -41,6 +49,7 @@ export function SwipeDeck({
   disabled = false,
   demo = false,
   alreadyVoted = [],
+  ballot = [],
   visited = [],
   superSpent = false,
   vetoSpent = false,
@@ -55,22 +64,29 @@ export function SwipeDeck({
   demo?: boolean;
   onLoadPlace: (id: string) => void;
   alreadyVoted?: string[];
+  ballot?: BallotChoice[];
   /** Where the group has already been, so a place out of cooldown says so instead of arriving as new. */
   visited?: VisitedPlace[];
   superSpent?: boolean;
   /** Seeded from the server so a reconnect can't hand back a spent veto. */
   vetoSpent?: boolean;
-  onSwipe: (restaurantId: string, direction: SwipeDirection, isSuper?: boolean, isVeto?: boolean) => void;
+  onSwipe: (choice: BallotChoice) => boolean;
   // The deck owns its status rail; the group panel joins it on desktop and follows it on phones.
   aside?: ReactNode;
-  onUndo: (restaurantId: string) => void;
+  onUndo: (choice: BallotChoice) => boolean;
   onAnnounce?: (text: string) => void;
 }) {
-  const restoredVotes = useMemo(() => new Set(alreadyVoted), [alreadyVoted]);
+  const historyRef = useRef(ballot);
+  const restoredVotes = useMemo(
+    () => new Set(alreadyVoted.filter((id) => !ballot.some((choice) => choice.restaurantId === id))),
+    [alreadyVoted, ballot],
+  );
   const nextUnvoted = useCallback(
     (after: number) => {
       for (let index = after + 1; index < restaurants.length; index += 1) {
-        if (!restoredVotes.has(restaurants[index]!.id)) return index;
+        const id = restaurants[index]!.id;
+        if (!restoredVotes.has(id) && !historyRef.current.some((choice) => choice.restaurantId === id))
+          return index;
       }
       return restaurants.length;
     },
@@ -80,15 +96,9 @@ export function SwipeDeck({
   // One super-like per round; seeded from the server (survives reconnect) then set locally on use.
   const [superUsed, setSuperUsed] = useState(superSpent);
   const [vetoUsed, setVetoUsed] = useState(vetoSpent);
-  // Only choices made in this mount are rewindable. Votes restored after a reconnect have no safe
-  // local ordering, so guessing which was "last" could remove the wrong restaurant on the server.
-  const historyRef = useRef<
-    { index: number; restaurantId: string; direction: SwipeDirection; super: boolean; veto: boolean }[]
-  >([]);
-  const [choices, setChoices] = useState<
-    { restaurantId: string; direction: SwipeDirection; super: boolean; veto: boolean }[]
-  >([]);
-  const [canUndo, setCanUndo] = useState(false);
+  const [choices, setChoices] = useState(ballot);
+  const canUndo = choices.length > 0;
+  useAppBadge(Math.max(0, restaurants.length - restoredVotes.size - choices.length));
   // The card whose full details are open in the sheet (null = closed). Tapping a card opens it;
   // it never blocks voting since a drag isn't a tap.
   const [detail, setDetail] = useState<Restaurant | null>(null);
@@ -141,6 +151,14 @@ export function SwipeDeck({
         (current.detailsStatus && (dir !== "left" || isVeto))
       )
         return;
+      const choice = {
+        restaurantId: current.id,
+        choiceId: crypto.randomUUID(),
+        direction: dir,
+        super: isSuper,
+        veto: isVeto,
+      };
+      if (!onSwipe(choice)) return;
       const next = nextUnvoted(i);
       if (restaurants[next]?.detailsStatus === "pending") {
         document.activeElement?.closest("main")?.focus({ preventScroll: true });
@@ -151,20 +169,9 @@ export function SwipeDeck({
       play(isVeto ? "veto" : isSuper ? "superLike" : dir === "right" ? "like" : "pass");
       if (isSuper) setSuperUsed(true);
       if (isVeto) setVetoUsed(true);
-      historyRef.current.push({
-        index: i,
-        restaurantId: current.id,
-        direction: dir,
-        super: isSuper,
-        veto: isVeto,
-      });
-      setChoices((previous) => [
-        ...previous,
-        { restaurantId: current.id, direction: dir, super: isSuper, veto: isVeto },
-      ]);
-      setCanUndo(true);
+      historyRef.current = [...historyRef.current, choice];
+      setChoices(historyRef.current);
       dismissHint();
-      onSwipe(current.id, dir, isSuper, isVeto);
       // The card changes under a sighted user's eyes and silently for everyone else, so say it.
       onAnnounce?.(
         swipeAnnouncement({
@@ -185,24 +192,25 @@ export function SwipeDeck({
   const undoButton = useRef<HTMLButtonElement>(null);
   const undoLast = useCallback(() => {
     if (disabled) return;
-    const previous = historyRef.current.pop();
-    if (!previous) return;
+    const previous = historyRef.current.at(-1);
+    if (!previous || !onUndo(previous)) return;
+    const previousIndex = restaurants.findIndex((restaurant) => restaurant.id === previous.restaurantId);
+    if (previousIndex < 0) return;
+    historyRef.current = historyRef.current.slice(0, -1);
     if (
       undoButton.current === document.activeElement &&
       (historyRef.current.length === 0 || indexRef.current >= restaurants.length)
     ) {
       undoButton.current?.closest("main")?.focus({ preventScroll: true });
     }
-    indexRef.current = previous.index;
-    setIndex(previous.index);
+    indexRef.current = previousIndex;
+    setIndex(previousIndex);
     if (previous.super) setSuperUsed(false);
     if (previous.veto) setVetoUsed(false);
-    setChoices((current) => current.slice(0, -1));
-    setCanUndo(historyRef.current.length > 0);
+    setChoices(historyRef.current);
     buzz(8);
-    onUndo(previous.restaurantId);
-    const back = restaurants[previous.index];
-    if (back) onAnnounce?.(undoAnnouncement(back.name, previous.index + 1, restaurants.length));
+    const back = restaurants[previousIndex];
+    if (back) onAnnounce?.(undoAnnouncement(back.name, previousIndex + 1, restaurants.length));
   }, [disabled, onUndo, onAnnounce, restaurants]);
 
   // Desktop: arrow keys swipe. Suspended while the detail sheet is open so arrows don't vote the
@@ -240,7 +248,7 @@ export function SwipeDeck({
       } else if (e.key === "ArrowUp" && !superUsed) {
         e.preventDefault();
         commit("right", true);
-      } else if (e.key === "ArrowDown" && !vetoUsed) {
+      } else if (e.key.toLowerCase() === "v" && !vetoUsed) {
         e.preventDefault();
         commit("left", false, true);
       }
@@ -293,44 +301,7 @@ export function SwipeDeck({
           <p className="mt-2 text-muted">{waitingLine}</p>
           {undoControl}
           {choices.length > 0 && (
-            <details className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] text-left">
-              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-cream [&::-webkit-details-marker]:hidden">
-                <span>Your private shortlist</span>
-                <span className="rounded-full bg-acid/10 px-2 py-0.5 text-xs text-acid">
-                  {likedChoices.length} liked
-                </span>
-              </summary>
-              <div className="border-t border-white/10 p-2">
-                {likedChoices.length === 0 ? (
-                  <p className="px-2 py-3 text-sm text-muted">You passed on the whole deck. Bold.</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {likedChoices.map((choice) => {
-                      const restaurant = restaurants.find(
-                        (candidate) => candidate.id === choice.restaurantId,
-                      );
-                      if (!restaurant) return null;
-                      return (
-                        <li key={choice.restaurantId}>
-                          <button
-                            type="button"
-                            onClick={() => setDetail(restaurant)}
-                            className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-white/5"
-                          >
-                            <span className="min-w-0 [overflow-wrap:anywhere] font-medium">
-                              {restaurant.name}
-                            </span>
-                            <span className={choice.super ? "shrink-0 text-grape" : "shrink-0 text-acid"}>
-                              {choice.super ? "⭐ super" : "♥ liked"}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            </details>
+            <PrivateShortlist liked={likedChoices} restaurants={restaurants} onOpen={setDetail} />
           )}
         </div>
         {/* Waiting on other people is exactly when their progress is worth looking at. */}
@@ -385,7 +356,7 @@ export function SwipeDeck({
             ↑
           </Key>
           <Key label="veto" dim={vetoUsed}>
-            ↓
+            V
           </Key>
           <Key label="undo" dim={!canUndo}>
             ⌫

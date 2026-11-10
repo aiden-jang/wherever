@@ -3,8 +3,8 @@
 
 // Clear older shells and asset entries when the caching boundaries change.
 const CACHE = "wherever-v8";
-// Refresh the entry for existing installations so offline invites use the recovery screen.
-const SHELL_CACHE = `${CACHE}-shell-v2`;
+const SHELL_VERSION = 3;
+const SHELL_CACHE = `${CACHE}-shell-v${SHELL_VERSION}`;
 const SHELL = "/";
 const LEGAL = new Set(["/privacy", "/terms"]);
 const MAX_ASSETS = 48;
@@ -15,6 +15,8 @@ async function storeShell(response) {
     throw new Error("Could not fetch the app shell");
   }
   const html = await response.clone().text();
+  // Cloudflare can serve the previous HTML while the new worker is already available.
+  if (!html.includes(`name="wherever-offline-shell" content="${SHELL_VERSION}"`)) return false;
   // The HTML declares Vite’s entry assets and the logo used by the offline screens.
   const paths = [
     ...new Set(
@@ -34,6 +36,15 @@ async function storeShell(response) {
   // A tab that just received the previous HTML can still request its assets during an update.
   const excess = Math.max(0, obsolete.length + paths.length - MAX_ASSETS);
   await Promise.all(obsolete.slice(0, excess).map((entry) => cache.delete(entry)));
+  return true;
+}
+
+async function installShell() {
+  for (const delay of [0, 1000, 3000]) {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    if (await storeShell(await fetch(SHELL, { cache: "no-store" }))) return;
+  }
+  throw new Error("Matching offline shell is not available yet");
 }
 
 async function storeAsset(request, response) {
@@ -48,11 +59,7 @@ async function storeAsset(request, response) {
 }
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    fetch(SHELL, { cache: "reload" })
-      .then(storeShell)
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(installShell().then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {

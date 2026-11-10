@@ -27,7 +27,7 @@ function installedWorker() {
   const match = vi.fn().mockResolvedValue(undefined);
   const addAll = vi.fn().mockResolvedValue(undefined);
   const html =
-    '<link rel="icon" href="/icon.svg"><script src="/assets/index-aBcDe123.js"></script><link href="/assets/index-xYz09876.css">';
+    '<meta name="wherever-offline-shell" content="3"><link rel="icon" href="/icon.svg"><script src="/assets/index-aBcDe123.js"></script><link href="/assets/index-xYz09876.css">';
   const response = {
     ok: true,
     headers: { get: () => "text/html" },
@@ -37,15 +37,23 @@ function installedWorker() {
     },
   };
   const fetch = vi.fn().mockResolvedValue(response);
+  const skipWaiting = vi.fn();
   runInNewContext(source, {
     URL,
     caches: { match, open: async () => ({ addAll, match, put, keys: async () => [] }) },
     fetch,
+    setTimeout: (callback: () => void) => callback(),
     self: {
       location: { origin: "https://app.test" },
       addEventListener: (name: string, handler: (event: unknown) => void) => handlers.set(name, handler),
+      skipWaiting,
     },
   });
+  const install = async () => {
+    const work: Promise<unknown>[] = [];
+    handlers.get("install")!({ waitUntil: (promise: Promise<unknown>) => work.push(promise) });
+    await Promise.all(work);
+  };
   const visit = async (path: string, mode = "navigate") => {
     let reply: Promise<unknown> | undefined;
     const work: Promise<unknown>[] = [];
@@ -61,8 +69,27 @@ function installedWorker() {
     await Promise.all(work);
     return { result, respondWith, work };
   };
-  return { addAll, put, fetch, match, response, visit };
+  const previous = { ...response, text: async () => html.replace('content="3"', 'content="2"') };
+  return { addAll, put, fetch, match, response, previous, install, skipWaiting, visit };
 }
+
+test("installation waits for the homepage from the same release", async () => {
+  const worker = installedWorker();
+  worker.fetch.mockResolvedValueOnce(worker.previous);
+  await worker.install();
+  expect(worker.fetch).toHaveBeenCalledTimes(2);
+  expect(worker.addAll).toHaveBeenCalledOnce();
+  expect(worker.put).toHaveBeenCalledExactlyOnceWith("/", worker.response);
+  expect(worker.skipWaiting).toHaveBeenCalledOnce();
+});
+
+test("persistent stale HTML leaves the previous worker active", async () => {
+  const worker = installedWorker();
+  worker.fetch.mockResolvedValue(worker.previous);
+  await expect(worker.install()).rejects.toThrow("Matching offline shell is not available yet");
+  expect(worker.put).not.toHaveBeenCalled();
+  expect(worker.skipWaiting).not.toHaveBeenCalled();
+});
 
 test.each(["/s/ABCDEF", "/share?url=private-invite"])(
   "%s cannot replace the public offline shell",

@@ -3,7 +3,7 @@
 
 // Clear older shells and asset entries when the caching boundaries change.
 const CACHE = "wherever-v8";
-const SHELL_VERSION = 3;
+const SHELL_VERSION = 4;
 const SHELL_CACHE = `${CACHE}-shell-v${SHELL_VERSION}`;
 const SHELL = "/";
 const LEGAL = new Set(["/privacy", "/terms"]);
@@ -56,6 +56,16 @@ async function storeAsset(request, response) {
   await Promise.all(
     assets.slice(0, Math.max(0, assets.length - MAX_ASSETS)).map((entry) => cache.delete(entry)),
   );
+}
+
+async function offlineInvite(shell) {
+  const html = (await shell.text()).replace("<html ", "<html data-offline-invite ");
+  const headers = new Headers(shell.headers);
+  headers.delete("content-encoding");
+  headers.delete("content-length");
+  headers.delete("etag");
+  headers.set("cache-control", "no-store");
+  return new Response(html, { headers });
 }
 
 self.addEventListener("install", (event) => {
@@ -122,6 +132,7 @@ self.addEventListener("fetch", (event) => {
             );
           }
           const hit = await caches.match(SHELL, { cacheName: SHELL_CACHE });
+          if (hit && (url.pathname.startsWith("/s/") || url.pathname === "/share")) return offlineInvite(hit);
           // respondWith(undefined) is a network error, not a fallback. First visit offline lands here.
           return (
             hit ??

@@ -1,7 +1,7 @@
 import { usePageAnalytics } from "./usePageAnalytics.js";
 import { pageForPath } from "../../../analytics/schema.js";
 import { AppUpdate } from "./AppUpdate.js";
-import { lazy, Suspense, useEffect, useRef, type CSSProperties } from "react";
+import { lazy, Suspense, useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import Landing from "./routes/Landing.js";
 import Share from "./routes/Share.js";
@@ -11,7 +11,18 @@ import { PlateState } from "./components/PlateState.js";
 import { SoundToggle } from "./components/SoundToggle.js";
 import { useHourMood } from "./useHourMood.js";
 
-const Lobby = lazy(() => import("./routes/Lobby.js").catch(() => ({ default: InviteUnavailable })));
+// An offline document only describes its initial navigation, even after the user goes Home.
+const offlineInviteKey = document.documentElement.hasAttribute("data-offline-invite")
+  ? (window.history.state?.key ?? "default")
+  : null;
+let roomLoadFailed = false;
+const needsRoomReload = () => roomLoadFailed;
+const Lobby = lazy(() =>
+  import("./routes/Lobby.js").catch(() => {
+    roomLoadFailed = true;
+    return { default: InviteUnavailable };
+  }),
+);
 
 export default function App() {
   const mood = useHourMood();
@@ -59,10 +70,24 @@ export default function App() {
             }
           >
             <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/s/:code" element={<Lobby />} />
+              <Route path="/" element={<Landing needsRoomReload={needsRoomReload} />} />
+              <Route
+                path="/s/:code"
+                element={
+                  <InviteEntry>
+                    <Lobby />
+                  </InviteEntry>
+                }
+              />
               {/* Registered in the manifest as the app's `share_target`. */}
-              <Route path="/share" element={<Share />} />
+              <Route
+                path="/share"
+                element={
+                  <InviteEntry>
+                    <Share />
+                  </InviteEntry>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
@@ -106,6 +131,10 @@ function AnalyticsPage() {
   const { pathname } = useLocation();
   usePageAnalytics(pageForPath(pathname), pathname);
   return null;
+}
+
+function InviteEntry({ children }: { children: ReactNode }) {
+  return useLocation().key === offlineInviteKey ? <InviteUnavailable /> : children;
 }
 
 function InviteUnavailable() {

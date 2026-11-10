@@ -1,7 +1,9 @@
+import type { Page } from "@playwright/test";
 import { once } from "node:events";
 import { createServer, request } from "node:http";
 import type { AddressInfo } from "node:net";
-import { audit, test, expect } from "./fixtures.js";
+import type { Duplex } from "node:stream";
+import { audit, createRoom, test, expect } from "./fixtures.js";
 
 test.use({ serviceWorkers: "allow" });
 
@@ -23,14 +25,38 @@ async function withConnection(
     upstream.on("error", () => response.destroy());
     incoming.pipe(upstream);
   });
+  const connections = new Set<Duplex>();
+  proxy.on("upgrade", (incoming, socket, head) => {
+    if (offline) return socket.destroy();
+    const upstream = request(new URL(incoming.url!, baseURL), { headers: incoming.headers });
+    upstream.on("upgrade", (reply, peer, pending) => {
+      connections.add(socket);
+      socket.once("close", () => {
+        connections.delete(socket);
+        peer.destroy();
+      });
+      peer.on("error", () => socket.destroy());
+      socket.on("error", () => peer.destroy());
+      const headers = reply.rawHeaders.map((part, index) => (index % 2 ? `${part}\r\n` : `${part}: `));
+      socket.write(`HTTP/1.1 101 Switching Protocols\r\n${headers.join("")}\r\n`);
+      if (pending.length) socket.write(pending);
+      if (head.length) peer.write(head);
+      socket.pipe(peer).pipe(socket);
+    });
+    upstream.on("response", () => socket.destroy());
+    upstream.on("error", () => socket.destroy());
+    upstream.end();
+  });
   proxy.listen(0, "127.0.0.1");
   await once(proxy, "listening");
   try {
     const origin = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
     await run(origin, (value) => {
       offline = value;
+      if (offline) for (const socket of connections) socket.destroy();
     });
   } finally {
+    for (const socket of connections) socket.destroy();
     proxy.close();
     proxy.closeAllConnections();
   }
@@ -82,6 +108,77 @@ test("an uncached invite offers Home offline and opens after reconnecting", asyn
     await page.getByRole("button", { name: "Try again" }).click();
     await expect(page).toHaveURL(invite);
     await expect(page.getByRole("textbox", { name: "Your name" })).toBeVisible();
+  });
+});
+
+async function joinByCode(page: Page, code: string) {
+  await page.getByRole("button", { name: "Join with a code" }).click();
+  const dialog = page.getByRole("dialog", { name: "Got a code?" });
+  await dialog.getByRole("textbox", { name: "Your name" }).fill("Guest from Home");
+  await dialog.getByRole("textbox", { name: "Session code" }).fill(code);
+  await dialog.getByRole("button", { name: "Join", exact: true }).click();
+}
+
+for (const entry of ["an invite link", "a room code"]) {
+  test(`joining by code from Home works after opening ${entry} offline`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    const host = await context.newPage();
+    const code = await createRoom(host);
+    await withConnection(baseURL!, async (origin, setOffline) => {
+      await page.goto(origin);
+      await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+      setOffline(true);
+      if (entry === "an invite link") await page.goto(`${origin}/s/${code}`);
+      else await joinByCode(page, code);
+      await expect(page.getByRole("heading", { name: "Can’t open this invite" })).toBeVisible();
+
+      await page.getByRole("link", { name: "Wherever, Honestly" }).click();
+      await expect(page.getByRole("heading", { name: /Big appetites/ })).toBeVisible();
+      setOffline(false);
+      await joinByCode(page, code);
+      await expect(page.getByRole("heading", { name: "Dinner room" })).toBeVisible();
+      await expect(host.locator(".participant-tile").filter({ hasText: "Guest from Home" })).toBeVisible();
+    });
+  });
+}
+
+test("a cached invite shows offline guidance and joins after reconnecting", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  const host = await context.newPage();
+  const code = await createRoom(host);
+  await withConnection(baseURL!, async (origin, setOffline) => {
+    await page.goto(origin);
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    const invite = `${origin}/s/${code}`;
+    const name = page.getByRole("textbox", { name: "Your name" });
+    await page.goto(invite);
+    await expect(name).toBeVisible();
+    await page.waitForFunction(async () => {
+      const runtime = await caches.open("wherever-v8");
+      return (await runtime.keys()).some(({ url }) => /\/assets\/Lobby-[\w-]+\.js$/.test(url));
+    });
+
+    const guest = await context.newPage();
+    setOffline(true);
+    await guest.goto(invite);
+    await expect(guest.getByRole("heading", { name: "Can’t open this invite" })).toBeFocused();
+    const guestName = guest.getByRole("textbox", { name: "Your name" });
+    await expect(guestName).toHaveCount(0);
+    setOffline(false);
+    await guest.getByRole("button", { name: "Try again" }).click();
+    await expect(guest).toHaveURL(invite);
+    await guestName.fill("Guest from cached invite");
+    await guest.getByRole("button", { name: "Join the session" }).click();
+    await expect(guest.getByRole("heading", { name: "Dinner room" })).toBeVisible();
+    await expect(
+      host.locator(".participant-tile").filter({ hasText: "Guest from cached invite" }),
+    ).toBeVisible();
   });
 });
 

@@ -27,7 +27,7 @@ function installedWorker() {
   const match = vi.fn().mockResolvedValue(undefined);
   const addAll = vi.fn().mockResolvedValue(undefined);
   const html =
-    '<meta name="wherever-offline-shell" content="3"><link rel="icon" href="/icon.svg"><script src="/assets/index-aBcDe123.js"></script><link href="/assets/index-xYz09876.css">';
+    '<html lang="en"><meta name="wherever-offline-shell" content="4"><link rel="icon" href="/icon.svg"><script src="/assets/index-aBcDe123.js"></script><link href="/assets/index-xYz09876.css"></html>';
   const response = {
     ok: true,
     headers: { get: () => "text/html" },
@@ -69,7 +69,7 @@ function installedWorker() {
     await Promise.all(work);
     return { result, respondWith, work };
   };
-  const previous = { ...response, text: async () => html.replace('content="3"', 'content="2"') };
+  const previous = { ...response, text: async () => html.replace('content="4"', 'content="3"') };
   return { addAll, put, fetch, match, response, previous, install, skipWaiting, visit };
 }
 

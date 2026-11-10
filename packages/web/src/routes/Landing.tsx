@@ -14,8 +14,7 @@ import { createSession, getLocation, rememberName, recallName, DEFAULT_FILTERS }
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
 
-function CreateForm() {
-  const go = useTransitionNavigate();
+function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
   const [name, setName] = useState(recallName());
   const [filters, setFilters] = useState<SessionFilters>(DEFAULT_FILTERS);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
@@ -64,7 +63,7 @@ function CreateForm() {
         },
         controller.signal,
       );
-      if (alive.current) go(`/s/${code}`);
+      if (alive.current) openRoom(code);
     } catch (err) {
       if (!alive.current) return;
       setError(err instanceof Error ? err.message : "Something broke. Probably not you.");
@@ -122,8 +121,7 @@ function CreateForm() {
   );
 }
 
-function JoinForm() {
-  const go = useTransitionNavigate();
+function JoinForm({ openRoom }: { openRoom: (code: string) => void }) {
   const [name, setName] = useState(recallName());
   const [code, setCode] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -144,7 +142,7 @@ function JoinForm() {
     e.preventDefault();
     if (!name.trim() || !isCompleteCode(code)) return;
     rememberName(name.trim());
-    go(`/s/${code}`);
+    openRoom(code);
   }
 
   /* The name still has to be filled in, so a scan fills the code and stops rather than jumping into
@@ -210,11 +208,19 @@ function JoinForm() {
   );
 }
 
-export default function Landing() {
+export default function Landing({ needsRoomReload }: { needsRoomReload: () => boolean }) {
   const [params, setParams] = useSearchParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const go = useTransitionNavigate();
   const modal = params.has("new") ? "create" : params.has("join") ? "join" : null;
+  function openRoom(code: string) {
+    const invite = `/s/${code}`;
+    // A browser can remember a failed module download until the next document load.
+    if (needsRoomReload()) window.location.assign(invite);
+    else go(invite);
+  }
+
   function setModal(next: "create" | "join" | null) {
     if (next === null && state?.landingDialog === true) {
       navigate(-1);
@@ -301,12 +307,12 @@ export default function Landing() {
 
       {modal === "create" && (
         <Modal title="Start a session" onClose={() => setModal(null)}>
-          <CreateForm />
+          <CreateForm openRoom={openRoom} />
         </Modal>
       )}
       {modal === "join" && (
         <Modal title="Got a code?" onClose={() => setModal(null)}>
-          <JoinForm />
+          <JoinForm openRoom={openRoom} />
         </Modal>
       )}
     </main>

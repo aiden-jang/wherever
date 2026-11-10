@@ -23,13 +23,14 @@ export function LocationPicker({
   const errorId = useId();
   const searchId = useId();
   const hintId = `${searchId}-hint`;
+  const neighborhoodsId = `${searchId}-neighborhoods`;
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(false);
   const searchField = useRef<HTMLInputElement>(null);
   const changeButton = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [nycOpen, setNycOpen] = useState(false);
+  const [nycOpen, setNycOpen] = useState(() => NEIGHBORHOODS.some((n) => n.value === filters.area));
 
   const latest = useRef({ filters, onChange });
   const request = useRef(0);
@@ -72,6 +73,16 @@ export function LocationPicker({
     (deviceLocation != null || (filters.lat != null && filters.lng != null));
   const hasQuery = Boolean(q.trim());
   const activeNeighborhood = filters.area ? NEIGHBORHOODS.find((n) => n.value === filters.area) : undefined;
+  const showLocationControls = !filters.locationLabel || editing;
+
+  function toggleNeighborhoods() {
+    if (nycOpen) {
+      setEditing(true);
+    } else {
+      stopSearch(q);
+    }
+    setNycOpen(!nycOpen);
+  }
 
   async function useNearMe() {
     if (searching.current || deferDeviceLocation) return;
@@ -128,7 +139,6 @@ export function LocationPicker({
       <FieldLabel>Search area</FieldLabel>
 
       {filters.locationLabel && (
-        // A searched place is active: show it as a chip with a way back to "Near me".
         <div className="flex items-center gap-2">
           <span className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-acid bg-acid/10 px-3 py-2 text-sm text-cream">
             <span aria-hidden>📍</span>
@@ -138,6 +148,7 @@ export function LocationPicker({
             type="button"
             ref={changeButton}
             onClick={() => {
+              setNycOpen(false);
               setEditing(true);
               requestAnimationFrame(() => searchField.current?.focus());
             }}
@@ -147,20 +158,77 @@ export function LocationPicker({
           </button>
         </div>
       )}
-      {(!filters.locationLabel || editing) && (
-        // Keep the search field wide enough inside narrow filter panels.
+      {showLocationControls && (
+        <button
+          type="button"
+          aria-pressed={nearMe}
+          onClick={() => void useNearMe()}
+          disabled={deferDeviceLocation || busy}
+          className={`shrink-0 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors ${
+            nearMe ? "bg-acid text-ink border-acid" : "border-white/15 text-cream hover:border-white/30"
+          }`}
+        >
+          📍 Near me
+        </button>
+      )}
+      <button
+        type="button"
+        aria-expanded={nycOpen}
+        aria-controls={neighborhoodsId}
+        onClick={toggleNeighborhoods}
+        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
+      >
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <span>{nycOpen ? "Back to ZIP or town" : "Explore NYC"}</span>
+          {!nycOpen && activeNeighborhood && (
+            <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
+              {activeNeighborhood.label}
+            </span>
+          )}
+        </span>
+        <span className="shrink-0 text-muted">
+          <Chevron open={nycOpen} />
+        </span>
+      </button>
+      <div id={neighborhoodsId} hidden={!nycOpen}>
+        {nycOpen && (
+          <>
+            <p className="mb-2 text-sm text-muted">
+              {hasQuery ? "Choose a neighborhood or go back to your search." : "Choose an NYC neighborhood."}
+            </p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="NYC neighborhoods">
+              {NEIGHBORHOODS.map((n) => {
+                const on = filters.area === n.value;
+                return (
+                  <button
+                    key={n.value}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      select({
+                        ...filters,
+                        area: n.value,
+                        lat: undefined,
+                        lng: undefined,
+                        locationLabel: undefined,
+                      })
+                    }
+                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      on
+                        ? "bg-acid text-ink border-acid font-semibold"
+                        : "border-white/10 text-cream hover:border-white/30"
+                    }`}
+                  >
+                    {n.label}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+      {!nycOpen && showLocationControls && (
         <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            aria-pressed={nearMe}
-            onClick={() => void useNearMe()}
-            disabled={deferDeviceLocation || busy}
-            className={`shrink-0 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors ${
-              nearMe ? "bg-acid text-ink border-acid" : "border-white/15 text-cream hover:border-white/30"
-            }`}
-          >
-            📍 Near me
-          </button>
           <label htmlFor={searchId} className="text-sm text-muted">
             ZIP code or town
           </label>
@@ -224,57 +292,6 @@ export function LocationPicker({
           {err}
         </p>
       )}
-
-      <div>
-        <button
-          type="button"
-          aria-expanded={nycOpen}
-          onClick={() => setNycOpen((o) => !o)}
-          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
-        >
-          <span className="flex min-w-0 flex-wrap items-center gap-2">
-            <span>Explore NYC</span>
-            {activeNeighborhood && (
-              <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
-                {activeNeighborhood.label}
-              </span>
-            )}
-          </span>
-          <span className="shrink-0 text-muted">
-            <Chevron open={nycOpen} />
-          </span>
-        </button>
-        {nycOpen && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {NEIGHBORHOODS.map((n) => {
-              const on = filters.area === n.value;
-              return (
-                <button
-                  key={n.value}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() =>
-                    select({
-                      ...filters,
-                      area: n.value,
-                      lat: undefined,
-                      lng: undefined,
-                      locationLabel: undefined,
-                    })
-                  }
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    on
-                      ? "bg-acid text-ink border-acid font-semibold"
-                      : "border-white/10 text-cream hover:border-white/30"
-                  }`}
-                >
-                  {n.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

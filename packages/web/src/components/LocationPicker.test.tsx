@@ -60,7 +60,7 @@ describe("location search", () => {
     );
   });
 
-  it("lets a newly selected neighborhood supersede a delayed lookup", async () => {
+  it("pauses a delayed lookup while exploring neighborhoods and keeps the typed town", async () => {
     let resolve!: (hit: { lat: number; lng: number; label: string }) => void;
     vi.mocked(geocode).mockReturnValue(
       new Promise((done) => {
@@ -74,10 +74,15 @@ describe("location search", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
     fireEvent.click(screen.getByRole("button", { name: "Explore NYC" }));
-    fireEvent.click(screen.getByRole("button", { name: "Williamsburg" }));
-    const selected = onChange.mock.calls.at(-1)![0];
+    expect(vi.mocked(geocode).mock.calls[0]?.[1]?.aborted).toBe(true);
     await act(async () => resolve({ lat: 39.7, lng: -104.9, label: "Denver" }));
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Back to ZIP or town" }));
+    const field = screen.getByRole<HTMLInputElement>("textbox", { name: "ZIP code or town" });
+    expect(field.value).toBe("Denver");
+    fireEvent.click(screen.getByRole("button", { name: "Explore NYC" }));
+    fireEvent.click(screen.getByRole("button", { name: "Williamsburg" }));
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(selected.area).toBeTruthy();
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ area: "williamsburg" }));
   });
 });

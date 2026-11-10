@@ -130,6 +130,7 @@ test("photo shape and fallback keep the vote controls still, with focus on the c
   const vote = page.locator(".vote-no");
   const main = page.getByRole("main");
   await expect(frame).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pick your dinner" })).toBeFocused();
   await page.getByRole("link", { name: "Skip to content" }).focus();
   await page.keyboard.press("Enter");
   await expect(main).toBeFocused();

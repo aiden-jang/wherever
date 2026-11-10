@@ -74,10 +74,18 @@ export function LocationPicker({
   const hasQuery = Boolean(q.trim());
   const activeNeighborhood = filters.area ? NEIGHBORHOODS.find((n) => n.value === filters.area) : undefined;
   const showLocationControls = !filters.locationLabel || editing;
+  const hasSelectedPlace = Boolean(filters.locationLabel || activeNeighborhood);
+  const showTownSearch = !nycOpen && (!hasSelectedPlace || editing);
+
+  function editTown() {
+    setNycOpen(false);
+    setEditing(true);
+    requestAnimationFrame(() => searchField.current?.focus());
+  }
 
   function toggleNeighborhoods() {
     if (nycOpen) {
-      setEditing(true);
+      if (!activeNeighborhood) setEditing(true);
     } else {
       stopSearch(q);
     }
@@ -147,11 +155,7 @@ export function LocationPicker({
           <button
             type="button"
             ref={changeButton}
-            onClick={() => {
-              setNycOpen(false);
-              setEditing(true);
-              requestAnimationFrame(() => searchField.current?.focus());
-            }}
+            onClick={editTown}
             className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm text-muted hover:bg-white/5"
           >
             Change
@@ -179,8 +183,10 @@ export function LocationPicker({
         className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
       >
         <span className="flex min-w-0 flex-wrap items-center gap-2">
-          <span>{nycOpen ? "Back to ZIP or town" : "Explore NYC"}</span>
-          {!nycOpen && activeNeighborhood && (
+          <span>
+            {activeNeighborhood ? "NYC neighborhoods" : nycOpen ? "Back to ZIP or town" : "Explore NYC"}
+          </span>
+          {activeNeighborhood && (
             <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
               {activeNeighborhood.label}
             </span>
@@ -190,6 +196,16 @@ export function LocationPicker({
           <Chevron open={nycOpen} />
         </span>
       </button>
+      {activeNeighborhood && !filters.locationLabel && !showTownSearch && (
+        <button
+          type="button"
+          ref={changeButton}
+          onClick={editTown}
+          className="min-h-11 self-start text-sm text-muted underline underline-offset-4 hover:text-cream"
+        >
+          Search by ZIP or town
+        </button>
+      )}
       <div id={neighborhoodsId} hidden={!nycOpen}>
         {nycOpen && (
           <>
@@ -227,7 +243,7 @@ export function LocationPicker({
           </>
         )}
       </div>
-      {!nycOpen && showLocationControls && (
+      {showTownSearch && (
         <div className="flex flex-col gap-2">
           <label htmlFor={searchId} className="text-sm text-muted">
             ZIP code or town
@@ -272,17 +288,17 @@ export function LocationPicker({
               Search for this place or clear the field before continuing.
             </p>
           )}
-          {(filters.locationLabel || hasQuery) && (
+          {(hasSelectedPlace || hasQuery) && (
             <button
               type="button"
               className="min-h-11 text-sm text-muted underline underline-offset-4"
               onClick={() => {
                 stopSearch();
                 setEditing(false);
-                (changeButton.current ?? searchField.current)?.focus();
+                requestAnimationFrame(() => (changeButton.current ?? searchField.current)?.focus());
               }}
             >
-              {filters.locationLabel ? "Cancel location change" : "Clear search"}
+              {hasSelectedPlace ? "Cancel location change" : "Clear search"}
             </button>
           )}
         </div>

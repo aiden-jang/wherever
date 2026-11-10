@@ -145,6 +145,26 @@ test("Explore NYC lets a host outside New York deliberately pick a neighborhood"
   await expect(nearMe).toHaveAttribute("aria-pressed", "false");
   await expect(neighborhood).toHaveAttribute("aria-pressed", "true");
   await expect(town).toBeHidden();
+  const selectedArea = dialog.getByRole("button", { name: "NYC neighborhoods Williamsburg" });
+  await selectedArea.click();
+  await expect(neighborhood).toBeHidden();
+  await expect(town).toBeHidden();
+  await selectedArea.press("Enter");
+  await expect(neighborhood).toHaveAttribute("aria-pressed", "true");
+  await expect(town).toBeHidden();
+  await selectedArea.click();
+  await audit(page);
+  await page.screenshot({ path: test.info().outputPath("selected-neighborhood.png") });
+
+  const searchByTown = dialog.getByRole("button", { name: "Search by ZIP or town" });
+  await searchByTown.click();
+  await expect(town).toBeFocused();
+  await town.fill("Denver");
+  await expect(create).toBeDisabled();
+  await dialog.getByRole("button", { name: "Cancel location change" }).click();
+  await expect(searchByTown).toBeFocused();
+  await expect(town).toBeHidden();
+  await expect(selectedArea).toHaveAttribute("aria-expanded", "false");
   await create.click();
   await expect(page.getByText(/^Williamsburg ·/)).toBeVisible();
   await page.getByRole("button", { name: "Edit dinner filters" }).click();
@@ -153,6 +173,9 @@ test("Explore NYC lets a host outside New York deliberately pick a neighborhood"
     "aria-pressed",
     "true",
   );
+  await page.getByRole("button", { name: "NYC neighborhoods Williamsburg" }).click();
+  await expect(page.getByRole("textbox", { name: "ZIP code or town" })).toBeHidden();
+  await expect(page.getByText(/^Williamsburg ·/)).toBeVisible();
 });
 
 test("changing a location preserves the selected town until a replacement is chosen", async ({ page }) => {

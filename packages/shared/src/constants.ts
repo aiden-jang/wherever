@@ -123,21 +123,6 @@ export function neighborhoodLabel(value: string): string | undefined {
   return NEIGHBORHOODS.find((n) => n.value === value)?.label;
 }
 
-/**
- * Rough bounding box covering NYC and its inner boroughs. The neighborhood shortcuts only make
- * sense here, so the UI shows them only when the user's location falls inside this box.
- */
-export const NYC_BOUNDS = { minLat: 40.45, maxLat: 40.95, minLng: -74.3, maxLng: -73.68 };
-
-export function isInNYC(lat: number, lng: number): boolean {
-  return (
-    lat >= NYC_BOUNDS.minLat &&
-    lat <= NYC_BOUNDS.maxLat &&
-    lng >= NYC_BOUNDS.minLng &&
-    lng <= NYC_BOUNDS.maxLng
-  );
-}
-
 export interface RadiusOption {
   meters: number;
   label: string;

@@ -2,7 +2,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTransitionNavigate } from "../useViewTransition.js";
 import { FieldLabel } from "../components/FilterControls.js";
-import { LocationPicker } from "../components/LocationPicker";
+import { LocationPicker, type LocationStatus } from "../components/LocationPicker";
 import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
 import type { SessionFilters } from "@wherever/shared";
 import { LandingPreview } from "../components/LandingPreview.js";
@@ -15,11 +15,11 @@ const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
 
 function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
-  const [name, setName] = useState(recallName());
+  const [name, setName] = useState(recallName);
   const [filters, setFilters] = useState<SessionFilters>(DEFAULT_FILTERS);
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [locPending, setLocPending] = useState(true);
-  const [searchPending, setSearchPending] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);
@@ -32,9 +32,7 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
     };
   }, []);
 
-  // Resolve location up front so we know whether to offer the NYC neighborhood shortcuts, and
-  // reuse it at submit. If it's unavailable (denied/timeout), flag it so we can tell the user their
-  // results will use a default area instead of silently serving the wrong city.
+  // Resolve the device location once and show the fallback area if permission is unavailable.
   useEffect(() => {
     getLocation().then((l) => {
       if (!alive.current) return;
@@ -45,10 +43,11 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
 
   const usingExplicitCenter = Boolean(filters.area) || (filters.lat != null && filters.lng != null);
   const waitingForLocation = !usingExplicitCenter && locPending;
+  const canCreate = Boolean(name.trim()) && !busy && locationStatus === "idle" && !waitingForLocation;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || busy || searchPending || waitingForLocation) return;
+    if (!canCreate || createRequest.current) return;
     setBusy(true);
     setError(null);
     try {
@@ -66,6 +65,7 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
       if (alive.current) openRoom(code);
     } catch (err) {
       if (!alive.current) return;
+      createRequest.current = null;
       setError(err instanceof Error ? err.message : "Something broke. Probably not you.");
       setBusy(false);
     }
@@ -89,13 +89,15 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
       </label>
       {/* Location only. Everything else is set in the lobby, where the group can see it and where
           somebody is waiting for people to join anyway. */}
-      <LocationPicker
-        filters={filters}
-        onChange={setFilters}
-        onSearchPendingChange={setSearchPending}
-        deviceLocation={loc}
-        deferDeviceLocation={locPending}
-      />
+      <fieldset disabled={busy} className="min-w-0">
+        <LocationPicker
+          filters={filters}
+          onChange={setFilters}
+          onLocationStatusChange={setLocationStatus}
+          deviceLocation={loc}
+          deferDeviceLocation={locPending}
+        />
+      </fieldset>
       {error && (
         <p role="alert" className="text-sm text-flare">
           {error}
@@ -103,12 +105,12 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
       )}
       <button
         type="submit"
-        disabled={!name.trim() || busy || searchPending || waitingForLocation}
+        disabled={!canCreate}
         className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
       >
         {busy
           ? "Creating room…"
-          : searchPending || waitingForLocation
+          : locationStatus === "searching" || waitingForLocation
             ? "Finding your location…"
             : "Create room"}
       </button>
@@ -121,9 +123,9 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
   );
 }
 
-function JoinForm({ openRoom }: { openRoom: (code: string) => void }) {
-  const [name, setName] = useState(recallName());
-  const [code, setCode] = useState("");
+function JoinForm({ openRoom, initialCode }: { openRoom: (code: string) => void; initialCode: string }) {
+  const [name, setName] = useState(recallName);
+  const [code, setCode] = useState(initialCode);
   const [scanning, setScanning] = useState(false);
   /* Asked once, on mount. The answer needs a promise, and a button that appears three seconds late is
      worse than one that was never offered. */
@@ -167,7 +169,7 @@ function JoinForm({ openRoom }: { openRoom: (code: string) => void }) {
           maxLength={24}
           autoComplete="name"
           onChange={(e) => setName(e.target.value)}
-          autoFocus={window.matchMedia("(pointer: fine)").matches}
+          autoFocus={(!initialCode || !name.trim()) && window.matchMedia("(pointer: fine)").matches}
         />
       </label>
       {/* No maxLength: a pasted invite link has to arrive whole for the parser to find the code in it. */}
@@ -185,6 +187,7 @@ function JoinForm({ openRoom }: { openRoom: (code: string) => void }) {
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
+          autoFocus={Boolean(initialCode && name.trim()) && window.matchMedia("(pointer: fine)").matches}
           onChange={(e) => setCode(sessionCodeFrom(e.target.value))}
         />
       </label>
@@ -214,6 +217,7 @@ export default function Landing({ needsRoomReload }: { needsRoomReload: () => bo
   const navigate = useNavigate();
   const go = useTransitionNavigate();
   const modal = params.has("new") ? "create" : params.has("join") ? "join" : null;
+  const initialCode = typeof state?.inviteCode === "string" ? sessionCodeFrom(state.inviteCode) : "";
   function openRoom(code: string) {
     const invite = `/s/${code}`;
     // A browser can remember a failed module download until the next document load.
@@ -312,7 +316,7 @@ export default function Landing({ needsRoomReload }: { needsRoomReload: () => bo
       )}
       {modal === "join" && (
         <Modal title="Got a code?" onClose={() => setModal(null)}>
-          <JoinForm openRoom={openRoom} />
+          <JoinForm openRoom={openRoom} initialCode={initialCode} />
         </Modal>
       )}
     </main>

@@ -1,4 +1,4 @@
-import { test, expect, createRoom } from "./fixtures.js";
+import { test, expect, createRoom, audit } from "./fixtures.js";
 
 test("an expired open room clears its controls and offers a new plan", async ({ page }) => {
   let expire!: () => void;
@@ -12,7 +12,7 @@ test("an expired open room clears its controls and offers a new plan", async ({ 
   await expect(page.getByRole("heading", { name: "This code leads nowhere." })).toBeVisible();
   await expect(page.getByText("This room has expired. Start a new plan.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start swiping", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Start a fresh session" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to home" })).toBeVisible();
 });
 
 test("an unavailable location search keeps the query and can be retried", async ({ page }) => {
@@ -28,14 +28,107 @@ test("an unavailable location search keeps the query and can be retried", async 
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   const field = dialog.getByRole("textbox", { name: "ZIP code or town" });
   await field.fill("Denver");
-  await dialog.getByRole("button", { name: "Go", exact: true }).click();
+  await dialog.getByRole("button", { name: "Search", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("Location search is unavailable");
+  await expect(dialog.getByRole("button", { name: "Create room" })).toBeDisabled();
   await expect(field).toHaveValue("Denver");
   await expect(dialog.getByRole("textbox", { name: "Your name" })).toHaveValue("Alex");
   available = true;
-  await dialog.getByRole("button", { name: "Go", exact: true }).click();
+  await dialog.getByRole("button", { name: "Search", exact: true }).click();
   await expect(dialog.getByText("Denver, CO", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("alert")).toHaveCount(0);
+});
+
+test("a typed town cannot be skipped when creating a room or starting a round", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.geolocation, "getCurrentPosition", {
+      value: (success: (position: { coords: { latitude: number; longitude: number } }) => void) =>
+        success({ coords: { latitude: 39.7392, longitude: -104.9903 } }),
+    });
+  });
+  await page.route("**/api/geocode?*", (route) =>
+    route.fulfill({ json: { lat: 37.7749, lng: -122.4194, label: "San Francisco, CA" } }),
+  );
+  await page.setViewportSize({ width: 320, height: 680 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start a session" }).click();
+  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  const create = dialog.getByRole("button", { name: "Create room" });
+  await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
+  await expect(create).toBeEnabled();
+  await dialog.getByRole("textbox", { name: "ZIP code or town" }).fill("San Francisco");
+  await expect(create).toBeDisabled();
+  await audit(page);
+  await page.screenshot({ path: test.info().outputPath("confirm-town.png") });
+  await dialog.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(dialog.getByText("San Francisco, CA", { exact: true })).toBeVisible();
+  const request = page.waitForRequest((candidate) => candidate.url().endsWith("/api/sessions"));
+  await create.click();
+  expect((await request).postDataJSON()).toMatchObject({
+    filters: { lat: 37.7749, lng: -122.4194, locationLabel: "San Francisco, CA" },
+  });
+  await expect(page.getByText(/^San Francisco, CA ·/)).toBeVisible();
+  await page.getByRole("button", { name: "Edit dinner filters" }).click();
+  await page.getByRole("button", { name: "Change", exact: true }).click();
+  await page.getByRole("textbox", { name: "ZIP code or town" }).fill("Boulder");
+  await expect(page.getByRole("button", { name: "Start swiping" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Done editing" })).toBeDisabled();
+  await page.getByRole("button", { name: "Cancel location change" }).click();
+  await expect(page.getByRole("button", { name: "Start swiping" })).toBeEnabled();
+  await expect(page.getByText(/^San Francisco, CA ·/)).toBeVisible();
+});
+
+test("a guest can correct a mistyped invite code and join the original room", async ({ page, context }) => {
+  const code = await createRoom(page);
+  const wrongCode = code.startsWith("A") ? `B${code.slice(1)}` : `A${code.slice(1)}`;
+  const guest = await context.newPage();
+  await guest.goto("/");
+  await guest.getByRole("button", { name: "Join with a code" }).click();
+  const name = guest.getByRole("textbox", { name: "Your name" });
+  const codeField = guest.getByRole("textbox", { name: "Session code" });
+  await name.fill("Sam");
+  await codeField.fill(wrongCode);
+  await guest.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(guest.getByRole("heading", { name: "This code leads nowhere." })).toBeVisible();
+  await guest.getByRole("link", { name: "Edit code" }).click();
+  await expect(codeField).toHaveValue(wrongCode);
+  await expect(codeField).toBeFocused();
+  await guest.reload();
+  await expect(codeField).toHaveValue(wrongCode);
+  await expect(name).toHaveValue("Sam");
+  await codeField.fill(code);
+  await codeField.press("Enter");
+  await expect(guest.getByRole("heading", { name: "Dinner room" })).toBeVisible();
+  await expect(page.getByText("2 people", { exact: true })).toBeVisible();
+});
+
+test("Explore NYC lets a host outside New York deliberately pick a neighborhood", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.geolocation, "getCurrentPosition", {
+      value: (success: (position: { coords: { latitude: number; longitude: number } }) => void) =>
+        success({ coords: { latitude: 39.7392, longitude: -104.9903 } }),
+    });
+  });
+  await page.setViewportSize({ width: 320, height: 680 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start a session" }).click();
+  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
+  const nearMe = dialog.getByRole("button", { name: /Near me/ });
+  await expect(nearMe).toHaveAttribute("aria-pressed", "true");
+  const explore = dialog.getByRole("button", { name: "Explore NYC" });
+  const neighborhood = dialog.getByRole("button", { name: "Williamsburg", exact: true });
+  await expect(explore).toHaveAttribute("aria-expanded", "false");
+  await expect(neighborhood).toBeHidden();
+  await explore.click();
+  await expect(nearMe).toHaveAttribute("aria-pressed", "true");
+  await audit(page);
+  await page.screenshot({ path: test.info().outputPath("explore-nyc.png") });
+  await neighborhood.click();
+  await expect(nearMe).toHaveAttribute("aria-pressed", "false");
+  await expect(neighborhood).toHaveAttribute("aria-pressed", "true");
+  await dialog.getByRole("button", { name: "Create room" }).click();
+  await expect(page.getByText(/^Williamsburg ·/)).toBeVisible();
 });
 
 test("changing a location preserves the selected town until a replacement is chosen", async ({ page }) => {
@@ -56,7 +149,7 @@ test("changing a location preserves the selected town until a replacement is cho
   const dialog = page.getByRole("dialog", { name: "Start a session" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   await dialog.getByRole("textbox", { name: "ZIP code or town" }).fill("Denver");
-  await dialog.getByRole("button", { name: "Go", exact: true }).click();
+  await dialog.getByRole("button", { name: "Search", exact: true }).click();
   await expect(dialog.getByText("Denver, CO", { exact: true })).toBeVisible();
   const change = dialog.getByRole("button", { name: "Change", exact: true });
   await change.click();
@@ -73,7 +166,7 @@ test("changing a location preserves the selected town until a replacement is cho
   await expect(dialog.getByText("Denver, CO", { exact: true })).toBeVisible();
   await change.click();
   await search.fill("Boulder");
-  await dialog.getByRole("button", { name: "Go", exact: true }).click();
+  await dialog.getByRole("button", { name: "Search", exact: true }).click();
   await expect(dialog.getByText("Boulder, CO", { exact: true })).toBeVisible();
   await expect(change).toBeFocused();
   expect(selected).toEqual([]);

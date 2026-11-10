@@ -1,5 +1,6 @@
 import { RoomInvite } from "../components/RoomInvite.js";
 import { FilterSummary } from "../components/FilterSummary.js";
+import type { LocationStatus } from "../components/LocationPicker.js";
 import { DeckSkeleton } from "../components/DeckSkeleton.js";
 import { PlateState } from "../components/PlateState.js";
 import { Suspense, lazy, useEffect, useRef, useState, type Ref } from "react";
@@ -38,7 +39,7 @@ export default function Lobby() {
   const [name, setName] = useState(recallName);
 
   if (!isCompleteCode(code))
-    return <InvalidRoom message="Check the six-character invite code and try again." />;
+    return <InvalidRoom code={code} message="Check the six-character invite code and try again." />;
 
   if (!name) {
     return (
@@ -93,7 +94,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   const [starting, setStarting] = useState(false);
   const [resultPending, setResultPending] = useState(false);
   useEffect(() => setResultPending(false), [errorSeq, match, status, session?.status]);
-  const [searching, setSearching] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
   const [savingFilters, setSavingFilters] = useState(false);
   useEffect(() => setStarting(false), [session?.status, errorSeq, status]);
 
@@ -191,7 +192,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
 
   // An error before any session state means a bad or expired code.
   if (error && !session && !match) {
-    return <InvalidRoom message={error} headingRef={lobbyHeading} />;
+    return <InvalidRoom code={code} message={error} headingRef={lobbyHeading} />;
   }
 
   // The match outcome wins over everything else once it arrives.
@@ -293,7 +294,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             initiallyOpen={state.roundId > 0 && isHost}
             onSavingChange={setSavingFilters}
             onChange={(filters) => send({ type: "set_filters", filters })}
-            onSearchPendingChange={setSearching}
+            locationStatus={locationStatus}
+            onLocationStatusChange={setLocationStatus}
             syncError={errorSeq}
           />
           {isHost && (
@@ -303,7 +305,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
                 void loadSwipingRoom().catch(() => undefined);
                 setStarting(send({ type: "start_round" }));
               }}
-              disabled={starting || searching || savingFilters || status !== "open"}
+              disabled={starting || locationStatus !== "idle" || savingFilters || status !== "open"}
               className="lobby-start rounded-xl bg-ember px-4 py-3 font-semibold text-ink hover:brightness-110 disabled:opacity-60"
             >
               {starting ? "Finding places…" : "Start swiping"}
@@ -357,7 +359,15 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   );
 }
 
-function InvalidRoom({ message, headingRef }: { message: string; headingRef?: Ref<HTMLHeadingElement> }) {
+function InvalidRoom({
+  code,
+  message,
+  headingRef,
+}: {
+  code: string;
+  message: string;
+  headingRef?: Ref<HTMLHeadingElement>;
+}) {
   return (
     <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
       <div className="table-panel max-w-sm">
@@ -366,12 +376,22 @@ function InvalidRoom({ message, headingRef }: { message: string; headingRef?: Re
           This code leads nowhere.
         </h1>
         <p className="mt-3 text-muted">{message}</p>
-        <Link
-          to="/"
-          className="mt-8 inline-block rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
-        >
-          Start a fresh session
-        </Link>
+        <div className="mt-6 grid gap-2">
+          <Link
+            to="/?join=1"
+            replace
+            state={{ inviteCode: code }}
+            className="rounded-xl bg-ember px-4 py-3 font-semibold text-ink transition hover:brightness-110"
+          >
+            Edit code
+          </Link>
+          <Link
+            to="/"
+            className="rounded-xl px-4 py-3 font-semibold text-muted hover:bg-white/5 hover:text-cream"
+          >
+            Back to home
+          </Link>
+        </div>
       </div>
     </main>
   );

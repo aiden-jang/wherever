@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { SessionFilters } from "@wherever/shared";
 import { FilterFields } from "./FilterFields";
+import type { LocationStatus } from "./LocationPicker.js";
 import {
   amenityLabel,
   cuisineLabel,
@@ -66,10 +67,12 @@ export function FilterSummary({
   initiallyOpen = false,
   onSavingChange,
   onChange,
-  onSearchPendingChange,
+  locationStatus,
+  onLocationStatusChange,
   syncError,
 }: {
-  onSearchPendingChange?: (pending: boolean) => void;
+  locationStatus: LocationStatus;
+  onLocationStatusChange: (status: LocationStatus) => void;
   filters: SessionFilters;
   editable?: boolean;
   locked?: boolean;
@@ -116,10 +119,11 @@ export function FilterSummary({
         {editable && onChange && (
           <button
             type="button"
+            disabled={open && locationStatus !== "idle"}
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-controls={editorId}
-            className="min-h-11 rounded-xl px-2 text-left text-xs font-semibold text-muted hover:bg-white/5 hover:text-cream"
+            className="min-h-11 rounded-xl px-2 text-left text-xs font-semibold text-muted enabled:hover:bg-white/5 enabled:hover:text-cream disabled:opacity-50"
           >
             {open ? "Done editing" : "Edit dinner filters"}
           </button>
@@ -140,7 +144,11 @@ export function FilterSummary({
       <div id={editorId} hidden={!open || !editable}>
         {open && editable && (
           <fieldset disabled={locked} className="filter-editor mt-3 min-w-0 border-t border-white/10 pt-4">
-            <FilterFields filters={active} onChange={update} onSearchPendingChange={onSearchPendingChange} />
+            <FilterFields
+              filters={active}
+              onChange={update}
+              onLocationStatusChange={onLocationStatusChange}
+            />
           </fieldset>
         )}
       </div>

@@ -161,7 +161,7 @@ test("unknown routes and invalid session codes provide a way home", async ({ pag
   await page.getByRole("button", { name: "Join the session" }).click();
   await expect(page.getByRole("heading", { name: "This code leads nowhere." })).toBeVisible();
   await audit(page);
-  await page.getByRole("link", { name: "Start a fresh session" }).click();
+  await page.getByRole("link", { name: "Back to home" }).click();
   await expect(page.getByRole("heading", { name: /Big appetites/ })).toBeVisible();
 });
 

@@ -1,33 +1,35 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
-import { NEIGHBORHOODS, isInNYC, type SessionFilters } from "@wherever/shared";
+import { NEIGHBORHOODS, type SessionFilters } from "@wherever/shared";
 import { geocode, getLocation } from "../api.js";
 import { FieldLabel, Chevron } from "./FilterControls.js";
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
+export type LocationStatus = "idle" | "editing" | "searching";
+
 // This sits inside the create form; submitting location must not submit the outer form.
 export function LocationPicker({
   filters,
   onChange,
-  onSearchPendingChange,
+  onLocationStatusChange,
   deviceLocation,
   deferDeviceLocation,
 }: {
   filters: SessionFilters;
   onChange: (f: SessionFilters) => void;
-  onSearchPendingChange?: (pending: boolean) => void;
+  onLocationStatusChange?: (status: LocationStatus) => void;
   deviceLocation?: { lat: number; lng: number } | null;
   deferDeviceLocation?: boolean;
 }) {
   const errorId = useId();
   const searchId = useId();
+  const hintId = `${searchId}-hint`;
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(false);
   const searchField = useRef<HTMLInputElement>(null);
   const changeButton = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  // Start expanded only if a neighborhood is already chosen, so the active pick is visible.
-  const [nycOpen, setNycOpen] = useState(Boolean(filters.area));
+  const [nycOpen, setNycOpen] = useState(false);
 
   const latest = useRef({ filters, onChange });
   const request = useRef(0);
@@ -40,21 +42,22 @@ export function LocationPicker({
     () => () => {
       request.current += 1;
       controller.current?.abort();
-      if (searching.current) onSearchPendingChange?.(false);
+      onLocationStatusChange?.("idle");
     },
-    [onSearchPendingChange],
+    [onLocationStatusChange],
   );
-  function setSearchPending(pending: boolean) {
+  function setSearchPending(pending: boolean, query = q) {
     searching.current = pending;
     setBusy(pending);
-    onSearchPendingChange?.(pending);
+    onLocationStatusChange?.(pending ? "searching" : query.trim() ? "editing" : "idle");
   }
 
-  function stopSearch() {
+  function stopSearch(query = "") {
     request.current += 1;
     controller.current?.abort();
-    setSearchPending(false);
+    setSearchPending(false, query);
     setErr("");
+    setQ(query);
   }
 
   function select(next: SessionFilters) {
@@ -67,10 +70,7 @@ export function LocationPicker({
     !filters.area &&
     !filters.locationLabel &&
     (deviceLocation != null || (filters.lat != null && filters.lng != null));
-  /* Only offer NYC shortcuts while the location is unknown or inside their coverage area. Keep a chosen neighborhood visible so it can be cleared. */
-  const showNyc =
-    Boolean(filters.area) || filters.lat == null || filters.lng == null || isInNYC(filters.lat, filters.lng);
-
+  const hasQuery = Boolean(q.trim());
   const activeNeighborhood = filters.area ? NEIGHBORHOODS.find((n) => n.value === filters.area) : undefined;
 
   async function useNearMe() {
@@ -86,6 +86,7 @@ export function LocationPicker({
         return;
       }
       select({ ...latest.current.filters, ...position, area: undefined, locationLabel: undefined });
+      setNycOpen(false);
     } finally {
       if (version === request.current) setSearchPending(false);
     }
@@ -105,15 +106,14 @@ export function LocationPicker({
         setErr('Couldn\'t find that. Try a zip, or "Town, State".');
         return;
       }
-      latest.current.onChange({
+      select({
         ...latest.current.filters,
         lat: hit.lat,
         lng: hit.lng,
         locationLabel: hit.label,
         area: undefined,
       });
-      setQ("");
-      setEditing(false);
+      setNycOpen(false);
       requestAnimationFrame(() => changeButton.current?.focus());
     } catch (error) {
       if (version === request.current)
@@ -169,14 +169,11 @@ export function LocationPicker({
               id={searchId}
               name="location"
               aria-invalid={Boolean(err)}
-              aria-describedby={err ? errorId : undefined}
+              aria-describedby={err ? errorId : hasQuery && !busy ? hintId : undefined}
               ref={searchField}
               type="text"
               value={q}
-              onChange={(e) => {
-                stopSearch();
-                setQ(e.target.value);
-              }}
+              onChange={(e) => stopSearch(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault(); // don't submit the outer create form
@@ -190,7 +187,7 @@ export function LocationPicker({
               maxLength={120}
               className={`${inputClass} min-w-0 flex-1 !py-2 !text-base`}
             />
-            {q.trim() && (
+            {hasQuery && (
               <button
                 type="button"
                 onClick={runSearch}
@@ -198,22 +195,26 @@ export function LocationPicker({
                 aria-label={busy ? "Searching location" : undefined}
                 className="shrink-0 rounded-2xl border border-white/15 px-3 py-2 text-sm font-semibold hover:bg-white/5 disabled:opacity-50 transition"
               >
-                {busy ? "Searching…" : "Go"}
+                {busy ? "Searching…" : "Search"}
               </button>
             )}
           </div>
-          {filters.locationLabel && (
+          {hasQuery && !busy && !err && (
+            <p id={hintId} className="text-sm text-muted">
+              Search for this place or clear the field before continuing.
+            </p>
+          )}
+          {(filters.locationLabel || hasQuery) && (
             <button
               type="button"
               className="min-h-11 text-sm text-muted underline underline-offset-4"
               onClick={() => {
                 stopSearch();
-                setQ("");
                 setEditing(false);
-                changeButton.current?.focus();
+                (changeButton.current ?? searchField.current)?.focus();
               }}
             >
-              Cancel location change
+              {filters.locationLabel ? "Cancel location change" : "Clear search"}
             </button>
           )}
         </div>
@@ -224,59 +225,56 @@ export function LocationPicker({
         </p>
       )}
 
-      {/* NYC neighborhood shortcuts, collapsed by default, and only where they mean anything. */}
-      {showNyc && (
-        <div>
-          <button
-            type="button"
-            aria-expanded={nycOpen}
-            onClick={() => setNycOpen((o) => !o)}
-            className="flex w-full items-center justify-between rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="text-muted">NYC neighborhoods</span>
-              {activeNeighborhood && (
-                <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
-                  {activeNeighborhood.label}
-                </span>
-              )}
-            </span>
-            <span className="shrink-0 text-muted">
-              <Chevron open={nycOpen} />
-            </span>
-          </button>
-          {nycOpen && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {NEIGHBORHOODS.map((n) => {
-                const on = filters.area === n.value;
-                return (
-                  <button
-                    key={n.value}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() =>
-                      select({
-                        ...filters,
-                        area: n.value,
-                        lat: undefined,
-                        lng: undefined,
-                        locationLabel: undefined,
-                      })
-                    }
-                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                      on
-                        ? "bg-acid text-ink border-acid font-semibold"
-                        : "border-white/10 text-cream hover:border-white/30"
-                    }`}
-                  >
-                    {n.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+      <div>
+        <button
+          type="button"
+          aria-expanded={nycOpen}
+          onClick={() => setNycOpen((o) => !o)}
+          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
+        >
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <span>Explore NYC</span>
+            {activeNeighborhood && (
+              <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
+                {activeNeighborhood.label}
+              </span>
+            )}
+          </span>
+          <span className="shrink-0 text-muted">
+            <Chevron open={nycOpen} />
+          </span>
+        </button>
+        {nycOpen && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {NEIGHBORHOODS.map((n) => {
+              const on = filters.area === n.value;
+              return (
+                <button
+                  key={n.value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    select({
+                      ...filters,
+                      area: n.value,
+                      lat: undefined,
+                      lng: undefined,
+                      locationLabel: undefined,
+                    })
+                  }
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    on
+                      ? "bg-acid text-ink border-acid font-semibold"
+                      : "border-white/10 text-cream hover:border-white/30"
+                  }`}
+                >
+                  {n.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -15,7 +15,7 @@ describe("location search", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "ZIP code or town" }), {
       target: { value: "Denver" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Go" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Location search is unavailable");
   });
 
@@ -30,12 +30,12 @@ describe("location search", () => {
     render(<LocationPicker filters={DEFAULT_FILTERS} onChange={onChange} />);
     const field = screen.getByRole("textbox", { name: "ZIP code or town" });
     fireEvent.change(field, { target: { value: "Denver" } });
-    fireEvent.click(screen.getByRole("button", { name: "Go" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
     fireEvent.change(field, { target: { value: "Boulder" } });
     await act(async () => resolve({ lat: 39.7, lng: -104.9, label: "Denver" }));
     expect(onChange).not.toHaveBeenCalled();
     expect((field as HTMLInputElement).value).toBe("Boulder");
-    expect(screen.getByRole("button", { name: "Go" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Search" }).hasAttribute("disabled")).toBe(false);
   });
 
   it("retains dinner filters changed while a location lookup is pending", async () => {
@@ -50,7 +50,7 @@ describe("location search", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "ZIP code or town" }), {
       target: { value: "Denver" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Go" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
     view.rerender(
       <LocationPicker filters={{ ...DEFAULT_FILTERS, categories: ["pizza"] }} onChange={onChange} />,
     );
@@ -72,8 +72,8 @@ describe("location search", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "ZIP code or town" }), {
       target: { value: "Denver" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Go" }));
-    fireEvent.click(screen.getByRole("button", { name: "NYC neighborhoods" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    fireEvent.click(screen.getByRole("button", { name: "Explore NYC" }));
     fireEvent.click(screen.getByRole("button", { name: "Williamsburg" }));
     const selected = onChange.mock.calls.at(-1)![0];
     await act(async () => resolve({ lat: 39.7, lng: -104.9, label: "Denver" }));

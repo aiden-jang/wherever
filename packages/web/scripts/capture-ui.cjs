@@ -167,7 +167,7 @@ async function setup(page, name) {
     }
     if (name === "location-error") {
       await dialog.getByRole("textbox", { name: "ZIP code or town" }).fill("Denver");
-      await dialog.getByRole("button", { name: "Go", exact: true }).click();
+      await dialog.getByRole("button", { name: "Search", exact: true }).click();
       await dialog.getByRole("alert").waitFor();
     }
   }

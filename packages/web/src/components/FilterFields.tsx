@@ -14,7 +14,7 @@ import {
 } from "@wherever/shared";
 
 import { FieldLabel, Chevron, FilterChoices, segBase, segOn, segOff } from "./FilterControls.js";
-import { LocationPicker } from "./LocationPicker.js";
+import { LocationPicker, type LocationStatus } from "./LocationPicker.js";
 import { RoundRules } from "./RoundRules.js";
 /**
  * Cuisine multi-select + distance / price / open-now up front, with rating / min-reviews / sort
@@ -25,9 +25,9 @@ import { RoundRules } from "./RoundRules.js";
 export function FilterFields({
   filters,
   onChange,
-  onSearchPendingChange,
+  onLocationStatusChange,
 }: {
-  onSearchPendingChange?: (pending: boolean) => void;
+  onLocationStatusChange?: (status: LocationStatus) => void;
   filters: SessionFilters;
   onChange: (next: SessionFilters) => void;
 }) {
@@ -93,7 +93,7 @@ export function FilterFields({
 
   return (
     <div className="filter-fields flex flex-col gap-4">
-      <LocationPicker filters={filters} onChange={onChange} onSearchPendingChange={onSearchPendingChange} />
+      <LocationPicker filters={filters} onChange={onChange} onLocationStatusChange={onLocationStatusChange} />
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Cravings (pick some, or leave it to fate)</FieldLabel>

@@ -111,11 +111,12 @@ test("an uncached invite offers Home offline and opens after reconnecting", asyn
   });
 });
 
-async function joinByCode(page: Page, code: string) {
+async function joinByCode(page: Page, code: string, beforeSubmit?: () => Promise<void>) {
   await page.getByRole("button", { name: "Join with a code" }).click();
   const dialog = page.getByRole("dialog", { name: "Got a code?" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Guest from Home");
   await dialog.getByRole("textbox", { name: "Session code" }).fill(code);
+  await beforeSubmit?.();
   await dialog.getByRole("button", { name: "Join", exact: true }).click();
 }
 
@@ -180,6 +181,44 @@ test("a cached invite shows offline guidance and joins after reconnecting", asyn
       host.locator(".participant-tile").filter({ hasText: "Guest from cached invite" }),
     ).toBeVisible();
   });
+});
+
+test("joining by code waits for internet and automatically joins on reconnect", async ({
+  page,
+  context,
+  browser,
+  baseURL,
+  extraHTTPHeaders,
+}) => {
+  const hostContext = await browser.newContext({ baseURL, extraHTTPHeaders, serviceWorkers: "block" });
+  try {
+    const host = await hostContext.newPage();
+    const code = await createRoom(host);
+    await withConnection(baseURL!, async (origin, setOffline) => {
+      await page.setViewportSize({ width: 320, height: 680 });
+      await page.goto(`${origin}/s/${code}`);
+      await expect(page.getByRole("textbox", { name: "Your name" })).toBeVisible();
+      await page.getByRole("link", { name: "Wherever, Honestly" }).click();
+      await expect(page.getByRole("heading", { name: /Big appetites/ })).toBeVisible();
+
+      await joinByCode(page, code, async () => {
+        setOffline(true);
+        await context.setOffline(true);
+        await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
+      });
+      await expect(page.getByRole("main").getByRole("status")).toHaveText(
+        "Waiting for internet. You’ll join automatically when you reconnect.",
+      );
+      await audit(page);
+
+      setOffline(false);
+      await context.setOffline(false);
+      await expect(page.getByRole("heading", { name: "Dinner room" })).toBeVisible();
+      await expect(host.locator(".participant-tile").filter({ hasText: "Guest from Home" })).toBeVisible();
+    });
+  } finally {
+    await hostContext.close();
+  }
 });
 
 test("the installed shell stays public and reopens offline", async ({

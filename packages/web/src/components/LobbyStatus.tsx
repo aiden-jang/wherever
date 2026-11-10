@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { DemoReason } from "@wherever/shared";
 
 /*
@@ -25,6 +25,33 @@ export function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
         Reload to rejoin
       </button>
     </div>
+  );
+}
+
+function subscribeToNetwork(notify: () => void) {
+  window.addEventListener("online", notify);
+  window.addEventListener("offline", notify);
+  return () => {
+    window.removeEventListener("online", notify);
+    window.removeEventListener("offline", notify);
+  };
+}
+
+const isOnline = () => navigator.onLine;
+
+export function JoiningRoom({ connectionClosed }: { connectionClosed: boolean }) {
+  const online = useSyncExternalStore(subscribeToNetwork, isOnline);
+  const message = !online
+    ? "Waiting for internet. You’ll join automatically when you reconnect."
+    : connectionClosed
+      ? "Couldn’t connect to the room."
+      : "Connecting…";
+  return (
+    <main id="main-content" tabIndex={-1} className="table-room">
+      <h1 className="table-title">Joining the dinner room</h1>
+      <p role="status">{message}</p>
+      {online && connectionClosed && <DisconnectBanner reconnecting={false} />}
+    </main>
   );
 }
 

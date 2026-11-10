@@ -28,7 +28,7 @@ import { RoomChrome } from "../components/RoomChrome.js";
 import { buzz } from "../components/haptics.js";
 
 import { NamePrompt } from "../components/NamePrompt.js";
-import { DisconnectBanner, HowItWorks } from "../components/LobbyStatus.js";
+import { DisconnectBanner, HowItWorks, JoiningRoom } from "../components/LobbyStatus.js";
 import { ParticipantChip } from "../components/LobbyPeople.js";
 
 export default function Lobby() {
@@ -259,15 +259,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
     );
   }
 
-  if (!session) {
-    return (
-      <main id="main-content" tabIndex={-1} className="table-room">
-        <h1 className="table-title">Joining the dinner room</h1>
-        <p role="status">{status === "closed" ? "Couldn’t connect to the room." : "Connecting…"}</p>
-        {status === "closed" && <DisconnectBanner reconnecting={false} />}
-      </main>
-    );
-  }
+  if (!session) return <JoiningRoom connectionClosed={status === "closed"} />;
 
   return (
     <main id="main-content" tabIndex={-1} className="table-room">

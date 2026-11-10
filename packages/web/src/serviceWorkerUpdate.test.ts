@@ -26,7 +26,8 @@ function installedWorker() {
   const put = vi.fn().mockResolvedValue(undefined);
   const match = vi.fn().mockResolvedValue(undefined);
   const addAll = vi.fn().mockResolvedValue(undefined);
-  const html = '<script src="/assets/index-aBcDe123.js"></script><link href="/assets/index-xYz09876.css">';
+  const html =
+    '<link rel="icon" href="/icon.svg"><script src="/assets/index-aBcDe123.js"></script><link href="/assets/index-xYz09876.css">';
   const response = {
     ok: true,
     headers: { get: () => "text/html" },
@@ -91,7 +92,11 @@ test("cached fingerprinted assets do not start another download", async () => {
 test("the public shell cache write extends the event lifetime", async () => {
   const worker = installedWorker();
   const event = await worker.visit("/");
-  expect(worker.addAll).toHaveBeenCalledWith(["/assets/index-aBcDe123.js", "/assets/index-xYz09876.css"]);
+  expect(worker.addAll).toHaveBeenCalledWith([
+    "/icon.svg",
+    "/assets/index-aBcDe123.js",
+    "/assets/index-xYz09876.css",
+  ]);
   expect(worker.put).toHaveBeenCalledWith("/", worker.response);
   expect(event.work.length).toBeGreaterThan(0);
 });

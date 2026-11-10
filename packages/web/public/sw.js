@@ -3,7 +3,8 @@
 
 // Clear older shells and asset entries when the caching boundaries change.
 const CACHE = "wherever-v8";
-const SHELL_CACHE = `${CACHE}-shell`;
+// Refresh the entry for existing installations so offline invites use the recovery screen.
+const SHELL_CACHE = `${CACHE}-shell-v2`;
 const SHELL = "/";
 const LEGAL = new Set(["/privacy", "/terms"]);
 const MAX_ASSETS = 48;
@@ -14,9 +15,11 @@ async function storeShell(response) {
     throw new Error("Could not fetch the app shell");
   }
   const html = await response.clone().text();
-  // Vite emits the entry script, stylesheet, and preloads as root-relative asset URLs in the HTML.
+  // The HTML declares Vite’s entry assets and the logo used by the offline screens.
   const paths = [
-    ...new Set(Array.from(html.matchAll(/\s(?:src|href)="(\/assets\/[\w.-]+)"/g), ([, path]) => path)),
+    ...new Set(
+      Array.from(html.matchAll(/\s(?:src|href)="(\/assets\/[\w.-]+|\/icon\.svg)"/g), ([, path]) => path),
+    ),
   ];
   if (!paths.some((path) => path.endsWith(".js"))) throw new Error("Missing the app entry script");
 

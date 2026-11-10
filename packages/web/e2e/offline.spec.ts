@@ -1,11 +1,14 @@
 import { once } from "node:events";
 import { createServer, request } from "node:http";
 import type { AddressInfo } from "node:net";
-import { test, expect } from "./fixtures.js";
+import { audit, test, expect } from "./fixtures.js";
 
 test.use({ serviceWorkers: "allow" });
 
-test("the first visit is enough to reopen the landing page offline", async ({ page, baseURL }) => {
+async function withConnection(
+  baseURL: string,
+  run: (origin: string, setOffline: (offline: boolean) => void) => Promise<void>,
+) {
   let offline = false;
   // Drop the connection at the origin so WebKit can still reach its service worker.
   const proxy = createServer((incoming, response) => {
@@ -24,19 +27,62 @@ test("the first visit is enough to reopen the landing page offline", async ({ pa
   await once(proxy, "listening");
   try {
     const origin = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
+    await run(origin, (value) => {
+      offline = value;
+    });
+  } finally {
+    proxy.close();
+    proxy.closeAllConnections();
+  }
+}
+
+test("the first visit is enough to reopen the landing page offline", async ({ page, baseURL }) => {
+  await withConnection(baseURL!, async (origin, setOffline) => {
     const heading = page.getByRole("heading", { name: /Big appetites/ });
     await page.goto(origin);
     await expect(heading).toBeVisible();
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
 
-    offline = true;
+    setOffline(true);
     await page.goto(`${origin}/?reopen`);
     await expect(heading).toBeVisible();
     await expect(page.getByRole("button", { name: "Start a session" })).toHaveCSS("display", "flex");
-  } finally {
-    proxy.close();
-    proxy.closeAllConnections();
-  }
+  });
+});
+
+test("an uncached invite offers Home offline and opens after reconnecting", async ({ page, baseURL }) => {
+  await withConnection(baseURL!, async (origin, setOffline) => {
+    await page.setViewportSize({ width: 320, height: 680 });
+    await page.goto(origin);
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    const invite = `${origin}/s/ABCDEF`;
+    const unavailable = page.getByRole("heading", { name: "Can’t open this invite" });
+    const home = page.getByRole("heading", { name: /Big appetites/ });
+    setOffline(true);
+    await page.goto(invite);
+    await expect(unavailable).toBeVisible();
+    await expect(unavailable).toBeFocused();
+    await expect(page.getByText("Reconnect to the internet, then try again to join the room.")).toBeVisible();
+    await expect
+      .poll(() => page.locator("main img").evaluate((img) => (img as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
+    await audit(page);
+
+    await page.getByRole("link", { name: "Wherever, Honestly" }).click();
+    await expect(home).toBeVisible();
+    await page.goBack();
+    await expect(unavailable).toBeVisible();
+    await page.getByRole("link", { name: "Go home" }).click();
+    await expect(home).toBeVisible();
+
+    await page.goto(invite);
+    await expect(unavailable).toBeVisible();
+    setOffline(false);
+    await page.getByRole("button", { name: "Try again" }).click();
+    await expect(page).toHaveURL(invite);
+    await expect(page.getByRole("textbox", { name: "Your name" })).toBeVisible();
+  });
 });
 
 test("the installed shell stays public and reopens offline", async ({

@@ -1,16 +1,17 @@
 import { usePageAnalytics } from "./usePageAnalytics.js";
 import { pageForPath } from "../../../analytics/schema.js";
 import { AppUpdate } from "./AppUpdate.js";
-import { lazy, Suspense, type CSSProperties } from "react";
+import { lazy, Suspense, useEffect, useRef, type CSSProperties } from "react";
 import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import Landing from "./routes/Landing.js";
 import Share from "./routes/Share.js";
 import NotFound from "./routes/NotFound.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
+import { PlateState } from "./components/PlateState.js";
 import { SoundToggle } from "./components/SoundToggle.js";
 import { useHourMood } from "./useHourMood.js";
 
-const Lobby = lazy(() => import("./routes/Lobby.js"));
+const Lobby = lazy(() => import("./routes/Lobby.js").catch(() => ({ default: InviteUnavailable })));
 
 export default function App() {
   const mood = useHourMood();
@@ -105,4 +106,37 @@ function AnalyticsPage() {
   const { pathname } = useLocation();
   usePageAnalytics(pageForPath(pathname), pathname);
   return null;
+}
+
+function InviteUnavailable() {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus({ preventScroll: true }), []);
+
+  return (
+    <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
+      <div className="table-panel w-full max-w-sm">
+        <PlateState />
+        <h1 ref={heading} tabIndex={-1} className="mt-4 font-display text-state font-bold">
+          Can’t open this invite
+        </h1>
+        <p className="mt-3 text-muted">Reconnect to the internet, then try again to join the room.</p>
+        <div className="mt-6 grid gap-2">
+          <button
+            type="button"
+            onClick={() => location.reload()}
+            className="min-h-11 rounded-xl bg-ember px-4 py-3 font-semibold text-ink hover:brightness-110 transition"
+          >
+            Try again
+          </button>
+          <Link
+            to="/"
+            reloadDocument
+            className="grid min-h-11 place-items-center rounded-xl border border-white/15 px-4 py-3 font-semibold hover:bg-white/5 transition"
+          >
+            Go home
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
 }

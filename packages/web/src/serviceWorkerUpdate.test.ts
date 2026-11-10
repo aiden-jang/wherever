@@ -25,11 +25,20 @@ function installedWorker() {
   const handlers = new Map<string, (event: unknown) => void>();
   const put = vi.fn().mockResolvedValue(undefined);
   const match = vi.fn().mockResolvedValue(undefined);
-  const response = { ok: true, headers: { get: () => "text/html" }, clone: () => ({ body: "copy" }) };
+  const addAll = vi.fn().mockResolvedValue(undefined);
+  const html = '<script src="/assets/index-aBcDe123.js"></script><link href="/assets/index-xYz09876.css">';
+  const response = {
+    ok: true,
+    headers: { get: () => "text/html" },
+    text: async () => html,
+    clone() {
+      return { ...this };
+    },
+  };
   const fetch = vi.fn().mockResolvedValue(response);
   runInNewContext(source, {
     URL,
-    caches: { match, open: async () => ({ put }) },
+    caches: { match, open: async () => ({ addAll, match, put, keys: async () => [] }) },
     fetch,
     self: {
       location: { origin: "https://app.test" },
@@ -51,7 +60,7 @@ function installedWorker() {
     await Promise.all(work);
     return { result, respondWith, work };
   };
-  return { put, fetch, match, response, visit };
+  return { addAll, put, fetch, match, response, visit };
 }
 
 test.each(["/s/ABCDEF", "/share?url=private-invite"])(
@@ -82,6 +91,18 @@ test("cached fingerprinted assets do not start another download", async () => {
 test("the public shell cache write extends the event lifetime", async () => {
   const worker = installedWorker();
   const event = await worker.visit("/");
-  expect(worker.put).toHaveBeenCalledWith("/", { body: "copy" });
+  expect(worker.addAll).toHaveBeenCalledWith(["/assets/index-aBcDe123.js", "/assets/index-xYz09876.css"]);
+  expect(worker.put).toHaveBeenCalledWith("/", worker.response);
   expect(event.work.length).toBeGreaterThan(0);
+});
+
+test("an incomplete replacement cannot overwrite the working offline shell", async () => {
+  const worker = installedWorker();
+  worker.addAll.mockRejectedValueOnce(new Error("Connection dropped"));
+  const event = await worker.visit("/");
+  expect(event.result).toBe(worker.response);
+  expect(worker.put).not.toHaveBeenCalled();
+
+  await worker.visit("/");
+  expect(worker.put).toHaveBeenCalledWith("/", worker.response);
 });

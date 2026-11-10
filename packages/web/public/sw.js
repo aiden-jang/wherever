@@ -2,10 +2,36 @@
 // API and WebSocket traffic always go to the network, never the cache.
 
 // Clear older shells and asset entries when the caching boundaries change.
-const CACHE = "wherever-v7";
+const CACHE = "wherever-v8";
+const SHELL_CACHE = `${CACHE}-shell`;
 const SHELL = "/";
 const LEGAL = new Set(["/privacy", "/terms"]);
 const MAX_ASSETS = 48;
+let shellWrite = Promise.resolve();
+
+async function storeShell(response) {
+  if (!response.ok || !response.headers.get("content-type")?.includes("text/html")) {
+    throw new Error("Could not fetch the app shell");
+  }
+  const html = await response.clone().text();
+  // Vite emits the entry script, stylesheet, and preloads as root-relative asset URLs in the HTML.
+  const paths = [
+    ...new Set(Array.from(html.matchAll(/\s(?:src|href)="(\/assets\/[\w.-]+)"/g), ([, path]) => path)),
+  ];
+  if (!paths.some((path) => path.endsWith(".js"))) throw new Error("Missing the app entry script");
+
+  const cache = await caches.open(SHELL_CACHE);
+  const cached = await Promise.all(paths.map((path) => cache.match(path)));
+  const missing = paths.filter((_, index) => !cached[index]);
+  if (missing.length) await cache.addAll(missing);
+  // Publish the new HTML only once its assets are available, and keep them outside runtime eviction.
+  await cache.put(SHELL, response);
+  const current = new Set([SHELL, ...paths]);
+  const obsolete = (await cache.keys()).filter((entry) => !current.has(new URL(entry.url).pathname));
+  // A tab that just received the previous HTML can still request its assets during an update.
+  const excess = Math.max(0, obsolete.length + paths.length - MAX_ASSETS);
+  await Promise.all(obsolete.slice(0, excess).map((entry) => cache.delete(entry)));
+}
 
 async function storeAsset(request, response) {
   const cache = await caches.open(CACHE);
@@ -19,8 +45,11 @@ async function storeAsset(request, response) {
 }
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.add(SHELL)));
-  self.skipWaiting();
+  event.waitUntil(
+    fetch(SHELL, { cache: "reload" })
+      .then(storeShell)
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -29,11 +58,13 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((k) => k.startsWith("wherever-") && k !== CACHE).map((k) => caches.delete(k)),
+          keys
+            .filter((k) => k.startsWith("wherever-") && k !== CACHE && k !== SHELL_CACHE)
+            .map((k) => caches.delete(k)),
         ),
-      ),
+      )
+      .then(() => self.clients.claim()),
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
@@ -60,7 +91,12 @@ self.addEventListener("fetch", (event) => {
             res.headers.get("content-type")?.includes("text/html")
           ) {
             const copy = res.clone();
-            event.waitUntil(caches.open(CACHE).then((c) => c.put(legal ? path : SHELL, copy)));
+            if (legal) {
+              event.waitUntil(caches.open(CACHE).then((c) => c.put(path, copy)));
+            } else {
+              shellWrite = shellWrite.then(() => storeShell(copy)).catch(() => undefined);
+              event.waitUntil(shellWrite);
+            }
           }
           return res;
         })
@@ -75,7 +111,7 @@ self.addEventListener("fetch", (event) => {
               )
             );
           }
-          const hit = await caches.match(SHELL);
+          const hit = await caches.match(SHELL, { cacheName: SHELL_CACHE });
           // respondWith(undefined) is a network error, not a fallback. First visit offline lands here.
           return (
             hit ??

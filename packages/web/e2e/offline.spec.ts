@@ -1,6 +1,43 @@
+import { once } from "node:events";
+import { createServer, request } from "node:http";
+import type { AddressInfo } from "node:net";
 import { test, expect } from "./fixtures.js";
 
 test.use({ serviceWorkers: "allow" });
+
+test("the first visit is enough to reopen the landing page offline", async ({ page, baseURL }) => {
+  let offline = false;
+  // Drop the connection at the origin so WebKit can still reach its service worker.
+  const proxy = createServer((incoming, response) => {
+    if (offline) {
+      incoming.socket.destroy();
+      return;
+    }
+    const upstream = request(new URL(incoming.url!, baseURL), { method: incoming.method }, (reply) => {
+      response.writeHead(reply.statusCode!, { ...reply.headers, "cache-control": "no-store" });
+      reply.pipe(response);
+    });
+    upstream.on("error", () => response.destroy());
+    incoming.pipe(upstream);
+  });
+  proxy.listen(0, "127.0.0.1");
+  await once(proxy, "listening");
+  try {
+    const origin = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
+    const heading = page.getByRole("heading", { name: /Big appetites/ });
+    await page.goto(origin);
+    await expect(heading).toBeVisible();
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    offline = true;
+    await page.goto(`${origin}/?reopen`);
+    await expect(heading).toBeVisible();
+    await expect(page.getByRole("button", { name: "Start a session" })).toHaveCSS("display", "flex");
+  } finally {
+    proxy.close();
+    proxy.closeAllConnections();
+  }
+});
 
 test("the installed shell stays public and reopens offline", async ({
   page,
@@ -8,7 +45,7 @@ test("the installed shell stays public and reopens offline", async ({
   browserName,
   baseURL,
 }) => {
-  test.skip(browserName !== "chromium", "Playwright service-worker control is established in Chromium.");
+  test.skip(browserName !== "chromium", "Playwright offline mode fails WebKit navigation to cached pages.");
   await page.goto("/");
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;

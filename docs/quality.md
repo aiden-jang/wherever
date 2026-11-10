@@ -42,9 +42,10 @@ enabled. It refuses to reuse a development server. API/browser fixtures never
 require live provider keys.
 An interrupted-upload regression checks that client cancellation leaves the Worker,
 existing room, and new session creation usable.
-Creation cancellation and location retry run in both browser engines. The Chromium
-service-worker journey checks the real cache and reopens the public shell offline;
-the WebKit project skips that test because its service-worker control is not established here.
+Creation cancellation and location retry run in both browser engines. The first-visit
+offline test cuts the connection to the local Worker and reopens the landing page in
+Chromium and WebKit. A separate Chromium test verifies that private navigation preserves
+the public shell and that previously visited legal pages reopen offline.
 
 Failures retain a screenshot and trace in the web package's ignored test-output
 directory. Wrangler logs are saved in `.wrangler/e2e-logs/` at the repository root.

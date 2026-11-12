@@ -137,7 +137,8 @@ export const RADIUS_OPTIONS: RadiusOption[] = [
 
 export function radiusLabel(meters: number): string {
   return (
-    RADIUS_OPTIONS.find((option) => option.meters === meters)?.label ?? `${Math.round(meters / 1000)} km`
+    RADIUS_OPTIONS.find((option) => option.meters === meters)?.label ??
+    `${Number((meters / 1609.344).toFixed(1))} mi`
   );
 }
 

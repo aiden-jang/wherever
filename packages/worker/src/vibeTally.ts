@@ -1,7 +1,7 @@
-import type { Vibe } from "@wherever/shared";
-import { socketIdentity } from "./roomState.js";
+import { applyVibe, resolveVibe, type SessionFilters, type Vibe } from "@wherever/shared";
+import { socketIdentity, type SessionMeta } from "./roomState.js";
 import { sendTo } from "./roomSockets.js";
-import { putLive } from "./sessionRetention.js";
+import { assertRoomLive } from "./sessionRetention.js";
 
 /* Only aggregate vibe counts leave storage; a participant receives their own choice for reconnects. */
 
@@ -24,11 +24,37 @@ export async function setVibe(
   participantId: string,
   vibe: Vibe | null,
 ): Promise<VibeMap> {
-  const vibes = await readVibes(storage);
-  if (vibe) vibes[participantId] = vibe;
-  else delete vibes[participantId];
-  await putLive(storage, { vibes });
-  return vibes;
+  return updateVibes(storage, (vibes) => {
+    if (vibe) vibes[participantId] = vibe;
+    else delete vibes[participantId];
+  });
+}
+
+export const restoreVibeFilters = (storage: DurableObjectStorage) => updateVibes(storage);
+
+async function updateVibes(
+  storage: DurableObjectStorage,
+  update?: (vibes: VibeMap) => void,
+): Promise<VibeMap> {
+  return storage.transaction(async (transaction) => {
+    await assertRoomLive(transaction);
+    const vibes = (await transaction.get<VibeMap>("vibes")) ?? {};
+    const meta = await transaction.get<SessionMeta>("meta");
+    if (!meta || meta.status !== "lobby") return vibes;
+    const previous = resolveVibe(tally(vibes)).vibe;
+    update?.(vibes);
+    const next = resolveVibe(tally(vibes)).vibe;
+    const savedBase = await transaction.get<SessionFilters | null>("vibeFilterBase");
+    if (previous !== next || (next && !savedBase)) {
+      const base = savedBase ?? meta.filters;
+      await transaction.put({
+        vibes,
+        meta: { ...meta, filters: next ? applyVibe(base, next) : base },
+        vibeFilterBase: next ? base : null,
+      });
+    } else await transaction.put({ vibes });
+    return vibes;
+  });
 }
 
 /**

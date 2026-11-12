@@ -1,15 +1,19 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { Restaurant } from "@wherever/shared";
+import { Modal } from "./Modal.js";
 import { RestaurantPhoto } from "./RestaurantPhoto.js";
 
 export function RestaurantGallery({
   restaurant,
   className = "",
   initialIndex = 0,
+  compact = false,
 }: {
   restaurant: Restaurant;
   className?: string;
   initialIndex?: number;
+  compact?: boolean;
 }) {
   const photos = restaurant.photos?.length
     ? restaurant.photos
@@ -17,6 +21,7 @@ export function RestaurantGallery({
       ? [restaurant.imageUrl]
       : [];
   const [index, setIndex] = useState(initialIndex);
+  const [expanded, setExpanded] = useState(false);
   const current = Math.max(0, Math.min(index, photos.length - 1));
   const source = restaurant.photoMapsUris?.[photos[current] ?? ""];
   return (
@@ -25,7 +30,7 @@ export function RestaurantGallery({
       role="group"
       aria-label={`${restaurant.name} photos`}
       onKeyDown={(event) => {
-        if (photos.length < 2) return;
+        if (expanded || photos.length < 2) return;
         if (event.key === "ArrowLeft") {
           event.preventDefault();
           setIndex(Math.max(0, current - 1));
@@ -39,15 +44,27 @@ export function RestaurantGallery({
       <RestaurantPhoto
         key={photos[current] ?? restaurant.id}
         imageUrl={photos[current] ?? null}
-        credits={restaurant.photoCredits?.[photos[current] ?? ""]}
+        credits={compact ? undefined : restaurant.photoCredits?.[photos[current] ?? ""]}
         category={restaurant.category}
         className="detail-photo"
       />
-      {source && (
+      {source && !compact && (
         <a href={source} target="_blank" rel="noopener noreferrer" className="gallery-source">
           View photo on Google Maps
         </a>
       )}
+      {compact && photos.length > 0 && (
+        <button type="button" className="gallery-expand" onClick={() => setExpanded(true)}>
+          View photos <span aria-hidden>↗</span>
+        </button>
+      )}
+      {expanded &&
+        createPortal(
+          <Modal title={`${restaurant.name} photos`} wide onClose={() => setExpanded(false)}>
+            <RestaurantGallery restaurant={restaurant} initialIndex={current} className="photo-viewer" />
+          </Modal>,
+          document.body,
+        )}
       {photos.length > 1 && (
         <>
           <button

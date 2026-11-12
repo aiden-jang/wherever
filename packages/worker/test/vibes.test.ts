@@ -34,6 +34,7 @@ interface Member {
   until: <T extends ServerMessage["type"]>(
     type: T,
     predicate: (msg: Extract<ServerMessage, { type: T }>) => boolean,
+    from?: number,
   ) => Promise<Extract<ServerMessage, { type: T }>>;
   close: () => void;
 }
@@ -62,9 +63,12 @@ async function join(code: string, displayName: string, clientId?: string): Promi
       }
       throw new Error(`never received ${type}; got ${seen.map((m) => m.type).join(", ")}`);
     },
-    until: async (type, predicate) => {
+    until: async (type, predicate, from = 0) => {
       for (let attempt = 0; attempt < 100; attempt += 1) {
-        const match = seen.filter((msg) => msg.type === type).find((msg) => predicate(msg as never));
+        const match = seen
+          .slice(from)
+          .filter((msg) => msg.type === type)
+          .find((msg) => predicate(msg as never));
         if (match) return match as never;
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
@@ -79,6 +83,35 @@ async function join(code: string, displayName: string, clientId?: string): Promi
 }
 
 describe("the vibe vote", () => {
+  it("applies a guest's preference to shared filters, including a late arrival", async () => {
+    const code = await createSession();
+    const alex = await join(code, "Alex", creatorId);
+    const sam = await join(code, "Sam");
+    sam.send({ type: "set_vibe", vibe: "quick" });
+    const state = await alex.until(
+      "session_state",
+      (message) => message.session.filters.radiusMeters === 800,
+    );
+    expect(state.session.filters).toMatchObject({
+      priceTiers: [1, 2],
+      openNow: true,
+      amenities: ["takeout"],
+    });
+    const late = await join(code, "Late");
+    expect((await late.next("session_state")).session.filters.radiusMeters).toBe(800);
+    const from = alex.seen.length;
+    sam.send({ type: "set_vibe", vibe: null });
+    const restored = await alex.until(
+      "session_state",
+      (message) => message.session.filters.radiusMeters === 5000,
+      from,
+    );
+    expect(restored.session.filters.priceTiers).toBeUndefined();
+    alex.close();
+    sam.close();
+    late.close();
+  });
+
   it("tells everyone the tallies and nobody the voters", async () => {
     const code = await createSession();
     const alex = await join(code, "Alex", creatorId);

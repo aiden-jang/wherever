@@ -3,7 +3,7 @@ import type { Restaurant } from "@wherever/shared";
 import { distanceText } from "@wherever/shared";
 import { categoryLabel, priceLabel, reviewCountLabel } from "./cardStyle.js";
 import { RestaurantGallery } from "./RestaurantGallery.js";
-import { availabilityLabel, RestaurantAmenities } from "./RestaurantFacts.js";
+import { availabilityLabel } from "./RestaurantFacts.js";
 
 export function DinnerTicket({
   restaurant,
@@ -29,7 +29,7 @@ export function DinnerTicket({
         <span>Tonight’s plan</span>
         <img src="/art/ticket.svg" alt="" width={26} height={26} />
       </div>
-      <RestaurantGallery key={restaurant.id} restaurant={restaurant} className="ticket-photo" />
+      <RestaurantGallery key={restaurant.id} restaurant={restaurant} className="ticket-photo" compact />
       <div className="ticket-body">
         <p className="meal-category">
           {categoryLabel(restaurant.category)}
@@ -42,7 +42,6 @@ export function DinnerTicket({
         </p>
         <h2 className="ticket-name">{restaurant.name}</h2>
         {restaurant.address && <p className="ticket-address">{restaurant.address}</p>}
-        {action}
         <div className="meal-facts">
           <span>
             <small>Price</small>
@@ -63,10 +62,7 @@ export function DinnerTicket({
             {availability}
           </p>
         )}
-        {restaurant.editorialSummary && (
-          <p className="mt-3 text-sm leading-relaxed">{restaurant.editorialSummary}</p>
-        )}
-        <RestaurantAmenities restaurant={restaurant} />
+        {action}
         {restaurant.source === "google" && (
           <p className="mt-2 text-xs" translate="no">
             Google Maps

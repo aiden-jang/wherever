@@ -46,8 +46,12 @@ it("opens group preferences above the host's dinner filters and still allows bot
   setup();
   const summary = screen.getByText("Group preferences", { exact: true });
   const preferences = summary.closest("details")!;
-  const filters = screen.getByRole("heading", { name: "Search area" }).closest("section")!;
+  const filters = screen.getByRole("heading", { name: "Dinner filters" }).closest("section")!;
   expect(preferences.open).toBe(true);
+  expect(screen.queryByRole("button", { name: /NYC neighborhoods/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Change area" }));
+  expect(screen.getByRole("button", { name: "NYC neighborhoods West Village" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Close area settings" }));
   expect(screen.getByRole("region", { name: "Group vibe" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Done editing" }).getAttribute("aria-expanded")).toBe("true");
   expect(preferences.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

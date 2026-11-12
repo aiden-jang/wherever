@@ -7,11 +7,12 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  wide?: boolean;
 }
 
 /** Minimal centered modal: an X (top-right), backdrop click, Escape, and swipe-down all close it.
  *  Background scroll is locked while open. */
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, wide = false }: ModalProps) {
   useScrollLock();
   const { dragY, scrollRef, handlers } = useSwipeToDismiss(onClose);
 
@@ -34,7 +35,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
           focusPanel(el);
         }}
         tabIndex={-1}
-        className="relative w-full max-w-sm max-h-[85dvh] overflow-y-auto overscroll-contain rounded-2xl bg-ink-soft border border-white/15 p-5 sm:p-7"
+        className={`relative w-full ${wide ? "max-w-4xl" : "max-w-sm"} max-h-[85dvh] overflow-y-auto overscroll-contain rounded-2xl bg-ink-soft border border-white/15 p-5 sm:p-7`}
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragY ? "none" : "transform 0.2s ease",
@@ -53,7 +54,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
         >
           ✕
         </button>
-        <h2 tabIndex={-1} className="font-display text-3xl font-bold mb-5 pr-12">
+        <h2 tabIndex={-1} className="font-display text-3xl font-bold mb-5 pr-12 [overflow-wrap:anywhere]">
           {title}
         </h2>
         {children}

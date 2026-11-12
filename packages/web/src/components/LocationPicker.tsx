@@ -36,6 +36,7 @@ export function LocationPicker({
   const latest = useRef({ filters, onChange });
   const request = useRef(0);
   const searching = useRef(false);
+  const townEditing = useRef(false);
   const controller = useRef<AbortController | null>(null);
   useLayoutEffect(() => {
     latest.current = { filters, onChange };
@@ -51,7 +52,9 @@ export function LocationPicker({
   function setSearchPending(pending: boolean, query = q) {
     searching.current = pending;
     setBusy(pending);
-    onLocationStatusChange?.(pending ? "searching" : query.trim() ? "editing" : "idle");
+    onLocationStatusChange?.(
+      pending ? "searching" : query.trim() || townEditing.current ? "editing" : "idle",
+    );
   }
 
   function stopSearch(query = "") {
@@ -63,6 +66,7 @@ export function LocationPicker({
   }
 
   function select(next: SessionFilters) {
+    townEditing.current = false;
     stopSearch();
     setEditing(false);
     setNycOpen(false);
@@ -71,16 +75,20 @@ export function LocationPicker({
   }
 
   const nearMe =
+    !editing &&
     !filters.area &&
     !filters.locationLabel &&
     (deviceLocation != null || (filters.lat != null && filters.lng != null));
   const hasQuery = Boolean(q.trim());
-  const activeNeighborhood = filters.area ? NEIGHBORHOODS.find((n) => n.value === filters.area) : undefined;
+  const activeNeighborhood =
+    !editing && filters.area ? NEIGHBORHOODS.find((n) => n.value === filters.area) : undefined;
   const showLocationControls = !filters.locationLabel || editing;
-  const hasSelectedPlace = Boolean(filters.locationLabel || activeNeighborhood);
+  const hasSelectedPlace = Boolean(filters.locationLabel || filters.area);
   const showTownSearch = !nycOpen && (!hasSelectedPlace || editing);
 
   function editTown() {
+    townEditing.current = true;
+    stopSearch();
     setNycOpen(false);
     setEditing(true);
     requestAnimationFrame(() => searchField.current?.focus());
@@ -218,7 +226,7 @@ export function LocationPicker({
             </p>
             <div className="flex flex-wrap gap-2" role="group" aria-label="NYC neighborhoods">
               {NEIGHBORHOODS.map((n) => {
-                const on = filters.area === n.value;
+                const on = !editing && filters.area === n.value;
                 return (
                   <button
                     key={n.value}
@@ -297,6 +305,7 @@ export function LocationPicker({
               type="button"
               className="min-h-11 text-sm text-muted underline underline-offset-4"
               onClick={() => {
+                townEditing.current = false;
                 stopSearch();
                 setEditing(false);
                 requestAnimationFrame(() => (changeButton.current ?? searchField.current)?.focus());

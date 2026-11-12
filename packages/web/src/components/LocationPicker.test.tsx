@@ -110,3 +110,51 @@ describe("location search", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ area: "williamsburg" }));
   });
 });
+
+it("clears the neighborhood highlight in a town draft, blocks continuing, and restores it on cancel", async () => {
+  const onChange = vi.fn();
+  const onStatus = vi.fn();
+  render(
+    <LocationPicker
+      filters={{ ...DEFAULT_FILTERS, area: "west-village" }}
+      onChange={onChange}
+      onLocationStatusChange={onStatus}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Search by ZIP or town" }));
+  expect(screen.queryByText("West Village")).toBeNull();
+  expect(onStatus).toHaveBeenLastCalledWith("editing");
+  const field = screen.getByRole("textbox", { name: "ZIP code or town" });
+  await waitFor(() => expect(document.activeElement).toBe(field));
+  fireEvent.change(field, { target: { value: "Denver" } });
+  fireEvent.change(field, { target: { value: "" } });
+  expect(onStatus).toHaveBeenLastCalledWith("editing");
+  expect(onChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel location change" }));
+  expect(screen.getByRole("button", { name: "NYC neighborhoods West Village" })).toBeTruthy();
+  expect(onStatus).toHaveBeenLastCalledWith("idle");
+});
+
+it("replaces the old neighborhood only after the town is found", async () => {
+  const onChange = vi.fn();
+  const onStatus = vi.fn();
+  vi.mocked(geocode).mockResolvedValue({ lat: 39.7, lng: -104.9, label: "Denver, CO" });
+  render(
+    <LocationPicker
+      filters={{ ...DEFAULT_FILTERS, area: "west-village" }}
+      onChange={onChange}
+      onLocationStatusChange={onStatus}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Search by ZIP or town" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "ZIP code or town" }), {
+    target: { value: "Denver" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Search" }));
+  await waitFor(() =>
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ area: undefined, locationLabel: "Denver, CO" }),
+    ),
+  );
+  expect(onStatus).toHaveBeenLastCalledWith("idle");
+});

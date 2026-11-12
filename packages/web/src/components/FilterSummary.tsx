@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { SessionFilters } from "@wherever/shared";
 import { FilterFields } from "./FilterFields";
-import type { LocationStatus } from "./LocationPicker.js";
+import { LocationPicker, type LocationStatus } from "./LocationPicker.js";
 import {
   amenityLabel,
   cuisineLabel,
@@ -44,7 +44,8 @@ export function filterSummaryChips(filters: SessionFilters): string[] {
   for (const category of filters.excludedCategories ?? [])
     chips.push(`no ${cuisineLabel(category).toLowerCase()}`);
   if (filters.revealVoters) chips.push("completion shown");
-  if (filters.sort === "distance") {
+  if (filters.shuffle) chips.push("shuffled");
+  if (!filters.shuffle && filters.sort === "distance") {
     const sort = SORT_OPTIONS.find((option) => option.value === "distance")?.label ?? "closest";
     chips.push(sort.toLowerCase());
   }
@@ -82,7 +83,9 @@ export function FilterSummary({
   syncError?: number;
 }) {
   const editorId = useId();
+  const areaButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(initiallyOpen);
+  const [changingArea, setChangingArea] = useState(false);
   const [draft, setDraft] = useState<SessionFilters | null>(null);
   const pending = useRef<string[]>([]);
   useEffect(() => {
@@ -111,9 +114,11 @@ export function FilterSummary({
     <section className="lobby-search">
       <div className="lobby-search-row">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold">Search area</h2>
+          <h2 className="text-sm font-semibold">Dinner filters</h2>
           <p className="text-sm text-muted [overflow-wrap:anywhere]">
-            {searchArea(active)} · {radiusLabel(active.radiusMeters)}
+            {changingArea && locationStatus !== "idle"
+              ? "Choose a new area"
+              : `${searchArea(active)} · ${radiusLabel(active.radiusMeters)}`}
           </p>
         </div>
         {editable && onChange && (
@@ -127,6 +132,34 @@ export function FilterSummary({
           >
             {open ? "Done editing" : "Edit dinner filters"}
           </button>
+        )}
+      </div>
+      {editable && onChange && (
+        <button
+          type="button"
+          disabled={locked}
+          ref={areaButton}
+          className="min-h-11 text-xs font-semibold text-muted underline hover:text-cream"
+          onClick={() => setChangingArea((value) => !value)}
+          aria-expanded={changingArea}
+          aria-controls={`${editorId}-area`}
+        >
+          {changingArea ? "Close area settings" : "Change area"}
+        </button>
+      )}
+      <div id={`${editorId}-area`} hidden={!changingArea || !editable}>
+        {changingArea && editable && (
+          <fieldset disabled={locked} className="filter-editor min-w-0">
+            <LocationPicker
+              filters={active}
+              onLocationStatusChange={onLocationStatusChange}
+              onChange={(next) => {
+                update(next);
+                setChangingArea(false);
+                requestAnimationFrame(() => areaButton.current?.focus());
+              }}
+            />
+          </fieldset>
         )}
       </div>
       <ul aria-label="Dinner filters" className="mt-2 flex flex-wrap gap-1.5">
@@ -146,6 +179,7 @@ export function FilterSummary({
           <fieldset disabled={locked} className="filter-editor min-w-0">
             <FilterFields
               filters={active}
+              showLocation={false}
               onChange={update}
               onLocationStatusChange={onLocationStatusChange}
             />

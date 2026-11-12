@@ -75,7 +75,8 @@ export function VibeDial({
 
       {reading.vibe && (
         <p className="mt-2.5 text-xs text-muted">
-          The deck prioritizes {vibeOption(reading.vibe).label} places within your dinner filters.
+          The group’s {vibeOption(reading.vibe).label} preset has been applied to Dinner filters. The host can
+          fine-tune it below.
         </p>
       )}
     </section>

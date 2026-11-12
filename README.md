@@ -15,8 +15,10 @@ swipe on one common deck, and turn the result into a dinner plan.
 - The highest weighted score wins. Each person gets one super-like and one anonymous
   veto per round; a veto removes the restaurant from contention.
 - Review expanded group preferences above the host’s open dinner filters. Selecting
-  an NYC neighborhood closes its choices and keeps the selected area visible. Optional timers and host
-  controls keep the group moving; voter identities stay hidden by default.
+  a group preset applies the winning preference to the shared dinner filters; the host can adjust it.
+  Selecting an NYC neighborhood closes its choices. In a room, the area stays a compact
+  summary until Change area is opened. Optional timers and host controls keep the group
+  moving; voter identities stay hidden by default.
 - Review the winner, ranked backups, directions, and past picks. Replay the same deck, excluding places the group marked to skip, or deal new
   places from the reserve. Widen the search when needed.
 - Small table, menu and map illustrations mark the lobby, waiting and no-match states;

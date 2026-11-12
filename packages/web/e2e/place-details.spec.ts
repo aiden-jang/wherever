@@ -173,6 +173,12 @@ test("the winner has its gallery, hours and contact details on the result page",
           name,
           photos,
           imageUrl: photos[0]!,
+          photoCredits: {
+            [photos[1]!]: [
+              { name: "Example contributor", url: "https://maps.google.com/contributor/example" },
+            ],
+          },
+          photoMapsUris: { [photos[1]!]: "https://maps.google.com/photo/example" },
           hours,
           address: "123 Dinner Lane",
           editorialSummary: "A quiet spot for dinner.",
@@ -195,6 +201,8 @@ test("the winner has its gallery, hours and contact details on the result page",
   await expect(page.getByRole("button", { name: /^See details for/ })).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByText("123 Dinner Lane", { exact: true })).toBeVisible();
+  await expect(page.getByText("A quiet spot for dinner.", { exact: true })).toBeHidden();
+  await page.getByText("Hours & place details", { exact: true }).click();
   await expect(page.getByText("A quiet spot for dinner.", { exact: true })).toBeVisible();
   await expect(page.getByText("Wheelchair-accessible", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "Call the place" })).toHaveAttribute(
@@ -208,6 +216,12 @@ test("the winner has its gallery, hours and contact details on the result page",
   await expect(page.getByRole("link", { name: "View on Google Maps" })).toBeVisible();
   await page.getByRole("button", { name: "Next photo" }).click();
   await expect(page.getByText("2 / 2", { exact: true })).toBeVisible();
+  await expect(page.getByText("Example contributor", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "View photos" }).click();
+  const viewer = page.getByRole("dialog", { name: `${name} photos` });
+  await expect(viewer.getByRole("link", { name: "Example contributor" })).toBeVisible();
+  await viewer.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("button", { name: "View photos" })).toBeFocused();
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const line of hours) await expect(page.getByText(line, { exact: true })).toBeVisible();

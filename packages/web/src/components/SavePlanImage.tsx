@@ -7,30 +7,34 @@ export function SavePlanImage({ restaurant, hostPicked }: { restaurant: Restaura
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   return (
-    <div>
-      <button
-        type="button"
-        disabled={busy}
-        className="w-full rounded-full border border-white/15 px-8 py-3 text-base font-semibold hover:bg-white/5 transition disabled:opacity-70"
-        onClick={async () => {
-          if (busy) return;
-          setBusy(true);
-          setMessage("");
-          try {
-            await saveDinnerImage(restaurant, hostPicked);
-            setMessage("Download started. The plan travels well.");
-          } catch {
-            setMessage("Couldn’t save the image. Try again, or send the plan above.");
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        {busy ? "Preparing image…" : "Save plan image"}
-      </button>
-      <p role="status" className="mt-2 text-center text-xs text-muted">
-        {message}
-      </p>
+    <div className="plan-image-actions">
+      <div className="plan-image-option">
+        <button
+          type="button"
+          disabled={busy}
+          className="min-h-11 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold hover:bg-white/5 transition disabled:opacity-70"
+          onClick={async () => {
+            if (busy) return;
+            setBusy(true);
+            setMessage("");
+            try {
+              await saveDinnerImage(restaurant, hostPicked);
+              setMessage("Download started. The plan travels well.");
+            } catch {
+              setMessage("Couldn’t save the image. Try again, or send the plan above.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Preparing image…" : "Save plan image"}
+        </button>
+        {message && (
+          <p role="status" className="mt-2 text-xs text-muted">
+            {message}
+          </p>
+        )}
+      </div>
       <SharePlanImage restaurant={restaurant} hostPicked={hostPicked} />
     </div>
   );

@@ -69,12 +69,13 @@ test("a typed town cannot be skipped when creating a room or starting a round", 
   });
   await expect(page.getByText(/^San Francisco, CA ·/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Done editing" })).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Change area", exact: true }).click();
   await page.getByRole("button", { name: "Change", exact: true }).click();
   const town = page.getByRole("textbox", { name: "ZIP code or town" });
   await town.fill("Boulder");
   await page.getByRole("button", { name: "Explore NYC" }).click();
   await expect(town).toBeHidden();
-  await expect(page.getByText(/^San Francisco, CA ·/)).toBeVisible();
+  await expect(page.getByText("Choose a new area", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start swiping" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Done editing" })).toBeDisabled();
   await page.getByRole("button", { name: "Back to ZIP or town" }).click();

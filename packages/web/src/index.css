@@ -2,6 +2,7 @@
 @import "./landing.css";
 @import "./dinner.css";
 @import "./flow.css";
+@import "./winner.css";
 
 .meal-artwork {
   display: block;

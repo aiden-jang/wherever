@@ -26,7 +26,7 @@ export function RoundAgain({
     );
   }
   return (
-    <div className="flex flex-col items-stretch gap-2">
+    <div className="round-again flex flex-col items-stretch gap-2">
       {resultError && (
         <p role="alert" className="text-sm text-flare">
           {resultError}

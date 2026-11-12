@@ -52,3 +52,30 @@ test("an available update waits for the create dialog to close", async ({ page, 
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByText("An update is ready.")).toBeVisible();
 });
+
+test("switching from an NYC neighborhood to town search clears its highlight before creating the room", async ({
+  page,
+}) => {
+  await page.route("**/api/geocode?*", (route) =>
+    route.fulfill({ json: { lat: 39.7, lng: -104.9, label: "Denver, CO" } }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start a session", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
+  await dialog.getByRole("button", { name: "Explore NYC" }).click();
+  await dialog.getByRole("button", { name: "West Village", exact: true }).click();
+  await dialog.getByRole("button", { name: "Search by ZIP or town" }).click();
+  await expect(dialog.getByText("West Village", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Create room" })).toBeDisabled();
+  await dialog.getByRole("textbox", { name: "ZIP code or town" }).fill("Denver");
+  await dialog.getByRole("button", { name: "Search", exact: true }).click();
+  const request = page.waitForRequest((candidate) => candidate.url().endsWith("/api/sessions"));
+  await dialog.getByRole("button", { name: "Create room" }).click();
+  const sent = (await request).postDataJSON().filters;
+  expect(sent.area).toBeUndefined();
+  expect(sent.locationLabel).toBe("Denver, CO");
+  await expect(page.getByRole("heading", { name: "Dinner room" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Explore NYC" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Change area" })).toBeVisible();
+});

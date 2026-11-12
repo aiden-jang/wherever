@@ -41,7 +41,8 @@ import {
 } from "./hostHandover.js";
 import { scrubLegacyPlaces } from "./roomPlaces.js";
 import { resolveIdentity } from "./roomIdentity.js";
-import { sendVibes, setVibe } from "./vibeTally.js";
+import { saveRoomFilters } from "./vibeFilters.js";
+import { restoreVibeFilters, sendVibes, setVibe } from "./vibeTally.js";
 import { attachmentsOn, broadcastTo, resultMessage, sendTo, broadcastSessionState } from "./roomSockets.js";
 import { presentHistory, readDeck, readDemoMode } from "./deckSource.js";
 import { sendResumedDeck, sendRoundPlace } from "./roundResume.js";
@@ -186,6 +187,7 @@ export class SessionRoom extends DurableObject<Env> {
       return sendTo(ws, { type: "error", message: "The deal is already in progress." });
     }
     await sendVibes(this.ctx, await setVibe(this.ctx.storage, att.participantId, vibe));
+    await broadcastSessionState(this.ctx);
   }
 
   private async handleSetFilters(ws: WebSocket, filters: SessionFilters): Promise<void> {
@@ -195,8 +197,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (this.rounds.transitioning) {
       return sendTo(ws, { type: "error", message: "The deal is already in progress." });
     }
-    meta.filters = filters;
-    await putLive(this.ctx.storage, { meta });
+    await saveRoomFilters(this.ctx.storage, filters);
     await broadcastSessionState(this.ctx);
   }
 
@@ -347,6 +348,7 @@ export class SessionRoom extends DurableObject<Env> {
     }
 
     sendTo(ws, { type: "identity", participantId: identity.participantId });
+    if (meta.status === "lobby" && !this.rounds.transitioning) await restoreVibeFilters(this.ctx.storage);
 
     await broadcastSessionState(this.ctx);
     if (meta.status === "lobby") await sendVibes(this.ctx);

@@ -7,6 +7,7 @@ import {
   PRICE_OPTIONS,
   RADIUS_OPTIONS,
   RATING_OPTIONS,
+  radiusLabel,
   SORT_OPTIONS,
   type AmenityKey,
   type PriceTier,
@@ -26,8 +27,10 @@ export function FilterFields({
   filters,
   onChange,
   onLocationStatusChange,
+  showLocation = true,
 }: {
   onLocationStatusChange?: (status: LocationStatus) => void;
+  showLocation?: boolean;
   filters: SessionFilters;
   onChange: (next: SessionFilters) => void;
 }) {
@@ -87,13 +90,19 @@ export function FilterFields({
   // How many hidden knobs are set away from their defaults, so a collapsed section still tells the
   // host something's active under there. (Rating + review-count moved out to the main filters.)
   const pickyCount =
-    ((filters.sort ?? "popularity") !== "popularity" ? 1 : 0) +
+    (filters.shuffle || (filters.sort ?? "popularity") !== "popularity" ? 1 : 0) +
     (filters.amenities?.length ?? 0) +
     (filters.excludedCategories?.length ?? 0);
 
   return (
     <div className="filter-fields flex flex-col gap-4">
-      <LocationPicker filters={filters} onChange={onChange} onLocationStatusChange={onLocationStatusChange} />
+      {showLocation && (
+        <LocationPicker
+          filters={filters}
+          onChange={onChange}
+          onLocationStatusChange={onLocationStatusChange}
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         <FieldLabel>Cravings (pick some, or leave it to fate)</FieldLabel>
@@ -131,7 +140,12 @@ export function FilterFields({
 
       <FilterChoices
         label="Distance"
-        options={RADIUS_OPTIONS.map(({ meters: value, label }) => ({ value, label }))}
+        options={[
+          ...RADIUS_OPTIONS.map(({ meters: value, label }) => ({ value, label })),
+          ...(RADIUS_OPTIONS.some((o) => o.meters === filters.radiusMeters)
+            ? []
+            : [{ value: filters.radiusMeters, label: radiusLabel(filters.radiusMeters) }]),
+        ]}
         value={filters.radiusMeters}
         onChange={(radiusMeters) => onChange({ ...filters, radiusMeters })}
       />
@@ -163,7 +177,12 @@ export function FilterFields({
 
       <FilterChoices
         label="Minimum rating"
-        options={RATING_OPTIONS}
+        options={[
+          ...RATING_OPTIONS,
+          ...(RATING_OPTIONS.some((o) => o.value === (filters.minRating ?? 0))
+            ? []
+            : [{ value: filters.minRating!, label: `${filters.minRating}+` }]),
+        ]}
         value={filters.minRating ?? 0}
         onChange={(minRating) => onChange({ ...filters, minRating })}
       />
@@ -274,11 +293,17 @@ export function FilterFields({
               <span className="text-xs text-muted">Anything you tap here won't show up.</span>
             </div>
 
-            <FilterChoices
+            <FilterChoices<"popularity" | "distance" | "shuffle">
               label="Order by"
-              options={SORT_OPTIONS}
-              value={filters.sort ?? "popularity"}
-              onChange={(sort) => onChange({ ...filters, sort })}
+              options={[...SORT_OPTIONS, { value: "shuffle", label: "Shuffle" }]}
+              value={filters.shuffle ? "shuffle" : (filters.sort ?? "popularity")}
+              onChange={(order) =>
+                onChange({
+                  ...filters,
+                  shuffle: order === "shuffle",
+                  sort: order === "shuffle" ? filters.sort : order,
+                })
+              }
             />
           </div>
         )}

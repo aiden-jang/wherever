@@ -146,7 +146,7 @@ export async function fetchFreshDeck({
 
   const reading = resolveVibe(vibeCounts);
   const preference = reading.vibe ? vibeOption(reading.vibe) : undefined;
-  const filters = preference?.filters.shuffle ? { ...meta.filters, shuffle: true } : meta.filters;
+  const filters = meta.filters;
 
   await assertRoomLive(storage);
   const results = await source.fetchDeck(filters);

@@ -66,8 +66,10 @@ client data authorize room operations.
 `restaurantSource.ts` owns source selection, transport, and source-independent
 filter predicates. `googlePlace.ts` normalizes provider fields and constructs
 validated photo references with author credits. `deckSource.ts` orders filtered
-places by the group’s vibe without removing explicit requirements. It also keeps
-track of past picks, exclusions, seen IDs, and the reserve.
+places by the group’s vibe after the room applies its winning preset to shared filters.
+Preset changes start from the pre-preset filters and preserve later host edits; clearing
+the last preference restores that base. Location and cuisines survive every preset.
+The deck source also tracks past picks, exclusions, seen IDs, and the reserve.
 
 A new round uses reserve data before another search. Exhausting the reserve widens
 the radius; failure preserves the current result and permits retry. Same-deck

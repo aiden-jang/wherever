@@ -24,7 +24,7 @@ export function VisitedHistory({
     await share({ title: "Wherever past picks", text });
   };
   return (
-    <div className="mt-10 text-left">
+    <div className="visited-history mt-10 text-left">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-muted uppercase tracking-wider">Past picks</h3>
         <button

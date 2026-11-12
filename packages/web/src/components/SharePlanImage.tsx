@@ -38,11 +38,11 @@ export function SharePlanImage({
   }, [restaurant, hostPicked]);
   if (!ready || ready.restaurant !== restaurant) return null;
   return (
-    <div className="mt-3">
+    <div className="plan-image-option">
       <button
         type="button"
         disabled={busy}
-        className="w-full rounded-full border border-white/15 px-8 py-3 text-base font-semibold hover:bg-white/5 transition disabled:opacity-70"
+        className="min-h-11 rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold hover:bg-white/5 transition disabled:opacity-70"
         onClick={async () => {
           if (sharing.current) return;
           sharing.current = true;
@@ -62,9 +62,11 @@ export function SharePlanImage({
       >
         {busy ? "Opening share sheet…" : "Share plan image"}
       </button>
-      <p role="status" className="mt-2 text-center text-xs text-muted">
-        {message}
-      </p>
+      {message && (
+        <p role="status" className="mt-2 text-xs text-muted">
+          {message}
+        </p>
+      )}
     </div>
   );
 }

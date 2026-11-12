@@ -109,6 +109,11 @@
 .photo-viewer .detail-photo img {
   object-fit: contain;
 }
+@media (max-width: 899px) and (max-height: 760px) {
+  .winner-page .ticket-photo {
+    height: clamp(128px, 24dvh, 180px);
+  }
+}
 @media (min-width: 900px) {
   .winner-page .dinner-ticket {
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);

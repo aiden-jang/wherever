@@ -46,9 +46,7 @@ export function DirectionsDialog({
 }) {
   return (
     <Modal title="How are we getting there?" onClose={onClose}>
-      <p className="text-sm leading-relaxed text-muted">
-        Pick the map app you already trust with the aux cord.
-      </p>
+      <p className="text-sm leading-relaxed text-muted">Choose a map app for directions.</p>
       {restaurant.address && (
         <p className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-cream/90">
           {restaurant.address}

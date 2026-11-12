@@ -19,7 +19,7 @@ export function SavePlanImage({ restaurant, hostPicked }: { restaurant: Restaura
             setMessage("");
             try {
               await saveDinnerImage(restaurant, hostPicked);
-              setMessage("Download started. The plan travels well.");
+              setMessage("Download started.");
             } catch {
               setMessage("Couldn’t save the image. Try again, or send the plan above.");
             } finally {

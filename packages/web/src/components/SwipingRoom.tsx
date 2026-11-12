@@ -129,15 +129,13 @@ export function SwipingRoom({
       ) : deck ? (
         <div className="text-center max-w-sm">
           <PlateState art="search" />
-          <h1 className="mt-4 font-display text-state font-bold">Nothing survived the filters.</h1>
-          <p className="mt-2 text-muted">
-            Your standards met this neighborhood and won. Try again with a wider radius or fewer filters.
-          </p>
+          <h1 className="mt-4 font-display text-state font-bold">No places match these filters.</h1>
+          <p className="mt-2 text-muted">Try a wider area or fewer filters.</p>
           <Link
             to="/"
             className="mt-8 inline-block rounded-full bg-ember px-8 py-3 text-lg font-semibold text-ink hover:brightness-110 transition"
           >
-            Start a fresh session
+            Create a new room
           </Link>
         </div>
       ) : (

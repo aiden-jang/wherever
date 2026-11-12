@@ -11,6 +11,7 @@ export interface SwipeAnnouncement {
   /** 1-based position of `next` in the deck. */
   position: number;
   total: number;
+  groupRound?: boolean;
 }
 
 function verb(a: SwipeAnnouncement): string {
@@ -21,11 +22,12 @@ function verb(a: SwipeAnnouncement): string {
 
 export function swipeAnnouncement(a: SwipeAnnouncement): string {
   const done = `${verb(a)}.`;
-  if (!a.next) return `${done} That is all of them. Waiting on everyone else.`;
+  if (!a.next)
+    return `${done} Your votes are in. ${a.groupRound === false ? "Choosing your dinner." : "Waiting for the group."}`;
   return `${done} Next, ${a.next}. ${a.position} of ${a.total}.`;
 }
 
 /** Undo puts a card back, which is just as invisible without saying so. */
 export function undoAnnouncement(name: string, position: number, total: number): string {
-  return `Took that back. ${name} again. ${position} of ${total}.`;
+  return `Vote undone. ${name} again. ${position} of ${total}.`;
 }

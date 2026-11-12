@@ -82,7 +82,7 @@ describe("reading the group", () => {
 
 describe("what the lobby says", () => {
   it("asks for a first pick when there is nothing to report", () => {
-    expect(vibeReadingLine(resolveVibe({}), 4)).toBe("No vibe yet. Somebody has to go first.");
+    expect(vibeReadingLine(resolveVibe({}), 4)).toBe("Pick a mood for dinner.");
   });
 
   // `votes === total` is true the instant the first person picks, and reads as five people agreeing.
@@ -92,7 +92,9 @@ describe("what the lobby says", () => {
   });
 
   it("does not congratulate one person for agreeing with themselves", () => {
-    expect(vibeReadingLine(resolveVibe({ cozy: 1 }), 1)).not.toMatch(/unanimous/i);
+    const said = vibeReadingLine(resolveVibe({ cozy: 1 }), 1);
+    expect(said).not.toMatch(/unanimous|nobody has argued|group/i);
+    expect(said).toBe("cozy it is.");
   });
 
   it("admits it when the group is split, and says what it did about it", () => {

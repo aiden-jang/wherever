@@ -38,7 +38,7 @@ export async function createSession(
   if (!res.ok) {
     // Surface the server's specific reason (rate limit, bad setup) instead of a generic one.
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? "Couldn't start the session. Give it another shot.");
+    throw new Error(body?.error ?? "Couldn’t create the room. Try again.");
   }
   const data = (await res.json()) as { code: string };
   rememberClientId(data.code, clientId);

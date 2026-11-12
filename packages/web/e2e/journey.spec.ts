@@ -99,7 +99,7 @@ test("a second person joins and participates in a shared anonymous round", async
     const friend = await guest.newPage();
     await friend.goto(`/s/${code}`);
     await friend.getByRole("textbox", { name: "Your name" }).fill("Alex");
-    await friend.getByRole("button", { name: "Join the session" }).click();
+    await friend.getByRole("button", { name: "Join room" }).click();
     await expect(page.getByText("2 people", { exact: true })).toBeVisible();
     await expect(friend.getByText("You’re in. Waiting on the host.")).toBeInViewport({ ratio: 1 });
     await expect(friend.getByRole("button", { name: "Start swiping", exact: true })).toHaveCount(0);
@@ -122,7 +122,7 @@ test("a second person joins and participates in a shared anonymous round", async
     await expect(friend.getByText(/Place 2 of \d+/)).toBeVisible();
     await friend.reload();
     await expect(friend.getByText(/Place 2 of \d+/)).toBeVisible();
-    await page.getByRole("button", { name: "just decide now" }).click();
+    await page.getByRole("button", { name: "Decide now" }).click();
     await page.getByRole("button", { name: "Decide anyway" }).click();
     await expect(friend.getByRole("heading", { name: /Dinner is handled/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Dinner is handled/ })).toHaveText(
@@ -144,10 +144,8 @@ test("landing dialogs remain readable and keep keyboard focus at narrow widths",
     await trigger.click();
     const dialog = page.getByRole("dialog", { name: "Got a code?" });
     await dialog.getByRole("textbox", { name: "Your name" }).fill("Sam");
-    await dialog
-      .getByRole("textbox", { name: "Session code" })
-      .fill("https://wherever.aidenjang.com/s/ABCDEF");
-    await expect(dialog.getByRole("textbox", { name: "Session code" })).toHaveValue("ABCDEF");
+    await dialog.getByRole("textbox", { name: "Room code" }).fill("https://wherever.aidenjang.com/s/ABCDEF");
+    await expect(dialog.getByRole("textbox", { name: "Room code" })).toHaveValue("ABCDEF");
     await audit(page);
     for (let i = 0; i < 8; i++) {
       await page.keyboard.press("Tab");
@@ -164,7 +162,7 @@ test("unknown routes and invalid session codes provide a way home", async ({ pag
   await audit(page);
   await page.goto("/s/ABCDEF");
   await page.getByRole("textbox", { name: "Your name" }).fill("Sam");
-  await page.getByRole("button", { name: "Join the session" }).click();
+  await page.getByRole("button", { name: "Join room" }).click();
   await expect(page.getByRole("heading", { name: "This code leads nowhere." })).toBeVisible();
   await audit(page);
   await page.getByRole("link", { name: "Back to home" }).click();
@@ -176,8 +174,8 @@ test("a failed create stays in one recoverable dialog and preserves the name", a
     route.fulfill({ status: 503, json: { error: "Restaurant setup is unavailable. Try again." } }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await page.getByRole("button", { name: "Create a room", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Create a room" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Sam");
   await dialog.getByRole("button", { name: "Create room" }).click();
   await expect(dialog.getByRole("alert")).toHaveText("Restaurant setup is unavailable. Try again.");
@@ -225,8 +223,8 @@ test("closing creation cancels its pending request and ignores a late response",
   });
   try {
     await page.goto("/");
-    await page.getByRole("button", { name: "Start a session", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Start a session" });
+    await page.getByRole("button", { name: "Create a room", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Create a room" });
     await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
     await dialog.getByRole("button", { name: "Create room" }).click();
     await requestStarted;

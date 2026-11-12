@@ -42,7 +42,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-function setup(place = restaurant) {
+function setup(place = restaurant, support = { rightSwipes: 1, totalParticipants: 1 }) {
   const onAgain = vi.fn(),
     onEditSearch = vi.fn(),
     onChooseAlternative = vi.fn();
@@ -52,8 +52,8 @@ function setup(place = restaurant) {
         match={{
           kind: "match",
           restaurant: place,
-          rightSwipes: 1,
-          totalParticipants: 1,
+          rightSwipes: support.rightSwipes,
+          totalParticipants: support.totalParticipants,
           vetoedCount: 0,
           tiedWith: 0,
           vetoedTop: false,
@@ -78,6 +78,11 @@ function setup(place = restaurant) {
   );
   return { onAgain, onEditSearch, onChooseAlternative };
 }
+it("does not describe a score winner as everyone agreeing", () => {
+  setup(restaurant, { rightSwipes: 1, totalParticipants: 4 });
+  expect(screen.getByText("Highest score.")).toBeTruthy();
+  expect(screen.queryByText("Everyone said yes.")).toBeNull();
+});
 it("keeps the winner free of credits and opens the selected photo in a credited viewer", () => {
   setup();
   expect(screen.queryByText("First author")).toBeNull();
@@ -118,7 +123,7 @@ it("offers open backups without celebrating a closed winner", () => {
   const { onChooseAlternative } = setup({ ...restaurant, openNow: false });
   expect(screen.getByRole("heading", { name: /One catch: the hours/ })).toBeTruthy();
   expect(play).not.toHaveBeenCalledWith("match");
-  expect(screen.getByText("The doors are shut. Try a backup.").closest("details")!.open).toBe(true);
+  expect(screen.getByText("This place is unavailable. Try a backup.").closest("details")!.open).toBe(true);
   fireEvent.click(screen.getByRole("button", { name: "Make Plan A: Backup Spot" }));
   expect(onChooseAlternative).toHaveBeenCalledWith("backup");
 });

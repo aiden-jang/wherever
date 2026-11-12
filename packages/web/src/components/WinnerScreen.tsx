@@ -185,8 +185,10 @@ export function WinnerScreen({
           </details>
         </div>
         <aside className="table-rail winner-rail" aria-label="Round details">
-          <h2 className="font-display text-lg font-bold">Still negotiating?</h2>
-          <p className="mb-4 mt-1 text-sm text-muted">The group chat lives to eat another day.</p>
+          <h2 className="font-display text-lg font-bold">Another round?</h2>
+          <p className="mb-4 mt-1 text-sm text-muted">
+            {isHost ? "Try new places or vote on these again." : "The host can start another round."}
+          </p>
           <RoundAgain
             isHost={isHost}
             online={online}

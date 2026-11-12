@@ -55,7 +55,7 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
     } catch (err) {
       if (!alive.current) return;
       createRequest.current = null;
-      setError(err instanceof Error ? err.message : "Something broke. Probably not you.");
+      setError(err instanceof Error ? err.message : "Couldn’t create the room. Try again.");
       setBusy(false);
     }
   }
@@ -99,7 +99,7 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
         disabled={!canCreate}
         className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
       >
-        {busy ? "Creating room…" : locationStatus === "searching" ? "Finding your location…" : "Create room"}
+        {busy ? "Creating room…" : locationStatus === "searching" ? "Finding an area…" : "Create room"}
       </button>
     </form>
   );
@@ -156,10 +156,10 @@ function JoinForm({ openRoom, initialCode }: { openRoom: (code: string) => void;
       </label>
       {/* No maxLength: a pasted invite link has to arrive whole for the parser to find the code in it. */}
       <label className="flex flex-col gap-2">
-        <FieldLabel>Session code</FieldLabel>
+        <FieldLabel>Room code</FieldLabel>
         <input
           className={`${inputClass} tracking-[0.4em] uppercase`}
-          aria-label="Session code"
+          aria-label="Room code"
           name="code"
           placeholder="e.g. ABCDEF…"
           // Not a field any password manager or address book has a value for.
@@ -178,7 +178,7 @@ function JoinForm({ openRoom, initialCode }: { openRoom: (code: string) => void;
         disabled={!name.trim() || !isCompleteCode(code)}
         className="rounded-2xl border border-white/15 px-6 py-3 text-lg font-semibold disabled:opacity-50 hover:bg-white/5 transition"
       >
-        Join
+        Join room
       </button>
       {canScan ? (
         <button
@@ -186,7 +186,7 @@ function JoinForm({ openRoom, initialCode }: { openRoom: (code: string) => void;
           onClick={() => setScanning(true)}
           className="text-sm text-muted transition hover:text-cream"
         >
-          Or point your camera at their code
+          Scan a QR code
         </button>
       ) : null}
     </form>
@@ -235,7 +235,7 @@ export default function Landing({ needsRoomReload }: { needsRoomReload: () => bo
           <p className="landing-description">
             Pick somewhere to eat. Together. Swipe on nearby restaurants and let the group decide.
           </p>
-          <p className="landing-aside">“Anything is fine” has entered the chat. Again.</p>
+          <p className="landing-aside">“Anything is fine.” Exceptions apply.</p>
           <div className="landing-actions">
             <button
               type="button"
@@ -245,7 +245,7 @@ export default function Landing({ needsRoomReload }: { needsRoomReload: () => bo
               }}
               className="landing-start"
             >
-              Start a session <span aria-hidden>↗</span>
+              Create a room <span aria-hidden>↗</span>
             </button>
             <button
               type="button"
@@ -258,7 +258,7 @@ export default function Landing({ needsRoomReload }: { needsRoomReload: () => bo
               Join with a code <span aria-hidden>→</span>
             </button>
           </div>
-          <p className="landing-footnote">No accounts. Just names and questionable taste.</p>
+          <p className="landing-footnote">No account needed. Just a name.</p>
         </section>
         <section aria-label="Interactive example of restaurant voting">
           <LandingPreview suspended={modal !== null} />
@@ -275,12 +275,12 @@ export default function Landing({ needsRoomReload }: { needsRoomReload: () => bo
         <div className="how-step">
           <span className="step-number">01</span>
           <h2>Gather the hungry.</h2>
-          <p>Start a session and share the code. Everyone gets the same deck.</p>
+          <p>Create a room and share the code or link. Everyone gets the same restaurants.</p>
         </div>
         <div className="how-step">
           <span className="step-number">02</span>
-          <h2>Have a tiny opinion.</h2>
-          <p>Swipe yes or nope. One veto each, for your personal food nemesis.</p>
+          <h2>Pick your favorites.</h2>
+          <p>Swipe yes or nope. Each person gets one veto and one super-like per round.</p>
         </div>
         <div className="how-step">
           <span className="step-number">03</span>
@@ -292,7 +292,7 @@ export default function Landing({ needsRoomReload }: { needsRoomReload: () => bo
       </section>
 
       {modal === "create" && (
-        <Modal title="Start a session" onClose={() => setModal(null)}>
+        <Modal title="Create a room" onClose={() => setModal(null)}>
           <CreateForm openRoom={openRoom} />
         </Modal>
       )}

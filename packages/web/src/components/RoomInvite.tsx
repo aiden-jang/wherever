@@ -67,7 +67,7 @@ export function RoomInvite({ code }: { code: string }) {
       </p>
       {inviteStatus === "failed" &&
         (lastAction === "code" ? (
-          <CopyFallback label="Session code to copy" text={code} />
+          <CopyFallback label="Room code to copy" text={code} />
         ) : (
           <CopyFallback label="Invite link to copy" text={invite} />
         ))}

@@ -175,7 +175,7 @@ describe("session socket ownership", () => {
     act(() => newest().open());
     act(() => newest().message({ type: "session_state", session: session("ABCDEF") }));
     expect(hook.result.current.session?.code).toBe("ABCDEF");
-    act(() => newest().close(1008, "This room has expired. Start a new plan."));
+    act(() => newest().close(1008, "This room has expired. Create a new room."));
     act(() => hook.result.current.send({ type: "start_round" }));
     act(() => {
       window.dispatchEvent(new Event("online"));

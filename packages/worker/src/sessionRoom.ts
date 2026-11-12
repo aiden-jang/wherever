@@ -184,7 +184,7 @@ export class SessionRoom extends DurableObject<Env> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "lobby") return;
     if (this.rounds.transitioning) {
-      return sendTo(ws, { type: "error", message: "The deal is already in progress." });
+      return sendTo(ws, { type: "error", message: "A round is already starting." });
     }
     await sendVibes(this.ctx, await setVibe(this.ctx.storage, att.participantId, vibe));
     await broadcastSessionState(this.ctx);
@@ -195,7 +195,7 @@ export class SessionRoom extends DurableObject<Env> {
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "lobby") return;
     if (this.rounds.transitioning) {
-      return sendTo(ws, { type: "error", message: "The deal is already in progress." });
+      return sendTo(ws, { type: "error", message: "A round is already starting." });
     }
     await saveRoomFilters(this.ctx.storage, filters);
     await broadcastSessionState(this.ctx);
@@ -222,14 +222,14 @@ export class SessionRoom extends DurableObject<Env> {
      limited on the server, because a button you can hold down is not a rate limit. */
   private async handleNudge(ws: WebSocket): Promise<void> {
     if (!(await isRoomHost(this.ctx, ws))) {
-      return sendTo(ws, { type: "error", message: "Only the host can hurry people along." });
+      return sendTo(ws, { type: "error", message: "Only the host can send a nudge." });
     }
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "swiping") return;
 
     const last = (await this.ctx.storage.get<number>("lastNudge")) ?? 0;
     if (Date.now() - last < NUDGE_COOLDOWN_MS) {
-      return sendTo(ws, { type: "error", message: "Give them a moment. You just did that." });
+      return sendTo(ws, { type: "error", message: "A nudge was just sent. Try again shortly." });
     }
     await putLive(this.ctx.storage, { lastNudge: Date.now() });
 
@@ -324,7 +324,7 @@ export class SessionRoom extends DurableObject<Env> {
     if (!meta) {
       return sendTo(ws, {
         type: "error",
-        message: "That session does not exist.",
+        message: "That room does not exist.",
       });
     }
 

@@ -31,7 +31,7 @@ test("the invite keeps Back history and confirms the latest copy action", async 
 
 test("an available update waits for the create dialog to close", async ({ page, baseURL }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session", exact: true }).click();
+  await page.getByRole("button", { name: "Create a room", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Unsubmitted name");
   let checks = 0;
@@ -60,8 +60,8 @@ test("switching from an NYC neighborhood to town search clears its highlight bef
     route.fulfill({ json: { lat: 39.7, lng: -104.9, label: "Denver, CO" } }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await page.getByRole("button", { name: "Create a room", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Create a room" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   const area = dialog.getByRole("status");
   await expect(area).toContainText("Search area: New York City");

@@ -83,7 +83,7 @@ describe("running it back", () => {
         }
       });
       const error = await h.waitFor("error");
-      expect(error.message).toBe("couldn't load restaurants right now. give it a moment and try again.");
+      expect(error.message).toBe("Couldn’t load restaurants. Try again shortly.");
       expect(error.message).not.toContain("deck_load_test_failure");
       expect((await h.waitFor("deck")).restaurants.length).toBeGreaterThan(0);
     } finally {

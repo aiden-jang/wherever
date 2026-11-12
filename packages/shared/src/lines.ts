@@ -1,9 +1,4 @@
-/*
- * Every waiting or turning point in the app says something, in one voice, from one place.
- *
- * The landing had a rotating set of these and nowhere else did, so the app opened funny and then went
- * quiet exactly where a group is most bored: dealing, waiting on the slow one, and a dead tie.
- */
+/* Short supporting lines stay factual about the state and leave the joke on dinner indecision. */
 
 export type Moment =
   /** The landing page, under the buttons. */
@@ -27,69 +22,58 @@ export type Moment =
 
 const LINES: Record<Moment, readonly string[]> = {
   landing: [
-    "It's going to be tacos. It's always tacos. Vote anyway.",
-    "You have a favorite. Say it with a swipe.",
-    "The group chat: 200 messages, zero decisions.",
-    "Someone will say 'I'm easy.' They are lying.",
-    "Nobody's driving 40 minutes. Be honest.",
-    "'Anywhere is fine.' Cool. We'll pick for you.",
-    "You already know. Just swipe.",
-    "Democracy, for dinner. Keep up.",
-    "The vegetarian remembers last time.",
-    "You're hungry and stalling. Iconic.",
-    "Whoever picked last time doesn't get a vote. Kidding. Mostly.",
-    "Six good options. You'll still say 'idk.'",
-    "This took your group 45 minutes last time. Not tonight.",
+    "'Anything is fine.' Exceptions apply.",
+    "Dinner plans. Some assembly required.",
+    "The group chat has enough messages.",
+    "An opinion is all you need to bring.",
   ],
   dealing: [
-    "Finding places you'll still complain about...",
-    "Shuffling. No, you can't see them yet.",
-    "Finding places that are actually open.",
-    "Dealing. Try to have an opinion ready.",
-    "Pulling the deck. Nobody has ruined it yet.",
+    "Finding options. Opinions to follow.",
+    "Looking for somewhere to eat.",
+    "A few places to consider.",
+    "Putting the next round together.",
   ],
   waiting: [
-    "Your votes are in. Now we wait on everyone else. The longest part.",
-    "You're done. Somebody is still reading the menu.",
-    "Everyone's waiting on one person. It's never you, apparently.",
-    "Your votes are in. The slow one knows what they did.",
-    "Done. Now we find out who takes dinner seriously.",
+    "Your votes are in. Other opinions are still pending.",
+    "You're done. Dinner is still being discussed.",
+    "Votes submitted. The menu research continues.",
+    "Your part is done. The group is still deciding.",
   ],
   nudged: [
-    "Everyone is waiting on you. No pressure.",
     "The group would like a decision this evening.",
-    "You are the slow one. It has been noticed.",
-    "Still you. Swipe something.",
+    "The round is still open. Have your say.",
+    "A little nudge. Dinner is still on the agenda.",
+    "Your next vote would be welcome.",
   ],
   quiet: [
-    "No votes yet. The deliberation is intense.",
-    "Nothing yet. Everyone is reading every single menu.",
-    "Zero votes. Riveting stuff so far.",
-    "No votes yet. Somebody go first, it's allowed.",
+    "No votes yet. An unusually diplomatic group.",
+    "No votes yet. Keeping the options open.",
+    "No votes yet. Plenty to consider.",
+    "No votes yet. Dinner is still a possibility.",
   ],
   vetoSpent: [
-    "One veto a round, and you already used yours.",
-    "You killed something already. One per customer.",
-    "Your veto is spent. That was your one act of violence.",
-    "Already vetoed tonight. The rest you have to argue for.",
+    "Veto used. Regular disapproval is still available.",
+    "One veto per round. Yours is already in.",
+    "Veto already used. Nope is still an option.",
+    "Veto used. The rest get a regular vote.",
   ],
   superSpent: [
-    "One super-like a round. Yours is already out there.",
-    "You only get the one star. It has been given.",
-    "Super-like spent. Everything else gets a normal opinion.",
-    "That star is gone. Champion something else the hard way.",
+    "Super-like used. A regular yes still counts.",
+    "One super-like per round. Yours is already in.",
+    "Super-like already used. More favorites are allowed.",
+    "Super-like used. Still plenty of room for a yes.",
   ],
   solo: [
     "Your call. Dinner is handled.",
-    "Table for one opinion. It happens to be the only one.",
-    "No committee, no argument. Straight to dinner.",
     "You voted, you won. Landslide.",
+    "One opinion. One dinner plan.",
+    "The vote is in. Very efficient.",
   ],
   tie: [
     "Dead tie. Of course it is.",
-    "A tie. Nobody wanted to be decisive tonight.",
-    "Level. This is what democracy gets you.",
-    "Tied. Somebody could have just picked.",
+    "A tie. Plenty of support to go around.",
+    "Same score. Dinner remains a close contest.",
+    "Even on points. A familiar situation.",
   ],
 };
 

@@ -30,10 +30,8 @@ export class ErrorBoundary extends Component<Props, State> {
       <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
         <div className="table-panel max-w-sm">
           <PlateState />
-          <h1 className="mt-4 font-display text-state font-bold">Well, that broke.</h1>
-          <p className="mt-3 text-muted">
-            Something went wrong loading the app. Try reloading. The dinner debate can wait a second.
-          </p>
+          <h1 className="mt-4 font-display text-state font-bold">Couldn’t load the app.</h1>
+          <p className="mt-3 text-muted">Something went wrong loading the app. Reload to try again.</p>
           <button
             type="button"
             onClick={() => location.reload()}

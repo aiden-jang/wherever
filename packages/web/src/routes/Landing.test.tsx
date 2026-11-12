@@ -59,9 +59,7 @@ it("waits for an explicitly requested location before allowing creation", async 
   setup();
   fireEvent.click(screen.getByRole("button", { name: /Near me/ }));
   expect(getLocation).toHaveBeenCalledTimes(1);
-  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Finding your location…" }).disabled).toBe(
-    true,
-  );
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Finding an area…" }).disabled).toBe(true);
   resolve({ lat: 42, lng: -71 });
   await waitFor(() =>
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "Create room" }).disabled).toBe(false),

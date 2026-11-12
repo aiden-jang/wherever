@@ -195,11 +195,12 @@ export function SwipeDeck({
           next: restaurants[next]?.name ?? null,
           position: next + 1,
           total: restaurants.length,
+          groupRound,
         }),
       );
       setIndex(next);
     },
-    [disabled, restaurants, onSwipe, onAnnounce, dismissHint, nextUnvoted],
+    [disabled, restaurants, onSwipe, onAnnounce, dismissHint, nextUnvoted, groupRound],
   );
 
   const undoButton = useRef<HTMLButtonElement>(null);
@@ -322,7 +323,7 @@ export function SwipeDeck({
         {/* Reserve one feedback slot so vote controls stay under the user’s finger. */}
         <p className={`table-vote-feedback ${spentNote ? "table-vote-warning" : ""}`} aria-live="polite">
           {spentNote ??
-            (showHint && !active.detailsStatus ? "Swipe or tap a vote. Tap the card for details." : "")}
+            (showHint && !active.detailsStatus ? "Swipe or tap a vote. Open Details for more." : "")}
         </p>
       </div>
 

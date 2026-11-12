@@ -19,13 +19,13 @@ export function VerdictNotes({
       )}
       {/* A winner carried by one super-like shows fewer right-swipes than the place it beat, so
         without this the tally looks broken rather than weighted. No name: it is still a vote. */}
-      {superTipped && <p className="mt-1 text-sm text-acid">⭐ A super-like tipped it past the headcount.</p>}
+      {superTipped && <p className="mt-1 text-sm text-acid">⭐ A super-like made the difference.</p>}
       {/* Only once the group has genuinely laboured. Round 1 is just dinner; saying "round 1" about
         it would be noise, and the joke below only earns itself if the number is real. */}
       {round >= 2 && (
         <p className="mt-1 text-sm italic text-muted">
           {round >= 4
-            ? `${round} rounds to pick one place. The group chat would have been faster.`
+            ? `Round ${round}. A well-considered dinner.`
             : `Round ${round}. Worth the wait, presumably.`}
         </p>
       )}

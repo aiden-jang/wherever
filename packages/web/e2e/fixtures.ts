@@ -38,8 +38,8 @@ export async function audit(page: Page) {
 
 export async function createRoom(page: Page, name = "Alex") {
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await page.getByRole("button", { name: "Create a room", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Create a room" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill(name);
   await dialog.getByRole("button", { name: "Create room" }).click();
   await expect(page.getByRole("heading", { name: "Dinner room" })).toBeVisible();

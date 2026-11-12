@@ -16,7 +16,7 @@ export function DisconnectBanner({ reconnecting }: { reconnecting: boolean }) {
   }
   return (
     <div role="status" className="room-connection bg-flare text-sm font-medium text-ink">
-      Still can&apos;t reach the session.{" "}
+      Still can&apos;t reach the room.{" "}
       <button
         type="button"
         onClick={() => location.reload()}

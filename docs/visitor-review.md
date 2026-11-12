@@ -6,7 +6,7 @@ ask participants to share real locations or private dinner history in recordings
 
 ## Tasks to give a visitor
 
-1. Start a session for dinner. Notice whether they understand that no account is
+1. Create a room for dinner. Notice whether they understand that no account is
    needed, where the search is centered, and which location is active.
 2. Invite another person. Let them choose the code, link, or QR. Check that the
    second person knows which name and code to enter without coaching.

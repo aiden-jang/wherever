@@ -270,7 +270,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           Dinner room
         </h1>
         <p className="text-sm text-muted">
-          {isHost ? "You’re hosting. Start when your group is ready." : "You’re in. Waiting on the host."}
+          {isHost ? "You’re hosting. Start whenever you’re ready." : "You’re in. Waiting on the host."}
         </p>
         {!isHost && !hostPresent && (
           <p className="mt-2 text-sm text-muted">
@@ -348,8 +348,8 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               ) : (
                 <p className="text-muted text-sm">
                   {status === "connecting"
-                    ? "Finding your people…"
-                    : "Just you so far. That code won't share itself."}
+                    ? "Loading the room…"
+                    : "Invite someone with the room code or link."}
                 </p>
               )}
             </div>

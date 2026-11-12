@@ -5,7 +5,7 @@ import type { Env } from "./env.js";
 import type { SessionMeta } from "./roomState.js";
 
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-export const EXPIRED_ROOM_REASON = "This room has expired. Start a new plan.";
+export const EXPIRED_ROOM_REASON = "This room has expired. Create a new room.";
 
 export class ExpiredRoomError extends Error {
   constructor() {

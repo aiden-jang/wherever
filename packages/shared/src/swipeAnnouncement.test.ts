@@ -37,12 +37,18 @@ describe("what a vote says out loud", () => {
 
   it("says the deck is finished instead of naming a card that is not there", () => {
     const said = swipeAnnouncement({ ...base, next: null });
-    expect(said).toBe("Liked Joe's Pizza. That is all of them. Waiting on everyone else.");
+    expect(said).toBe("Liked Joe's Pizza. Your votes are in. Waiting for the group.");
     expect(said).not.toContain("of 19");
   });
 
   it("says an undo out loud too", () => {
-    expect(undoAnnouncement("Joe's Pizza", 1, 19)).toBe("Took that back. Joe's Pizza again. 1 of 19.");
+    expect(undoAnnouncement("Joe's Pizza", 1, 19)).toBe("Vote undone. Joe's Pizza again. 1 of 19.");
+  });
+
+  it("does not tell a solo voter to wait for other people", () => {
+    const said = swipeAnnouncement({ ...base, next: null, groupRound: false });
+    expect(said).toContain("Choosing your dinner.");
+    expect(said).not.toMatch(/group|everyone else/i);
   });
 
   it("always ends a sentence, so a screen reader pauses rather than running on", () => {

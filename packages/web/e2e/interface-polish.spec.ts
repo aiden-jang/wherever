@@ -54,8 +54,8 @@ test("photo controls are explicit and undo keeps the vote controls steady", asyn
   });
   await createRoom(page);
   await page.getByRole("button", { name: "Start swiping", exact: true }).click();
-  await expect(page.getByRole("button", { name: "hurry them" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "just decide now" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Send a nudge" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Decide now" })).toHaveCount(0);
   await expect(page.getByText("0 of 1 done")).toHaveCount(0);
   const shortcuts = page.getByText("Shortcuts", { exact: true });
   const passShortcut = page.getByText(/^←\s*pass$/);
@@ -66,7 +66,7 @@ test("photo controls are explicit and undo keeps the vote controls steady", asyn
   await page.keyboard.press("Enter");
   await expect(passShortcut).toBeHidden();
   const yes = page.getByRole("button", { name: "Yes, please", exact: true });
-  const veto = page.getByRole("button", { name: "Veto (one per round, kills it outright)" });
+  const veto = page.getByRole("button", { name: "Veto (one per round, removes this place for everyone)" });
   const first = await veto.boundingBox();
   await page.getByRole("button", { name: "Next photo, 1 of 2" }).click();
   await page.getByRole("button", { name: "Previous photo, 2 of 2" }).click();

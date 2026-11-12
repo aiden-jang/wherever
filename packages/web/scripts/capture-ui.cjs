@@ -158,8 +158,8 @@ async function setup(page, name) {
   const atHome = ["landing", "create", "join", "create-error", "location-error", "qr-error"].includes(name);
   await page.goto(new URL(atHome ? "/" : "/s/ABCDEF", base).href);
   if (["create", "create-error", "location-error"].includes(name)) {
-    await page.getByRole("button", { name: "Start a session", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Start a session" });
+    await page.getByRole("button", { name: "Create a room", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Create a room" });
     await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
     if (name === "create-error") {
       await dialog.getByRole("button", { name: "Create room" }).click();

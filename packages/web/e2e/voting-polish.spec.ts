@@ -10,13 +10,13 @@ test("one step of Undo survives reconnect and keyboard votes focus the matching 
     const guest = await context.newPage();
     await guest.goto(`/s/${code}`);
     await guest.getByRole("textbox", { name: "Your name" }).fill("Guest");
-    await guest.getByRole("button", { name: "Join the session" }).click();
+    await guest.getByRole("button", { name: "Join room" }).click();
     await expect(page.getByText("2 people", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Start swiping", exact: true }).click();
     await expect(page.getByText("0 of 2 done")).toBeVisible();
-    await expect(page.getByRole("button", { name: "hurry them" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "just decide now" })).toBeVisible();
-    await expect(guest.getByRole("button", { name: "hurry them" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Send a nudge" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Decide now" })).toBeVisible();
+    await expect(guest.getByRole("button", { name: "Send a nudge" })).toHaveCount(0);
     const nope = page.getByRole("button", { name: "Nope", exact: true });
     await nope.click();
     await page.keyboard.press("ArrowRight");

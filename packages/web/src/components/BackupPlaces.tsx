@@ -31,7 +31,7 @@ export function BackupPlaces({
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:content-none">
         <span className="min-w-0">
           <span className="block text-sm font-semibold text-cream">
-            {unavailable ? "The doors are shut. Try a backup." : "If the wait is ridiculous"}
+            {unavailable ? "This place is unavailable. Try a backup." : "Other options"}
           </span>
           <span className="block text-xs text-muted [overflow-wrap:anywhere]">
             Plan B: {alternatives[0]!.restaurant.name}

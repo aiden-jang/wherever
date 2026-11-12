@@ -72,7 +72,7 @@ test("the first visit is enough to reopen the landing page offline", async ({ pa
     setOffline(true);
     await page.goto(`${origin}/?reopen`);
     await expect(heading).toBeVisible();
-    await expect(page.getByRole("button", { name: "Start a session" })).toHaveCSS("display", "flex");
+    await expect(page.getByRole("button", { name: "Create a room" })).toHaveCSS("display", "flex");
   });
 });
 
@@ -115,9 +115,9 @@ async function joinByCode(page: Page, code: string, beforeSubmit?: () => Promise
   await page.getByRole("button", { name: "Join with a code" }).click();
   const dialog = page.getByRole("dialog", { name: "Got a code?" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Guest from Home");
-  await dialog.getByRole("textbox", { name: "Session code" }).fill(code);
+  await dialog.getByRole("textbox", { name: "Room code" }).fill(code);
   await beforeSubmit?.();
-  await dialog.getByRole("button", { name: "Join", exact: true }).click();
+  await dialog.getByRole("button", { name: "Join room", exact: true }).click();
 }
 
 for (const entry of ["an invite link", "a room code"]) {
@@ -175,7 +175,7 @@ test("a cached invite shows offline guidance and joins after reconnecting", asyn
     await guest.getByRole("button", { name: "Try again" }).click();
     await expect(guest).toHaveURL(invite);
     await guestName.fill("Guest from cached invite");
-    await guest.getByRole("button", { name: "Join the session" }).click();
+    await guest.getByRole("button", { name: "Join room" }).click();
     await expect(guest.getByRole("heading", { name: "Dinner room" })).toBeVisible();
     await expect(
       host.locator(".participant-tile").filter({ hasText: "Guest from cached invite" }),
@@ -250,7 +250,7 @@ test("the installed shell stays public and reopens offline", async ({
   await context.setOffline(true);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Big appetites/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start a session", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Create a room", exact: true })).toBeEnabled();
   for (const name of ["Privacy", "Terms"]) {
     await page.getByRole("link", { name, exact: true }).click();
     await expect(page.getByRole("heading", { name: new RegExp(name, "i") })).toBeVisible();

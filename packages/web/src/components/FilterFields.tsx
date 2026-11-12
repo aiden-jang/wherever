@@ -102,7 +102,7 @@ export function FilterFields({
       )}
 
       <div className="flex flex-col gap-2">
-        <FieldLabel>Cravings (pick some, or leave it to fate)</FieldLabel>
+        <FieldLabel>Cravings (optional)</FieldLabel>
         <div className="flex flex-wrap gap-2">
           {(showAllCuisines ? CUISINE_OPTIONS : popularCuisines).map((c) => {
             const on = filters.categories.includes(c.value);
@@ -149,7 +149,7 @@ export function FilterFields({
       />
 
       <div className={`flex flex-col gap-2 ${highlighted.includes("priceTiers") ? "filter-changed" : ""}`}>
-        <FieldLabel>Budget, realistically</FieldLabel>
+        <FieldLabel>Budget</FieldLabel>
         <div role="group" aria-label="Price levels" className="filter-options gap-2">
           {PRICE_OPTIONS.map((o) => {
             const on = (filters.priceTiers ?? []).includes(o.tier as PriceTier);

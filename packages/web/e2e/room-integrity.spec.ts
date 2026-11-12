@@ -15,13 +15,13 @@ test("creation requests and waits for location only after Near me", async ({ pag
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session" }).click();
+  await page.getByRole("button", { name: "Create a room" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   await expect(dialog.getByRole("button", { name: "Create room" })).toBeEnabled();
   await expect(dialog.getByRole("status")).toContainText("Search area: New York City");
   await dialog.getByRole("button", { name: /Near me/ }).click();
-  await expect(dialog.getByRole("button", { name: "Finding your location…" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Finding an area…" })).toBeDisabled();
   const request = page.waitForRequest((candidate) => candidate.url().endsWith("/api/sessions"));
   await page.evaluate(() => window.dispatchEvent(new Event("fixture-location")));
   await dialog.getByRole("button", { name: "Create room" }).click();
@@ -36,7 +36,7 @@ test("a host can undo the last vote while the group is still voting", async ({ p
     const friend = await guest.newPage();
     await friend.goto(`/s/${code}`);
     await friend.getByRole("textbox", { name: "Your name" }).fill("Guest");
-    await friend.getByRole("button", { name: "Join the session" }).click();
+    await friend.getByRole("button", { name: "Join room" }).click();
     await expect(page.getByText("2 people", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Start swiping" }).click();
     const first = await page.getByText(/Place 1 of \d+/).textContent();

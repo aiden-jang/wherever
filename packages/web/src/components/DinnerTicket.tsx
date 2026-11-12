@@ -77,8 +77,10 @@ export function DinnerTicket({
           {hostPicked
             ? "Host’s choice."
             : totalParticipants > 1
-              ? "An agreement. Historic."
-              : "Your call. No committee."}
+              ? rightSwipes === totalParticipants
+                ? "Everyone said yes."
+                : "Highest score."
+              : "Your pick."}
         </span>
       </div>
     </article>

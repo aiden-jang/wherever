@@ -14,7 +14,7 @@ export function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
         className="table-panel w-full max-w-sm"
       >
         <h1 className="font-display text-3xl font-bold">And you are?</h1>
-        <p className="mt-2 text-muted">The group needs a name to overrule.</p>
+        <p className="mt-2 text-muted">Just a name. Opinions can follow.</p>
         <label className="mt-6 grid gap-2 text-sm font-semibold">
           Your name
           <input
@@ -34,7 +34,7 @@ export function NamePrompt({ onSubmit }: { onSubmit: (name: string) => void }) {
           disabled={!name.trim()}
           className="mt-3 w-full rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
         >
-          Join the session
+          Join room
         </button>
       </form>
     </main>

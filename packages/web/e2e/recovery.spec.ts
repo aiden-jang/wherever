@@ -4,13 +4,13 @@ test("an expired open room clears its controls and offers a new plan", async ({ 
   let expire!: () => void;
   await page.routeWebSocket("**/ws/*", (socket) => {
     socket.connectToServer();
-    expire = () => socket.close({ code: 1008, reason: "This room has expired. Start a new plan." });
+    expire = () => socket.close({ code: 1008, reason: "This room has expired. Create a new room." });
   });
   await createRoom(page, "Synthetic owner");
   await expect(page.getByRole("button", { name: "Start swiping", exact: true })).toBeVisible();
   expire();
   await expect(page.getByRole("heading", { name: "This code leads nowhere." })).toBeVisible();
-  await expect(page.getByText("This room has expired. Start a new plan.", { exact: true })).toBeVisible();
+  await expect(page.getByText("This room has expired. Create a new room.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start swiping", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to home" })).toBeVisible();
 });
@@ -23,8 +23,8 @@ test("an unavailable location search keeps the query and can be retried", async 
       : route.fulfill({ status: 503, json: { error: "Location search is unavailable. Try again shortly." } }),
   );
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await page.getByRole("button", { name: "Create a room", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Create a room" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   const field = dialog.getByRole("textbox", { name: "ZIP code or town" });
   await field.fill("Denver");
@@ -51,8 +51,8 @@ test("a typed town cannot be skipped when creating a room or starting a round", 
   );
   await page.setViewportSize({ width: 320, height: 680 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session" }).click();
-  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await page.getByRole("button", { name: "Create a room" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create a room" });
   const create = dialog.getByRole("button", { name: "Create room" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   await expect(create).toBeEnabled();
@@ -94,10 +94,10 @@ test("a guest can correct a mistyped invite code and join the original room", as
   await guest.goto("/");
   await guest.getByRole("button", { name: "Join with a code" }).click();
   const name = guest.getByRole("textbox", { name: "Your name" });
-  const codeField = guest.getByRole("textbox", { name: "Session code" });
+  const codeField = guest.getByRole("textbox", { name: "Room code" });
   await name.fill("Sam");
   await codeField.fill(wrongCode);
-  await guest.getByRole("button", { name: "Join", exact: true }).click();
+  await guest.getByRole("button", { name: "Join room", exact: true }).click();
   await expect(guest.getByRole("heading", { name: "This code leads nowhere." })).toBeVisible();
   await guest.getByRole("link", { name: "Edit code" }).click();
   await expect(codeField).toHaveValue(wrongCode);
@@ -120,8 +120,8 @@ test("Explore NYC lets a host outside New York deliberately pick a neighborhood"
   });
   await page.setViewportSize({ width: 320, height: 680 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session" }).click();
-  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await page.getByRole("button", { name: "Create a room" }).click();
+  const dialog = page.getByRole("dialog", { name: "Create a room" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   const nearMe = dialog.getByRole("button", { name: /Near me/ });
   await expect(nearMe).toHaveAttribute("aria-pressed", "false");
@@ -204,8 +204,8 @@ test("changing a location preserves the selected town until a replacement is cho
     await route.fulfill({ status: 503, json: { error: "Test creation stopped." } });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Start a session", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Start a session" });
+  await page.getByRole("button", { name: "Create a room", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Create a room" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   await dialog.getByRole("textbox", { name: "ZIP code or town" }).fill("Denver");
   await dialog.getByRole("button", { name: "Search", exact: true }).click();

@@ -46,8 +46,8 @@ export function MatchScreen({
         </h1>
         <p className="mt-3 text-muted">
           {allVetoed
-            ? `${match.vetoedCount} place${match.vetoedCount === 1 ? "" : "s"} struck off, and whatever survived, nobody wanted. Run it back with a wider net.`
-            : "Try different places to give the group another choice."}
+            ? `${match.vetoedCount} place${match.vetoedCount === 1 ? "" : "s"} vetoed. Try new places or adjust the search.`
+            : "Try new places or adjust the search for another round."}
         </p>
         <div className="mt-8">
           {!isHost && <p className="mb-3 text-muted">The host can start another round.</p>}

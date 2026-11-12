@@ -65,14 +65,14 @@ export function RoundProgress({
                 }}
                 className="min-h-11 underline hover:text-cream disabled:no-underline disabled:opacity-50"
               >
-                {hurryWait > 0 ? `hurried (${hurryWait}s)` : "hurry them"}
+                {hurryWait > 0 ? `Nudge sent (${hurryWait}s)` : "Send a nudge"}
               </button>
               <button
                 disabled={disabled}
                 onClick={() => setConfirmDecide(true)}
                 className="min-h-11 underline enabled:hover:text-cream disabled:opacity-60"
               >
-                just decide now
+                Decide now
               </button>
             </>
           )}

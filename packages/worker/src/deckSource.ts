@@ -214,7 +214,8 @@ export async function nextRoundDeck(
       : held;
     return { deck, paid: false };
   }
-  if (!canPay) return { error: "This room has used its new searches. Replay the deck or start a new room." };
+  if (!canPay)
+    return { error: "This room has reached its search limit. Vote on the same places or create a new room." };
 
   const from = (await request.storage.get<number>("lastSearchRadius")) ?? request.meta.filters.radiusMeters;
   const wider = widerRadius(from);

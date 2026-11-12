@@ -53,7 +53,11 @@ export function VoteControls({
           type="button"
           disabled={disabled || Boolean(detailsStatus)}
           aria-disabled={vetoUsed}
-          aria-label={vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"}
+          aria-label={
+            vetoUsed
+              ? "Veto, already used this round"
+              : "Veto (one per round, removes this place for everyone)"
+          }
           onClick={() => (vetoUsed ? onSpent("vetoSpent") : onVote("left", false, true))}
         >
           <span className="vote-special-label">

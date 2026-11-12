@@ -54,11 +54,7 @@ export async function createDinnerImage(
   ctx.fillText("Scan to open the map.", 362, 1000);
   ctx.fillStyle = "#f4f1e7";
   ctx.font = "400 28px Inter, sans-serif";
-  ctx.fillText(
-    hostPicked ? "The host chose this backup." : "The group has made a decision. Allegedly.",
-    76,
-    1246,
-  );
+  ctx.fillText(hostPicked ? "The host chose this backup." : "A dinner plan. Finally.", 76, 1246);
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(
       (result) => (result ? resolve(result) : reject(new Error("Couldn’t create the image."))),

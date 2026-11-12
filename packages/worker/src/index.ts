@@ -40,7 +40,7 @@ app.use("*", async (c, next) => {
 // client response generic. Without this, Hono swallows the cause as a bare "Internal Server Error".
 app.onError((err, c) => {
   console.error("Unhandled error:", err);
-  return c.json({ error: "Something broke on our end. Not your fault." }, 500);
+  return c.json({ error: "Something went wrong. Please try again." }, 500);
 });
 
 app.all("/api/analytics", (c) => handleAnalytics(c.req.raw, c.env));
@@ -58,7 +58,7 @@ app.post("/api/sessions", async (c) => {
   const ip = c.req.header("cf-connecting-ip") ?? "local";
   const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(`create:${ip}`));
   if (!(await limiter.hit(CREATE_LIMIT, CREATE_WINDOW_MS))) {
-    return c.json({ error: "Slow down. Too many sessions." }, 429);
+    return c.json({ error: "Too many room requests. Try again later." }, 429);
   }
 
   const body = await c.req.json().catch(() => null);
@@ -66,7 +66,7 @@ app.post("/api/sessions", async (c) => {
   if (!parsed.success) {
     const needsCreator = parsed.error.issues.some((issue) => issue.path[0] === "clientId");
     return c.json(
-      { error: needsCreator ? "Reload Wherever before creating a room." : "Invalid session setup." },
+      { error: needsCreator ? "Reload Wherever before creating a room." : "Invalid room settings." },
       400,
     );
   }
@@ -109,7 +109,7 @@ const GEOCODE_WINDOW_MS = 60_000;
 app.get("/api/geocode", async (c) => {
   const q = (c.req.query("q") ?? "").trim();
   if (q.length < 2 || q.length > 120) {
-    return c.json({ error: "Enter a zip code or town." }, 400);
+    return c.json({ error: "Enter a ZIP code or town." }, 400);
   }
 
   const key = c.env.GOOGLE_PLACES_API_KEY;
@@ -118,12 +118,12 @@ app.get("/api/geocode", async (c) => {
   const ip = c.req.header("cf-connecting-ip") ?? "local";
   const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(`geocode:${ip}`));
   if (!(await limiter.hit(GEOCODE_LIMIT, GEOCODE_WINDOW_MS))) {
-    return c.json({ error: "Slow down on the location search." }, 429);
+    return c.json({ error: "Too many location searches. Try again shortly." }, 429);
   }
 
   const meter = c.env.USAGE_METER.get(c.env.USAGE_METER.idFromName("global"));
   if (!(await meter.tryConsume("geocode"))) {
-    return c.json({ error: "Monthly location search budget reached." }, 429);
+    return c.json({ error: "Location search has reached its monthly limit. Try Near me instead." }, 429);
   }
 
   const upstream = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${key}`;

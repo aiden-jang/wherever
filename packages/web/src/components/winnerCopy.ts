@@ -15,9 +15,9 @@ export function seedFrom(id: string): number {
 // A single participant can tie their own choices; omit jokes about a committee in that case.
 export function consensusLine(rightSwipes: number, totalParticipants: number, seed: number): string {
   if (totalParticipants <= 1) return line("solo", seed);
-  if (rightSwipes === totalParticipants) return "Unanimous. Put it in the group chat.";
+  if (rightSwipes === totalParticipants) return "Everyone said yes. Dinner is handled.";
   if (rightSwipes / totalParticipants >= 0.75) return "A clear majority. Dinner is handled.";
-  return "The committee picked a winner.";
+  return "Highest score. We have a dinner plan.";
 }
 
 /** A share should read like a plan someone can act on, not an app notification. */
@@ -34,5 +34,6 @@ export function planText(
   const why = reasons.length > 0 ? `\nAbout this pick: ${reasons.join(" · ")}` : "";
   const fallback = backup ? `\nPlan B: ${backup.name}\n${mapsUrl(backup)}` : "";
   const support = hostPicked ? "The host chose this backup. " : "";
-  return `Dinner plan: ${r.name}${where}\n${support}${rightSwipes} of ${totalParticipants} voted yes.${availability ? ` ${availability}.` : ""}${why}${fallback}`;
+  const votes = totalParticipants <= 1 ? "Your pick." : `${rightSwipes} of ${totalParticipants} voted yes.`;
+  return `Dinner plan: ${r.name}${where}\n${support}${votes}${availability ? ` ${availability}.` : ""}${why}${fallback}`;
 }

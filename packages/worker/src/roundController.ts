@@ -65,7 +65,7 @@ export class RoundController {
   }
 
   private async transition(ws: WebSocket, run: () => Promise<void>): Promise<void> {
-    if (this.transitioning) return sendTo(ws, { type: "error", message: "The deal is already in progress." });
+    if (this.transitioning) return sendTo(ws, { type: "error", message: "A round is already starting." });
     this.transitioning = true;
     try {
       await run();
@@ -95,7 +95,7 @@ export class RoundController {
       console.error("restaurant_deck_failed", error);
       return sendTo(ws, {
         type: "error",
-        message: "couldn't load restaurants right now. give it a moment and try again.",
+        message: "Couldn’t load restaurants. Try again shortly.",
       });
     }
 
@@ -161,7 +161,7 @@ export class RoundController {
     if (!(await isRoomHost(this.ctx, ws))) {
       return sendTo(ws, {
         type: "error",
-        message: "Only the host can call it.",
+        message: "Only the host can end the round early.",
       });
     }
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
@@ -302,7 +302,7 @@ export class RoundController {
 
   private async again(ws: WebSocket, mode: "new" | "same"): Promise<void> {
     if (!(await isRoomHost(this.ctx, ws))) {
-      return sendTo(ws, { type: "error", message: "Only the host can run it back." });
+      return sendTo(ws, { type: "error", message: "Only the host can start another round." });
     }
     const meta = await this.ctx.storage.get<SessionMeta>("meta");
     if (!meta || meta.status !== "decided") return;
@@ -312,7 +312,7 @@ export class RoundController {
     let next: { deck: Restaurant[]; paid: boolean; note?: string };
     if (mode === "same") {
       if (dealt.length === 0) {
-        return sendTo(ws, { type: "error", message: "nothing to vote on again. deal a new list." });
+        return sendTo(ws, { type: "error", message: "No places to vote on again. Try new places." });
       }
       const history = await visitedFor(this.env, meta.code);
       const excluded = new Set(

@@ -21,15 +21,13 @@ export default function Share() {
     <main id="main-content" tabIndex={-1} className="table-room grid place-items-center text-center">
       <div className="table-panel max-w-sm">
         <PlateState />
-        <h1 className="font-display text-state font-bold">That wasn’t a session link.</h1>
-        <p className="mt-3 text-muted">
-          Wherever can open an invite you were sent. Anything else, start from the top.
-        </p>
+        <h1 className="font-display text-state font-bold">That wasn’t a room link.</h1>
+        <p className="mt-3 text-muted">Open a Wherever room link, or create a room below.</p>
         <Link
           to="/"
           className="mt-6 inline-block rounded-xl bg-ember px-6 py-3 font-semibold text-ink transition hover:brightness-110"
         >
-          Start a session
+          Create a room
         </Link>
       </div>
     </main>

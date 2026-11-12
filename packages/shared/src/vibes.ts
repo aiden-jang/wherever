@@ -22,14 +22,14 @@ export const VIBES: VibeOption[] = [
     id: "cozy",
     label: "cozy",
     emoji: "🫖",
-    blurb: "Close by, warm, and nobody rushes you out.",
+    blurb: "Close by. Preferably a long dinner.",
     filters: { priceTiers: [2, 3], radiusMeters: 1600, minRating: 4.2 },
   },
   {
     id: "quick",
     label: "quick",
     emoji: "⚡",
-    blurb: "In, fed, out. Somewhere open right now.",
+    blurb: "Nearby takeout. Dinner can be quick.",
     filters: {
       priceTiers: [1, 2],
       radiusMeters: 800,
@@ -42,21 +42,21 @@ export const VIBES: VibeOption[] = [
     id: "fancy",
     label: "fancy",
     emoji: "🥂",
-    blurb: "Worth the trip and worth the tablecloth.",
+    blurb: "Somewhere worth dressing up for.",
     filters: { priceTiers: [3, 4], radiusMeters: 4000, minRating: 4.4, amenities: ["reservable"] },
   },
   {
     id: "chaotic",
     label: "chaotic",
     emoji: "🎲",
-    blurb: "Everything is on the table. Good luck.",
+    blurb: "Keep the options open. See what turns up.",
     filters: { priceTiers: [1, 2, 3, 4], radiusMeters: 8000, minRating: 0, minReviews: 0, shuffle: true },
   },
   {
     id: "adventurous",
     label: "adventurous",
     emoji: "🧭",
-    blurb: "Further out, and somewhere none of you can pronounce.",
+    blurb: "A little further. Something different.",
     filters: { priceTiers: [1, 2, 3], radiusMeters: 8000, minReviews: 0 },
   },
 ];
@@ -125,17 +125,18 @@ export function resolveVibe(counts: Partial<Record<Vibe, number>>): VibeReading 
 
 /** Unanimous requires the whole group, not just everyone who has voted so far. */
 export function vibeReadingLine(reading: VibeReading, groupSize: number): string {
-  if (!reading.vibe) return "No vibe yet. Somebody has to go first.";
+  if (!reading.vibe) return "Pick a mood for dinner.";
   const option = vibeOption(reading.vibe);
 
   if (reading.divided) {
     const others = reading.runnersUp.map((vibe) => vibeOption(vibe).label).join(" and ");
     return `Split between ${option.label} and ${others}, so we are going wide.`;
   }
+  if (groupSize <= 1) return `${option.label} it is.`;
   if (reading.total >= groupSize && reading.votes === reading.total && groupSize > 1) {
-    return `Unanimously ${option.label}. That never happens.`;
+    return `Unanimously ${option.label}. That was easy.`;
   }
-  if (reading.votes === reading.total) return `${option.label} so far, and nobody has argued.`;
+  if (reading.votes === reading.total) return `${option.label} so far.`;
   return `${option.label} is ahead, ${reading.votes} of ${reading.total}.`;
 }
 
@@ -174,7 +175,7 @@ export function vibeEffect(vibe: Vibe, base: SessionFilters): string[] {
 export function vibeEffectLine(vibe: Vibe, base: SessionFilters): string {
   const label = vibeOption(vibe).label;
   const parts = vibeEffect(vibe, base);
-  if (parts.length === 0) return `${label}: nothing to change, the filters were already there.`;
+  if (parts.length === 0) return `${label}: filters already match.`;
   return `${label}: ${parts.slice(0, 2).join(", ")}.`;
 }
 

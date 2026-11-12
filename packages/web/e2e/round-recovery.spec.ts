@@ -9,7 +9,7 @@ const waiting = (page: Page) => heading(page, "Waiting for the group");
 async function join(page: Page, url: string) {
   await page.goto(url);
   await page.getByRole("textbox", { name: "Your name" }).fill("Dinner guest");
-  await button(page, "Join the session").click();
+  await button(page, "Join room").click();
 }
 
 async function finishVoting(page: Page) {

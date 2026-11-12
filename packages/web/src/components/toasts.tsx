@@ -84,7 +84,7 @@ export function useHostPromotionToasts(
     if (before === null) return; // seed silently on first known state
     if (before || !isHost) return; // only fire on a false -> true handoff
 
-    const text = "You're the host now. You can start swiping.";
+    const text = "You’re the host now.";
     onEventRef.current?.(text);
     const toast = { id: crypto.randomUUID(), text };
     setToasts((t) => [...t, toast]);

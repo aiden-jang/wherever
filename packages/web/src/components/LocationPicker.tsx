@@ -132,7 +132,7 @@ export function LocationPicker({
       const hit = await geocode(query, controller.current.signal);
       if (version !== request.current) return;
       if (!hit) {
-        setErr('Couldn\'t find that. Try a zip, or "Town, State".');
+        setErr("Couldn’t find that place. Try a ZIP code or add a state or country.");
         return;
       }
       select({

@@ -125,7 +125,7 @@ export function useSessionSocket(code: string, displayName: string) {
           dispatch({ type: "reset" });
           dispatch({
             type: "received",
-            message: { type: "error", message: event.reason || "This room has expired. Start a new plan." },
+            message: { type: "error", message: event.reason || "This room has expired. Create a new room." },
           });
           dispatch({ type: "connection", status: "closed" });
           return;

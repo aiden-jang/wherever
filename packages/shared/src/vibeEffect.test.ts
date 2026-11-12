@@ -33,7 +33,7 @@ describe("what a vibe did to the deck", () => {
     // The honest answer when a group picks a vibe they were effectively already on.
     const already = { ...base, ...vibeOption("chaotic").filters };
     expect(vibeEffect("chaotic", already)).toEqual([]);
-    expect(vibeEffectLine("chaotic", already)).toContain("nothing to change");
+    expect(vibeEffectLine("chaotic", already)).toContain("filters already match");
   });
 
   it("reports a narrowing of price, never a full house", () => {

@@ -1,7 +1,7 @@
 {
   "name": "Wherever, Honestly",
   "short_name": "Wherever",
-  "description": "Because \"I'm fine with whatever\" is a lie and everyone knows it.",
+  "description": "Pick somewhere to eat together. Swipe on nearby restaurants and let the votes decide.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -43,7 +43,7 @@
   },
   "shortcuts": [
     {
-      "name": "Start a session",
+      "name": "Create a room",
       "short_name": "Start",
       "description": "Deal a fresh deck and get a code to share.",
       "url": "/?new=1",
@@ -75,7 +75,7 @@
       "sizes": "824x1830",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Start a dinner session. Invite the group."
+      "label": "Create a dinner room. Invite the group."
     },
     {
       "src": "/screenshot-wide.png",

@@ -17,7 +17,7 @@ export function PrivateShortlist({
       </summary>
       <div className="border-t border-white/10 p-2">
         {liked.length === 0 ? (
-          <p className="px-2 py-3 text-sm text-muted">You passed on the whole deck. Bold.</p>
+          <p className="px-2 py-3 text-sm text-muted">No favorites this round.</p>
         ) : (
           <ul className="space-y-1">
             {liked.map((choice) => {

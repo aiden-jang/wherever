@@ -31,6 +31,7 @@ test("create, vote, decide, and run the same deck again", async ({ page }) => {
   await page.getByRole("button", { name: "Send the plan", exact: true }).click();
   await expect(page.getByRole("button", { name: "Try sharing again" })).toBeVisible();
   const imageDownload = page.waitForEvent("download");
+  await page.getByText("Plan image options", { exact: true }).click();
   await page.getByRole("button", { name: "Save plan image", exact: true }).click();
   const image = await imageDownload;
   expect(image.suggestedFilename()).toMatch(/^wherever-.+-\d{4}-\d{2}-\d{2}\.png$/);
@@ -82,7 +83,7 @@ test("a second person joins and participates in a shared anonymous round", async
   const roomCode = page.getByRole("button", { name: `Copy room code ${code}` });
   await roomCode.scrollIntoViewIfNeeded();
   await expect(roomCode).toBeInViewport({ ratio: 1 });
-  const searchArea = page.getByRole("heading", { name: "Search area" });
+  const searchArea = page.getByRole("heading", { name: "Dinner filters" });
   await searchArea.scrollIntoViewIfNeeded();
   await expect(searchArea).toBeInViewport({ ratio: 1 });
   await start.scrollIntoViewIfNeeded();
@@ -285,6 +286,7 @@ test("enlarged text and stronger contrast keep phone filters usable", async ({ p
     document.documentElement.style.fontSize = "20px";
   });
   await expect(page.getByRole("button", { name: "Done editing" })).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Change area", exact: true }).click();
   await page.getByRole("button", { name: "Change", exact: true }).click();
   const query = page.getByRole("textbox", { name: "ZIP code or town" });
   await query.fill("Brooklyn");

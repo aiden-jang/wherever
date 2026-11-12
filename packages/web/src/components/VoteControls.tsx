@@ -44,7 +44,7 @@ export function VoteControls({
           <span aria-hidden>♥</span> Yes, please
         </button>
       </div>
-      {undo && <div className="text-center">{undo}</div>}
+      <div className="vote-undo-slot">{undo}</div>
       <div className="vote-special">
         <button
           data-deck-control

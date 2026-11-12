@@ -1,4 +1,13 @@
-import { resolveVibe, VIBES, vibeOption, vibeReadingLine, type Vibe } from "@wherever/shared";
+import {
+  radiusLabel,
+  resolveVibe,
+  VIBES,
+  vibeOption,
+  vibeReadingLine,
+  type SessionFilters,
+  type Vibe,
+} from "@wherever/shared";
+import { filterSummaryChips } from "./filterLabels.js";
 import { buzz } from "./haptics.js";
 import { play } from "./sound.js";
 
@@ -12,15 +21,23 @@ export function VibeDial({
   mine,
   groupSize,
   onPick,
+  filters,
 }: {
   disabled?: boolean;
   counts: Partial<Record<Vibe, number>>;
   mine: Vibe | null;
   groupSize: number;
   onPick: (vibe: Vibe | null) => void;
+  filters: SessionFilters;
 }) {
   const reading = resolveVibe(counts);
   const total = reading.total;
+  const preset = reading.vibe ? vibeOption(reading.vibe) : null;
+  const customized =
+    preset &&
+    (Object.keys(preset.filters) as (keyof SessionFilters)[]).some(
+      (key) => JSON.stringify(filters[key]) !== JSON.stringify(preset.filters[key]),
+    );
 
   return (
     <section className="mt-2" aria-label="Group vibe">
@@ -53,7 +70,7 @@ export function VibeDial({
               }}
               aria-pressed={picked}
               className={`relative overflow-hidden rounded-2xl border px-3 py-2.5 text-left transition disabled:opacity-60 ${
-                picked ? "border-white/70 bg-white/5" : "border-white/15 hover:border-white/35"
+                picked ? "border-acid bg-acid text-ink" : "border-white/15 hover:border-white/35"
               }`}
             >
               {/* Behind the label rather than beside it: the count is context, not the content. */}
@@ -65,18 +82,30 @@ export function VibeDial({
               <span className="relative flex items-center gap-2">
                 <span aria-hidden>{option.emoji}</span>
                 <span className="font-display text-sm font-bold">{option.label}</span>
-                {votes > 0 && <span className="ml-auto text-xs tabular-nums text-muted">{votes}</span>}
+                {picked && <span aria-hidden>✓</span>}
+                {votes > 0 && (
+                  <span className={`ml-auto text-xs tabular-nums ${picked ? "text-ink" : "text-muted"}`}>
+                    {votes}
+                  </span>
+                )}
               </span>
-              <span className="relative mt-0.5 block text-xs leading-snug text-muted">{option.blurb}</span>
+              <span
+                className={`relative mt-0.5 block text-xs leading-snug ${picked ? "text-ink" : "text-muted"}`}
+              >
+                {option.blurb}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {reading.vibe && (
-        <p className="mt-2.5 text-xs text-muted">
-          The group’s {vibeOption(reading.vibe).label} preset has been applied to Dinner filters. The host can
-          fine-tune it below.
+      {preset && (
+        <p className="mt-2.5 text-xs text-muted" role="status">
+          <strong className="text-acid">
+            {preset.label} {customized ? "· Customized" : "applied"}
+          </strong>
+          {" · "}
+          {radiusLabel(filters.radiusMeters)} · {filterSummaryChips(filters).slice(1, 4).join(" · ")}
         </p>
       )}
     </section>

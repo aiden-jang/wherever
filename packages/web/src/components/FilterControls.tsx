@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from "react";
 export const segBase = "flex-1 rounded-xl px-2 py-2 text-sm font-semibold transition-colors border min-h-11";
-export const segOn = "bg-ember text-ink border-ember";
+export const segOn = "bg-acid text-ink border-acid";
 export const segOff = "bg-black/40 text-cream border-white/10 hover:border-white/30";
 
 export function FieldLabel({ children }: { children: ReactNode }) {
@@ -12,15 +12,17 @@ export function FilterChoices<T extends string | number>({
   options,
   value,
   onChange,
+  highlight = false,
 }: {
   label: string;
   options: { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
+  highlight?: boolean;
 }) {
   const name = useId();
   return (
-    <fieldset className="min-w-0">
+    <fieldset className={`min-w-0 ${highlight ? "filter-changed" : ""}`}>
       <legend className="mb-2">
         <FieldLabel>{label}</FieldLabel>
       </legend>

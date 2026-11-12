@@ -17,10 +17,7 @@ export function RoundAgain({
 }) {
   if (!isHost) {
     return (
-      <Link
-        to="/"
-        className="rounded-full border border-white/15 px-8 py-3 text-lg font-semibold transition hover:bg-white/5"
-      >
+      <Link to="/" className="round-leave">
         Leave room
       </Link>
     );

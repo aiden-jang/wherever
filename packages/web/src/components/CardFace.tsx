@@ -10,6 +10,7 @@ export function CardFace({
   photoCount,
   photoIdx,
   onNextPhoto,
+  onPreviousPhoto,
   revisit,
 }: {
   restaurant: Restaurant;
@@ -17,6 +18,7 @@ export function CardFace({
   photoCount: number;
   photoIdx: number;
   onNextPhoto: () => void;
+  onPreviousPhoto?: () => void;
   revisit?: string | null;
 }) {
   const cuisine = styleFor(restaurant.category);
@@ -27,15 +29,31 @@ export function CardFace({
       <div data-card-photo className="relative">
         <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="table-photo" />
         {photoCount > 1 && (
-          <button
-            type="button"
-            aria-label={`Next photo, ${photoIdx + 1} of ${photoCount}`}
-            className="absolute bottom-2 right-2 min-h-11 min-w-11 rounded-full bg-black/90 px-2 text-xs text-white"
-            onPointerUp={(event) => event.stopPropagation()}
-            onClick={onNextPhoto}
-          >
-            {photoIdx + 1}/{photoCount}
-          </button>
+          <div className="card-photo-navigation">
+            {onPreviousPhoto && (
+              <button
+                type="button"
+                aria-label={`Previous photo, ${photoIdx + 1} of ${photoCount}`}
+                onPointerDown={(event) => event.stopPropagation()}
+                onPointerUp={(event) => event.stopPropagation()}
+                onClick={onPreviousPhoto}
+              >
+                <span aria-hidden>‹</span>
+              </button>
+            )}
+            <span aria-hidden>
+              {photoIdx + 1}/{photoCount}
+            </span>
+            <button
+              type="button"
+              aria-label={`Next photo, ${photoIdx + 1} of ${photoCount}`}
+              onPointerDown={(event) => event.stopPropagation()}
+              onPointerUp={(event) => event.stopPropagation()}
+              onClick={onNextPhoto}
+            >
+              <span aria-hidden>›</span>
+            </button>
+          </div>
         )}
         {revisit && (
           <span className="meal-revisit">

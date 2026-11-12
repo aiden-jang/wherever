@@ -12,6 +12,7 @@ import { useSessionSocket } from "../useSessionSocket.js";
 import { isCompleteCode } from "@wherever/shared";
 import { useWakeLock } from "../useWakeLock.js";
 import { VibeDial } from "../components/VibeDial.js";
+import { LobbyStart } from "../components/LobbyStart.js";
 
 /*
  * The decided screen is the biggest thing here and nothing reaches it until a round ends. Split out,
@@ -29,7 +30,7 @@ import { RoomChrome } from "../components/RoomChrome.js";
 import { buzz } from "../components/haptics.js";
 
 import { NamePrompt } from "../components/NamePrompt.js";
-import { DisconnectBanner, HowItWorks, JoiningRoom } from "../components/LobbyStatus.js";
+import { DisconnectBanner, JoiningRoom } from "../components/LobbyStatus.js";
 import { ParticipantChip } from "../components/LobbyPeople.js";
 
 export default function Lobby() {
@@ -263,7 +264,7 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
   if (!session) return <JoiningRoom connectionClosed={status === "closed"} />;
 
   return (
-    <main id="main-content" tabIndex={-1} className="table-room">
+    <main id="main-content" tabIndex={-1} className={`table-room ${isHost ? "table-host-lobby" : ""}`}>
       <header className="lobby-heading">
         <h1 ref={lobbyHeading} tabIndex={-1} className="table-title">
           Dinner room
@@ -294,11 +295,13 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               counts={vibeCounts}
               mine={myVibe}
               groupSize={count}
+              filters={session.filters}
               onPick={(vibe) => send({ type: "set_vibe", vibe })}
             />
           </details>
           <FilterSummary
             filters={session.filters}
+            vibeCounts={vibeCounts}
             editable={isHost}
             locked={starting || status !== "open"}
             initiallyOpen={isHost}
@@ -309,17 +312,18 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
             syncError={errorSeq}
           />
           {isHost && (
-            <button
-              type="button"
-              onClick={() => {
+            <LobbyStart
+              filters={session.filters}
+              starting={starting}
+              locationStatus={locationStatus}
+              saving={savingFilters}
+              online={status === "open"}
+              count={count}
+              onStart={() => {
                 void loadSwipingRoom().catch(() => undefined);
                 setStarting(send({ type: "start_round" }));
               }}
-              disabled={starting || locationStatus !== "idle" || savingFilters || status !== "open"}
-              className="lobby-start rounded-xl bg-ember px-4 py-3 font-semibold text-ink hover:brightness-110 disabled:opacity-60"
-            >
-              {starting ? "Finding places…" : "Start swiping"}
-            </button>
+            />
           )}
           {error && (
             <p role="alert" className="text-sm text-flare">
@@ -350,9 +354,6 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
               )}
             </div>
           </div>
-        </div>
-        <div className="min-w-0">
-          <HowItWorks />
         </div>
       </div>
     </main>

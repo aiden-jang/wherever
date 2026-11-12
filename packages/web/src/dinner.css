@@ -101,7 +101,7 @@
     gap: 22px;
   }
   .table-lobby > .table-rail {
-    grid-area: 1 / 2 / span 2;
+    grid-area: 1 / 2;
   }
   .table-face,
   .dinner-ticket {
@@ -209,6 +209,38 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
+}
+.vote-undo-slot {
+  min-height: 44px;
+  text-align: center;
+}
+.card-photo-navigation {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+  background: rgb(0 0 0 / 90%);
+  color: white;
+  font-size: 12px;
+}
+.card-photo-navigation button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  font-size: 24px;
+}
+.card-photo-navigation button:enabled:hover {
+  background: rgb(255 255 255 / 18%);
+}
+.card-photo-navigation ~ .meal-revisit {
+  right: 160px;
+  max-width: calc(100% - 160px);
+}
+.table-card .card-photo-navigation button:focus-visible {
+  outline-color: white;
+  outline-offset: -4px;
 }
 .vote-main button {
   min-height: 46px;

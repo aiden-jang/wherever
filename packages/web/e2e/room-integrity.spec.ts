@@ -1,6 +1,6 @@
 import { test, expect, createRoom } from "./fixtures.js";
 
-test("creation waits for the browser position", async ({ page }) => {
+test("creation requests and waits for location only after Near me", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator.geolocation, "getCurrentPosition", {
       value: (success: (position: { coords: { latitude: number; longitude: number } }) => void) => {
@@ -18,6 +18,9 @@ test("creation waits for the browser position", async ({ page }) => {
   await page.getByRole("button", { name: "Start a session" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
+  await expect(dialog.getByRole("button", { name: "Create room" })).toBeEnabled();
+  await expect(dialog.getByRole("status")).toContainText("Search area: New York City");
+  await dialog.getByRole("button", { name: /Near me/ }).click();
   await expect(dialog.getByRole("button", { name: "Finding your location…" })).toBeDisabled();
   const request = page.waitForRequest((candidate) => candidate.url().endsWith("/api/sessions"));
   await page.evaluate(() => window.dispatchEvent(new Event("fixture-location")));

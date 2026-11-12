@@ -17,20 +17,17 @@ import {
 import { FieldLabel, Chevron, FilterChoices, segBase, segOn, segOff } from "./FilterControls.js";
 import { LocationPicker, type LocationStatus } from "./LocationPicker.js";
 import { RoundRules } from "./RoundRules.js";
-/**
- * Cuisine multi-select + distance / price / open-now up front, with rating / min-reviews / sort
- * tucked behind a collapsible "get picky" disclosure. The app's whole premise is that deciding is
- * exhausting, so the create form leads with the few choices a group actually cares about and hides
- * the power-user knobs until asked. Empty cuisine = anything.
- */
+/** Everyday choices stay visible; less-used filters are optional. */
 export function FilterFields({
   filters,
   onChange,
   onLocationStatusChange,
   showLocation = true,
+  highlighted = [],
 }: {
   onLocationStatusChange?: (status: LocationStatus) => void;
   showLocation?: boolean;
+  highlighted?: (keyof SessionFilters)[];
   filters: SessionFilters;
   onChange: (next: SessionFilters) => void;
 }) {
@@ -140,6 +137,7 @@ export function FilterFields({
 
       <FilterChoices
         label="Distance"
+        highlight={highlighted.includes("radiusMeters")}
         options={[
           ...RADIUS_OPTIONS.map(({ meters: value, label }) => ({ value, label })),
           ...(RADIUS_OPTIONS.some((o) => o.meters === filters.radiusMeters)
@@ -150,7 +148,7 @@ export function FilterFields({
         onChange={(radiusMeters) => onChange({ ...filters, radiusMeters })}
       />
 
-      <div className="flex flex-col gap-2">
+      <div className={`flex flex-col gap-2 ${highlighted.includes("priceTiers") ? "filter-changed" : ""}`}>
         <FieldLabel>Budget, realistically</FieldLabel>
         <div role="group" aria-label="Price levels" className="filter-options gap-2">
           {PRICE_OPTIONS.map((o) => {
@@ -177,6 +175,7 @@ export function FilterFields({
 
       <FilterChoices
         label="Minimum rating"
+        highlight={highlighted.includes("minRating")}
         options={[
           ...RATING_OPTIONS,
           ...(RATING_OPTIONS.some((o) => o.value === (filters.minRating ?? 0))
@@ -189,6 +188,7 @@ export function FilterFields({
 
       <FilterChoices
         label="Minimum number of reviews"
+        highlight={highlighted.includes("minReviews")}
         options={MIN_REVIEWS_OPTIONS}
         value={filters.minReviews ?? 0}
         onChange={(minReviews) => onChange({ ...filters, minReviews })}
@@ -198,8 +198,8 @@ export function FilterFields({
         type="button"
         aria-pressed={filters.openNow ?? false}
         onClick={() => onChange({ ...filters, openNow: !filters.openNow })}
-        className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
-          filters.openNow ? "border-ember bg-ember/10" : "border-white/10 hover:border-white/30"
+        className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${highlighted.includes("openNow") ? "filter-changed" : ""} ${
+          filters.openNow ? "border-acid bg-acid/10" : "border-white/10 hover:border-white/30"
         }`}
       >
         <span className="flex flex-col">
@@ -208,12 +208,12 @@ export function FilterFields({
         </span>
         <span
           className={`relative h-6 w-11 rounded-full transition-colors ${
-            filters.openNow ? "bg-ember" : "bg-white/15"
+            filters.openNow ? "bg-acid" : "bg-white/15"
           }`}
         >
           <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-              filters.openNow ? "translate-x-[22px]" : "translate-x-0.5"
+            className={`absolute top-0.5 h-5 w-5 rounded-full transition-transform ${
+              filters.openNow ? "translate-x-[22px] bg-ink" : "translate-x-0.5 bg-white"
             }`}
           />
         </span>
@@ -221,7 +221,9 @@ export function FilterFields({
 
       {/* Power-user knobs most groups never touch, folded away so the form leads with the choices
           that actually matter. A count keeps them discoverable when set. */}
-      <div className="rounded-2xl border border-white/10">
+      <div
+        className={`rounded-2xl border border-white/10 ${highlighted.some((key) => key === "amenities" || key === "shuffle" || key === "sort") ? "filter-changed" : ""}`}
+      >
         <button
           type="button"
           aria-expanded={pickyOpen}
@@ -280,7 +282,7 @@ export function FilterFields({
                       onClick={() => toggleExclude(c.value)}
                       className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
                         on
-                          ? "bg-flare text-ink border-flare font-semibold"
+                          ? "bg-acid text-ink border-acid font-semibold"
                           : "border-white/10 text-cream hover:border-white/30"
                       }`}
                     >

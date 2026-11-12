@@ -45,8 +45,7 @@ export function SwipeCard({
   // so tapping never fights the swipe gesture.
   const pressStart = useRef<{ x: number; y: number } | null>(null);
 
-  // Photos: tapping the photo cycles through them; tapping the "i" badge or the text area opens
-  // details. Fall back to the single imageUrl when there's no gallery.
+  // Photos advance on tap; the labeled Details action opens the current photo's larger view.
   const photos =
     restaurant.photos && restaurant.photos.length > 0
       ? restaurant.photos
@@ -55,6 +54,7 @@ export function SwipeCard({
         : [];
   const [photoIdx, setPhotoIdx] = useState(0);
   const nextPhoto = () => setPhotoIdx((index) => (index + 1) % photos.length);
+  const previousPhoto = () => setPhotoIdx((index) => (index - 1 + photos.length) % photos.length);
 
   return (
     <motion.div
@@ -79,8 +79,7 @@ export function SwipeCard({
           return;
         }
         const target = e.target as HTMLElement;
-        // Tapping the photo (but not the "i" badge sitting on it) cycles photos; everywhere else
-        // — the badge and the text area below — opens details.
+        if (target.closest?.("button, a")) return;
         if (
           photos.length > 1 &&
           target.closest?.("[data-card-photo]") &&
@@ -104,12 +103,14 @@ export function SwipeCard({
         photoCount={photos.length}
         photoIdx={photoIdx}
         onNextPhoto={nextPhoto}
+        onPreviousPhoto={previousPhoto}
       />
       {/* The details affordance: a real hit target (data-card-info) so the tap handler opens details
           when it's tapped, even though the surrounding photo cycles. */}
       <button
         type="button"
         aria-label={`See details for ${restaurant.name}`}
+        onPointerDown={(event) => event.stopPropagation()}
         onPointerUp={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.currentTarget.focus({ preventScroll: true });
@@ -117,9 +118,9 @@ export function SwipeCard({
         }}
         data-deck-control
         data-card-info
-        className="absolute right-3 top-4 grid h-11 w-11 place-items-center rounded-full bg-ink text-sm font-semibold text-cream"
+        className="absolute right-3 top-4 grid min-h-11 place-items-center rounded-xl bg-ink px-3 text-sm font-semibold text-cream"
       >
-        <span aria-hidden>i</span>
+        Details
       </button>
       <motion.span
         aria-hidden

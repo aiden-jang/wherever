@@ -159,7 +159,14 @@ export function WinnerScreen({
             <p className="mt-3 text-sm text-muted">Check Maps before heading out. Hours can change.</p>
           )}
           {backups}
-          {!demo && <SavePlanImage key={restaurant.id} restaurant={restaurant} hostPicked={hostPicked} />}
+          {!demo && (
+            <details className="winner-disclosure">
+              <summary>Plan image options</summary>
+              <div className="winner-detail-content">
+                <SavePlanImage key={restaurant.id} restaurant={restaurant} hostPicked={hostPicked} />
+              </div>
+            </details>
+          )}
           <details className="winner-disclosure">
             <summary>Hours &amp; place details</summary>
             <div className="winner-detail-content">

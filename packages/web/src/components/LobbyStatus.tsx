@@ -72,32 +72,6 @@ export function DemoBanner({ reason }: { reason: DemoReason }) {
   );
 }
 
-export function HowItWorks() {
-  const steps = [
-    { emoji: "👆", label: "Everyone swipes" },
-    { emoji: "🗳️", label: "Highest score wins" },
-    { emoji: "🍽️", label: "Nobody's fault" },
-  ];
-  return (
-    <div className="w-full mt-10 grid grid-cols-3 gap-2">
-      {steps.map((s, i) => (
-        <div
-          key={s.label}
-          className="flex flex-col items-center gap-1 rounded-2xl bg-white/5 border border-white/10 px-2 py-4 text-center"
-        >
-          <span className="text-2xl">{s.emoji}</span>
-          <span className="text-xs font-semibold text-muted">
-            {i + 1}. {s.label}
-          </span>
-        </div>
-      ))}
-      <p className="col-span-3 mt-3 text-center text-xs text-muted">
-        🚫 One veto each. It kills a place outright, however many people wanted it.
-      </p>
-    </div>
-  );
-}
-
 /** Live round countdown from an absolute deadline; goes red in the final stretch, then "Deciding…". */
 export function RoundCountdown({ endsAt, onTurnOff }: { endsAt: number; onTurnOff?: () => void }) {
   const [remaining, setRemaining] = useState(() => Math.max(0, endsAt - Date.now()));

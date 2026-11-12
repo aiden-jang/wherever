@@ -99,6 +99,13 @@ it("folds secondary information and keeps round actions available", () => {
   const details = screen.getByText("Hours & place details").closest("details")!;
   expect(details.open).toBe(false);
   expect(screen.getByText("Decision receipt").closest("details")!.open).toBe(false);
+  expect(screen.getByText("Plan image options").closest("details")!.open).toBe(false);
+  expect(screen.getByRole("button", { name: "Save plan image" }).closest("details")).toBe(
+    screen.getByText("Plan image options").closest("details"),
+  );
+  expect(screen.getByRole("button", { name: "Send the plan" })).toBeTruthy();
+  fireEvent.click(screen.getByText("Plan image options"));
+  expect(screen.getByRole("button", { name: "Save plan image" })).toBeTruthy();
   fireEvent.click(screen.getByText("Hours & place details"));
   expect(details.open).toBe(true);
   expect(screen.getByRole("link", { name: "Call the place" }).getAttribute("href")).toBe("tel:+15555550100");

@@ -19,6 +19,7 @@ export function DeckSkeleton() {
             <div className="h-[46px] rounded-xl bg-ink/10" />
             <div className="h-[46px] rounded-xl bg-ink/10" />
           </div>
+          <div className="vote-undo-slot" />
           <div className="vote-special">
             <div className="h-11 w-24 rounded-xl bg-ink/10" />
             <div className="h-11 w-24 rounded-xl bg-ink/10" />

@@ -67,7 +67,7 @@ test("a typed town cannot be skipped when creating a room or starting a round", 
   expect((await request).postDataJSON()).toMatchObject({
     filters: { lat: 37.7749, lng: -122.4194, locationLabel: "San Francisco, CA" },
   });
-  await expect(page.getByText(/^San Francisco, CA ·/)).toBeVisible();
+  await expect(page.locator(".lobby-search").getByText(/^San Francisco, CA ·/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Done editing" })).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("button", { name: "Change area", exact: true }).click();
   await page.getByRole("button", { name: "Change", exact: true }).click();
@@ -82,7 +82,7 @@ test("a typed town cannot be skipped when creating a room or starting a round", 
   await expect(town).toHaveValue("Boulder");
   await page.getByRole("button", { name: "Cancel location change" }).click();
   await expect(page.getByRole("button", { name: "Start swiping" })).toBeEnabled();
-  await expect(page.getByText(/^San Francisco, CA ·/)).toBeVisible();
+  await expect(page.locator(".lobby-search").getByText(/^San Francisco, CA ·/)).toBeVisible();
 });
 
 test("a guest can correct a mistyped invite code and join the original room", async ({ page, context }) => {
@@ -122,6 +122,8 @@ test("Explore NYC lets a host outside New York deliberately pick a neighborhood"
   const dialog = page.getByRole("dialog", { name: "Start a session" });
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   const nearMe = dialog.getByRole("button", { name: /Near me/ });
+  await expect(nearMe).toHaveAttribute("aria-pressed", "false");
+  await nearMe.click();
   await expect(nearMe).toHaveAttribute("aria-pressed", "true");
   const explore = dialog.getByRole("button", { name: "Explore NYC" });
   const back = dialog.getByRole("button", { name: "Back to ZIP or town" });
@@ -139,7 +141,8 @@ test("Explore NYC lets a host outside New York deliberately pick a neighborhood"
   await expect(explore).toBeFocused();
   await expect(town).toHaveValue("Denver");
   await explore.click();
-  await expect(nearMe).toHaveAttribute("aria-pressed", "true");
+  await expect(nearMe).toHaveAttribute("aria-pressed", "false");
+  await expect(create).toBeDisabled();
   await audit(page);
   await page.screenshot({ path: test.info().outputPath("explore-nyc.png") });
   await neighborhood.click();
@@ -167,20 +170,22 @@ test("Explore NYC lets a host outside New York deliberately pick a neighborhood"
   await expect(town).toBeHidden();
   await expect(selectedArea).toHaveAttribute("aria-expanded", "false");
   await create.click();
-  await expect(page.getByText(/^Williamsburg ·/)).toBeVisible();
+  await expect(page.locator(".lobby-search").getByText(/^Williamsburg ·/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Done editing" })).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("textbox", { name: "ZIP code or town" })).toBeHidden();
   const lobbyArea = page.getByRole("button", { name: "NYC neighborhoods Williamsburg" });
+  await expect(lobbyArea).toHaveCount(0);
+  await page.getByRole("button", { name: "Change area", exact: true }).click();
   await expect(lobbyArea).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("button", { name: "Williamsburg", exact: true })).toBeHidden();
   await lobbyArea.click();
   const chosen = page.getByRole("button", { name: "Williamsburg", exact: true });
   await expect(chosen).toHaveAttribute("aria-pressed", "true");
   await chosen.click();
-  await expect(lobbyArea).toHaveAttribute("aria-expanded", "false");
-  await expect(lobbyArea).toBeFocused();
+  await expect(lobbyArea).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Change area", exact: true })).toBeFocused();
   await expect(page.getByRole("textbox", { name: "ZIP code or town" })).toBeHidden();
-  await expect(page.getByText(/^Williamsburg ·/)).toBeVisible();
+  await expect(page.locator(".lobby-search").getByText(/^Williamsburg ·/)).toBeVisible();
 });
 
 test("changing a location preserves the selected town until a replacement is chosen", async ({ page }) => {

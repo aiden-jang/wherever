@@ -37,7 +37,7 @@ export function RoundRules({
             aria-pressed={filters.revealVoters ?? false}
             onClick={() => onChange({ ...filters, revealVoters: !filters.revealVoters })}
             className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
-              filters.revealVoters ? "border-ember bg-ember/10" : "border-white/10 hover:border-white/30"
+              filters.revealVoters ? "border-acid bg-acid/10" : "border-white/10 hover:border-white/30"
             }`}
           >
             <span className="flex flex-col">
@@ -50,12 +50,12 @@ export function RoundRules({
             </span>
             <span
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                filters.revealVoters ? "bg-ember" : "bg-white/15"
+                filters.revealVoters ? "bg-acid" : "bg-white/15"
               }`}
             >
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                  filters.revealVoters ? "translate-x-[22px]" : "translate-x-0.5"
+                className={`absolute top-0.5 h-5 w-5 rounded-full transition-transform ${
+                  filters.revealVoters ? "translate-x-[22px] bg-ink" : "translate-x-0.5 bg-white"
                 }`}
               />
             </span>

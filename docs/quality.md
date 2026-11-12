@@ -110,3 +110,9 @@ earlier special votes, and focus when switching between pointer and keyboard vot
 Photo cases check that compact cards omit author overlays and the larger gallery
 opens the selected photo with its matching attribution and source. Landing cases
 cover quiet cycling, stable controls, interaction pauses and reduced motion.
+
+Setup keeps the host’s start action and area/filter summary visible on narrow screens.
+Location permission is requested only by Near me; creation shows New York City as the
+default until an explicit location is chosen. Preset feedback reflects current settings
+and labels customized values. Photo controls and Undo reserve stable space; waiting
+copy stays steady, and result image exports live under Plan image options.

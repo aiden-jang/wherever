@@ -29,6 +29,9 @@ test("the dinner image reaches native sharing from the click and cancellation do
     await page.keyboard.press("ArrowRight");
     await page.waitForTimeout(80);
   }
+  await expect(page.getByRole("button", { name: "Save plan image", exact: true })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Send the plan", exact: true })).toBeVisible();
+  await page.getByText("Plan image options", { exact: true }).click();
   const share = page.getByRole("button", { name: "Share plan image", exact: true });
   await expect(share).toBeVisible();
   if (process.env.CAPTURE_DETAILS && test.info().project.name === "chromium") {

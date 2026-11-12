@@ -9,7 +9,7 @@ import { LandingPreview } from "../components/LandingPreview.js";
 import { Modal } from "../components/Modal.js";
 import { ScanQr } from "../components/ScanQr.js";
 import { qrScanSupported } from "../qrScan.js";
-import { createSession, getLocation, rememberName, recallName, DEFAULT_FILTERS } from "../api.js";
+import { createSession, rememberName, recallName, DEFAULT_FILTERS } from "../api.js";
 
 const inputClass =
   "w-full rounded-2xl bg-black/40 border border-white/10 px-4 py-3 text-lg outline-none focus:border-ember transition-colors";
@@ -17,8 +17,6 @@ const inputClass =
 function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
   const [name, setName] = useState(recallName);
   const [filters, setFilters] = useState<SessionFilters>(DEFAULT_FILTERS);
-  const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
-  const [locPending, setLocPending] = useState(true);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,18 +30,8 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
     };
   }, []);
 
-  // Resolve the device location once and show the fallback area if permission is unavailable.
-  useEffect(() => {
-    getLocation().then((l) => {
-      if (!alive.current) return;
-      setLoc(l);
-      setLocPending(false);
-    });
-  }, []);
-
   const usingExplicitCenter = Boolean(filters.area) || (filters.lat != null && filters.lng != null);
-  const waitingForLocation = !usingExplicitCenter && locPending;
-  const canCreate = Boolean(name.trim()) && !busy && locationStatus === "idle" && !waitingForLocation;
+  const canCreate = Boolean(name.trim()) && !busy && locationStatus === "idle";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +46,7 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
         name.trim(),
         {
           ...filters,
-          ...(usingExplicitCenter ? {} : (loc ?? { locationLabel: "New York City" })),
+          ...(usingExplicitCenter ? {} : { locationLabel: "New York City" }),
         },
         controller.signal,
       );
@@ -90,13 +78,7 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
       {/* Location only. Everything else is set in the lobby, where the group can see it and where
           somebody is waiting for people to join anyway. */}
       <fieldset disabled={busy} className="min-w-0">
-        <LocationPicker
-          filters={filters}
-          onChange={setFilters}
-          onLocationStatusChange={setLocationStatus}
-          deviceLocation={loc}
-          deferDeviceLocation={locPending}
-        />
+        <LocationPicker filters={filters} onChange={setFilters} onLocationStatusChange={setLocationStatus} />
       </fieldset>
       {error && (
         <p role="alert" className="text-sm text-flare">
@@ -108,15 +90,11 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
         disabled={!canCreate}
         className="rounded-2xl bg-ember px-6 py-3 text-lg font-semibold text-ink disabled:opacity-50 hover:brightness-110 transition"
       >
-        {busy
-          ? "Creating room…"
-          : locationStatus === "searching" || waitingForLocation
-            ? "Finding your location…"
-            : "Create room"}
+        {busy ? "Creating room…" : locationStatus === "searching" ? "Finding your location…" : "Create room"}
       </button>
-      {!usingExplicitCenter && !locPending && !loc && (
+      {!usingExplicitCenter && locationStatus === "idle" && (
         <p className="text-center text-sm text-muted" role="status">
-          Your location is unavailable. Search for a ZIP code or town, or use New York City.
+          Search area: New York City. Choose Near me or search to change it.
         </p>
       )}
     </form>

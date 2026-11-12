@@ -1,6 +1,6 @@
 import { line, matchReasons, nearMissLine, type SessionFilters } from "@wherever/shared";
 import type { MatchState } from "../sessionState.js";
-import { filterSummaryChips } from "./FilterSummary.js";
+import { filterSummaryChips } from "./filterLabels.js";
 import { VerdictNotes } from "./VerdictNotes.js";
 import { seedFrom, consensusLine } from "./winnerCopy.js";
 

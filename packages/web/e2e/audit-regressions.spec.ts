@@ -117,11 +117,7 @@ test("the selected group preference stays readable", async ({ page }) => {
   await expect(page.locator(".lobby-preferences")).toHaveAttribute("open", "");
   await expect(page.getByRole("button", { name: "Done editing" })).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("button", { name: /^quick/ }).click();
-  await expect(
-    page.getByText(
-      "The group’s quick preset has been applied to Dinner filters. The host can fine-tune it below.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "quick applied" })).toContainText("0.5 mi");
   await expect(page.getByRole("radio", { name: "0.5 mi", exact: true })).toBeChecked();
   await expect(page.getByRole("button", { name: "Open now", exact: false })).toHaveAttribute(
     "aria-pressed",

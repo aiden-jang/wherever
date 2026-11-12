@@ -61,7 +61,9 @@ test("a typed town cannot be skipped when creating a room or starting a round", 
   await audit(page);
   await page.screenshot({ path: test.info().outputPath("confirm-town.png") });
   await dialog.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(dialog.getByText("San Francisco, CA", { exact: true })).toBeVisible();
+  await expect(
+    dialog.locator(".location-picker").getByText("San Francisco, CA", { exact: true }),
+  ).toBeVisible();
   const request = page.waitForRequest((candidate) => candidate.url().endsWith("/api/sessions"));
   await create.click();
   expect((await request).postDataJSON()).toMatchObject({

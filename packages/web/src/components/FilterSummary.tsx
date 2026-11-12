@@ -118,18 +118,20 @@ export function FilterSummary({
           </fieldset>
         )}
       </div>
-      <ul aria-label="Dinner filters" className="mt-2 flex flex-wrap gap-1.5">
-        {filterSummaryChips(active)
-          .slice(1)
-          .map((chip) => (
-            <li
-              key={chip}
-              className="rounded-full bg-white/5 px-2.5 py-1 text-xs text-muted [overflow-wrap:anywhere]"
-            >
-              {chip}
-            </li>
-          ))}
-      </ul>
+      {(!open || !editable) && (
+        <ul aria-label="Dinner filters" className="mt-2 flex flex-wrap gap-1.5">
+          {filterSummaryChips(active)
+            .slice(1)
+            .map((chip) => (
+              <li
+                key={chip}
+                className="rounded-full bg-white/5 px-2.5 py-1 text-xs text-muted [overflow-wrap:anywhere]"
+              >
+                {chip}
+              </li>
+            ))}
+        </ul>
+      )}
       <div id={editorId} hidden={!open || !editable}>
         {open && editable && (
           <fieldset disabled={locked} className="filter-editor min-w-0">

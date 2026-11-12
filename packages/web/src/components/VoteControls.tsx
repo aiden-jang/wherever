@@ -44,8 +44,8 @@ export function VoteControls({
           <span aria-hidden>♥</span> Yes, please
         </button>
       </div>
-      <div className="vote-undo-slot">{undo}</div>
       <div className="vote-special">
+        <div className="vote-undo-slot">{undo}</div>
         <button
           data-deck-control
           data-vote-action="veto"
@@ -56,7 +56,10 @@ export function VoteControls({
           aria-label={vetoUsed ? "Veto, already used this round" : "Veto (one per round, kills it outright)"}
           onClick={() => (vetoUsed ? onSpent("vetoSpent") : onVote("left", false, true))}
         >
-          <span aria-hidden>⊘</span> Veto <small>{vetoUsed ? "Used" : "1 left"}</small>
+          <span className="vote-special-label">
+            <span aria-hidden>⊘</span> Veto
+          </span>
+          <small>{vetoUsed ? "Used" : "1 left"}</small>
         </button>
         <button
           data-deck-control
@@ -68,7 +71,10 @@ export function VoteControls({
           aria-label={superUsed ? "Super-like, already used this round" : "Super-like (one per round)"}
           onClick={() => (superUsed ? onSpent("superSpent") : onVote("right", true))}
         >
-          <span aria-hidden>✦</span> Super-like <small>{superUsed ? "Used" : "1 left"}</small>
+          <span className="vote-special-label">
+            <span aria-hidden>✦</span> Super-like
+          </span>
+          <small>{superUsed ? "Used" : "1 left"}</small>
         </button>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTransitionNavigate } from "../useViewTransition.js";
 import { FieldLabel } from "../components/FilterControls.js";
 import { LocationPicker, type LocationStatus } from "../components/LocationPicker";
+import { searchArea } from "../components/filterLabels.js";
 import { isCompleteCode, sessionCodeFrom } from "@wherever/shared";
 import type { SessionFilters } from "@wherever/shared";
 import { LandingPreview } from "../components/LandingPreview.js";
@@ -85,6 +86,14 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
           {error}
         </p>
       )}
+      {locationStatus === "idle" && (
+        <p className="rounded-xl bg-white/5 px-3 py-2 text-sm text-muted" role="status">
+          Search area: <strong className="font-semibold text-cream">{searchArea(filters)}</strong>
+          {!usingExplicitCenter && (
+            <span className="block text-xs">Choose Near me or search to change it.</span>
+          )}
+        </p>
+      )}
       <button
         type="submit"
         disabled={!canCreate}
@@ -92,11 +101,6 @@ function CreateForm({ openRoom }: { openRoom: (code: string) => void }) {
       >
         {busy ? "Creating room…" : locationStatus === "searching" ? "Finding your location…" : "Create room"}
       </button>
-      {!usingExplicitCenter && locationStatus === "idle" && (
-        <p className="text-center text-sm text-muted" role="status">
-          Search area: New York City. Choose Near me or search to change it.
-        </p>
-      )}
     </form>
   );
 }

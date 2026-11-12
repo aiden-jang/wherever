@@ -54,6 +54,7 @@ it("opens group preferences above the host's dinner filters and still allows bot
   fireEvent.click(screen.getByRole("button", { name: "Close area settings" }));
   expect(screen.getByRole("region", { name: "Group vibe" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Done editing" }).getAttribute("aria-expanded")).toBe("true");
+  expect(screen.queryByRole("list", { name: "Dinner filters" })).toBeNull();
   expect(preferences.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole("button", { name: /^More filters/ }).getAttribute("aria-expanded")).toBe("false");
   fireEvent.click(summary);
@@ -62,6 +63,9 @@ it("opens group preferences above the host's dinner filters and still allows bot
   expect(screen.getByRole("button", { name: "Edit dinner filters" }).getAttribute("aria-expanded")).toBe(
     "false",
   );
+  expect(screen.getByRole("list", { name: "Dinner filters" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Edit dinner filters" }));
+  expect(screen.queryByRole("list", { name: "Dinner filters" })).toBeNull();
 });
 it("keeps group preferences available to guests without exposing the host's filter editor", () => {
   const state = vi.mocked(useSessionSocket).getMockImplementation()!("ABCDEF", "Alex");
@@ -76,4 +80,5 @@ it("keeps group preferences available to guests without exposing the host's filt
   expect(screen.getByText("Group preferences").closest("details")!.open).toBe(true);
   expect(screen.queryByRole("button", { name: "Done editing" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Edit dinner filters" })).toBeNull();
+  expect(screen.getByRole("list", { name: "Dinner filters" })).toBeTruthy();
 });

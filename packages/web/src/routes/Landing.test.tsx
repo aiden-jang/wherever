@@ -36,6 +36,10 @@ it("shows the default area and creates without asking for location permission", 
   setup();
   expect(getLocation).not.toHaveBeenCalled();
   expect(screen.getByRole("status").textContent).toContain("Search area: New York City");
+  expect(
+    screen.getByRole("status").compareDocumentPosition(screen.getByRole("button", { name: "Create room" })) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Create room" }));
   await waitFor(() =>
     expect(createSession).toHaveBeenCalledWith(
@@ -62,6 +66,7 @@ it("waits for an explicitly requested location before allowing creation", async 
   await waitFor(() =>
     expect(screen.getByRole<HTMLButtonElement>("button", { name: "Create room" }).disabled).toBe(false),
   );
+  expect(screen.getByRole("status").textContent).toContain("Search area: Current location");
   fireEvent.click(screen.getByRole("button", { name: "Create room" }));
   await waitFor(() =>
     expect(createSession).toHaveBeenCalledWith(
@@ -70,6 +75,17 @@ it("waits for an explicitly requested location before allowing creation", async 
       expect.any(AbortSignal),
     ),
   );
+});
+it("updates the area above Create room when a neighborhood is selected and hides it during an unfinished search", () => {
+  setup();
+  fireEvent.click(screen.getByRole("button", { name: "Explore NYC" }));
+  fireEvent.click(screen.getByRole("button", { name: "West Village" }));
+  expect(screen.getByRole("status").textContent).toBe("Search area: West Village");
+  fireEvent.click(screen.getByRole("button", { name: "Search by ZIP or town" }));
+  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Create room" }).disabled).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel location change" }));
+  expect(screen.getByRole("status").textContent).toBe("Search area: West Village");
 });
 it("keeps the default available after denied permission and lets Near me retry", async () => {
   vi.mocked(getLocation).mockResolvedValueOnce(null).mockResolvedValueOnce({ lat: 42, lng: -71 });

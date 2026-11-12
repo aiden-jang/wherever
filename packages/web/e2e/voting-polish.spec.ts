@@ -13,6 +13,10 @@ test("one step of Undo survives reconnect and keyboard votes focus the matching 
     await guest.getByRole("button", { name: "Join the session" }).click();
     await expect(page.getByText("2 people", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Start swiping", exact: true }).click();
+    await expect(page.getByText("0 of 2 done")).toBeVisible();
+    await expect(page.getByRole("button", { name: "hurry them" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "just decide now" })).toBeVisible();
+    await expect(guest.getByRole("button", { name: "hurry them" })).toHaveCount(0);
     const nope = page.getByRole("button", { name: "Nope", exact: true });
     await nope.click();
     await page.keyboard.press("ArrowRight");
@@ -34,7 +38,7 @@ test("one step of Undo survives reconnect and keyboard votes focus the matching 
   }
 });
 
-test("the landing preview cycles quietly, can pause, and stays still with reduced motion", async ({
+test("the landing preview cycles quietly, pauses for interaction, and respects reduced motion", async ({
   page,
 }) => {
   await page.clock.install();
@@ -47,11 +51,17 @@ test("the landing preview cycles quietly, can pause, and stays still with reduce
   await page.clock.fastForward(3500);
   await expect(preview.getByRole("heading", { name: "Noodle Situation" })).toBeVisible();
   expect((await yes.boundingBox())!.y).toBeCloseTo(before!.y, 0);
-  await preview.getByRole("button", { name: "Pause preview" }).click();
-  await page.mouse.move(0, 0);
-  await page.getByRole("heading", { level: 1 }).click();
+  await expect(preview.getByRole("button", { name: /^(Pause|Play) preview$/ })).toHaveCount(0);
+  await yes.hover();
   await page.clock.fastForward(20_000);
   await expect(preview.getByRole("heading", { name: "Noodle Situation" })).toBeVisible();
+  await page.mouse.move(0, 0);
+  await yes.focus();
+  await page.clock.fastForward(20_000);
+  await expect(preview.getByRole("heading", { name: "Noodle Situation" })).toBeVisible();
+  await page.getByRole("main").focus();
+  await page.clock.fastForward(3500);
+  await expect(preview.getByRole("heading", { name: "Probably Fine Tacos" })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("landing-cycle.png") });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();

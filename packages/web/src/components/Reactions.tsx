@@ -12,7 +12,7 @@ export function ReactionBar({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-1">
+    <div className="mx-auto flex w-full max-w-72 flex-nowrap items-center justify-center gap-1">
       {REACTION_EMOJIS.map((emoji) => (
         <button
           key={emoji}
@@ -24,7 +24,7 @@ export function ReactionBar({
             play("tap");
             onReact(emoji);
           }}
-          className="grid h-11 w-11 place-items-center rounded-full text-2xl hover:bg-white/10 active:scale-90 transition"
+          className="grid h-11 min-w-0 max-w-11 flex-1 place-items-center rounded-full text-2xl hover:bg-white/10 active:scale-90 transition"
         >
           {emoji}
         </button>

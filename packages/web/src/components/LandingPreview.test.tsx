@@ -35,7 +35,7 @@ it("quietly cycles example cards while keeping vote controls in place", () => {
   expect(screen.getByRole("heading", { name: "Probably Fine Tacos" })).toBeTruthy();
   expect(play).toHaveBeenCalledWith("like");
 });
-it("pauses for interaction and offers an explicit persistent pause", () => {
+it("pauses during hover and keyboard focus, then resumes without a playback control", () => {
   render(<LandingPreview />);
   const preview = screen.getByRole("region", { name: "Example restaurant preview" });
   fireEvent.mouseEnter(preview);
@@ -46,10 +46,7 @@ it("pauses for interaction and offers an explicit persistent pause", () => {
   advance(20_000);
   expect(screen.getByText("1 / 3 examples")).toBeTruthy();
   fireEvent.blur(screen.getByRole("button", { name: "Nope" }), { relatedTarget: document.body });
-  fireEvent.click(screen.getByRole("button", { name: "Pause preview" }));
-  advance(20_000);
-  expect(screen.getByText("1 / 3 examples")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Play preview" }));
+  expect(screen.queryByRole("button", { name: /^(Pause|Play) preview$/ })).toBeNull();
   advance();
   expect(screen.getByText("2 / 3 examples")).toBeTruthy();
 });

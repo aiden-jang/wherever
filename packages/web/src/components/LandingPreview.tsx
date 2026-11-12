@@ -50,7 +50,6 @@ const CARDS: TeaserCard[] = [
 export function LandingPreview({ suspended = false }: { suspended?: boolean }) {
   const reduce = useReducedMotion();
   const [frame, setFrame] = useState({ index: 0, direction: -1, manual: false });
-  const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(() => !document.hidden);
@@ -60,7 +59,7 @@ export function LandingPreview({ suspended = false }: { suspended?: boolean }) {
     return () => document.removeEventListener("visibilitychange", update);
   }, []);
   useEffect(() => {
-    if (reduce !== false || paused || hovered || focused || !visible || suspended) return;
+    if (reduce !== false || hovered || focused || !visible || suspended) return;
     const timer = setTimeout(
       () =>
         setFrame((current) => ({
@@ -71,7 +70,7 @@ export function LandingPreview({ suspended = false }: { suspended?: boolean }) {
       3000,
     );
     return () => clearTimeout(timer);
-  }, [reduce, paused, hovered, focused, visible, suspended, frame.index]);
+  }, [reduce, hovered, focused, visible, suspended, frame.index]);
   const card = CARDS[frame.index]!;
   function vote(direction: "left" | "right") {
     buzz(direction === "right" ? 12 : [8, 20]);
@@ -139,11 +138,6 @@ export function LandingPreview({ suspended = false }: { suspended?: boolean }) {
           <span>
             {frame.index + 1} / {CARDS.length} examples
           </span>
-          {!reduce && (
-            <button type="button" onClick={() => setPaused((value) => !value)}>
-              {paused ? "Play preview" : "Pause preview"}
-            </button>
-          )}
         </div>
       </div>
     </section>

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ComponentProps } from "react";
 import { MotionConfig } from "framer-motion";
 import { Link } from "react-router-dom";
-import { decideNowWarning, NUDGE_COOLDOWN_MS } from "@wherever/shared";
 import type { useSessionSocket } from "../useSessionSocket.js";
 import { PlateState } from "./PlateState.js";
 import { DisconnectBanner, RoundCountdown } from "./LobbyStatus.js";
@@ -10,6 +9,7 @@ import { SwipeDeck } from "./SwipeDeck.js";
 import { DeckSkeleton } from "./DeckSkeleton.js";
 import { GroupTasteMap, LiveVotes, VoterAvatars } from "./LobbyPeople.js";
 import { ReactionBar } from "./Reactions.js";
+import { RoundProgress } from "./RoundProgress.js";
 export function SwipingRoom({
   state,
   chrome,
@@ -55,24 +55,7 @@ export function SwipingRoom({
     status !== "open" ||
     (roundEndsAt !== null && (expiredDeadline === roundEndsAt || Date.now() >= roundEndsAt));
   const showBanner = everConnected && status !== "open";
-  const [confirmDecide, setConfirmDecide] = useState(false);
-  /*
-   * Mirrors the server's cooldown so the button shows the rule instead of failing silently. The
-   * server is still the enforcement: socket errors are not rendered during a round, so a second
-   * click would otherwise do nothing visible at all.
-   */
-  const [hurriedAt, setHurriedAt] = useState(0);
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!hurriedAt) return;
-    const t = setInterval(() => {
-      const current = Date.now();
-      setNow(current);
-      if (current - hurriedAt >= NUDGE_COOLDOWN_MS) clearInterval(t);
-    }, 500);
-    return () => clearInterval(t);
-  }, [hurriedAt]);
-  const hurryWait = Math.max(0, NUDGE_COOLDOWN_MS / 1000 - Math.floor((now - hurriedAt) / 1000));
+  const groupRound = (progress?.totalParticipants ?? session?.participants.length ?? 1) > 1;
 
   return (
     <main ref={main} id="main-content" tabIndex={-1} className="table-room table-voting">
@@ -109,6 +92,7 @@ export function SwipingRoom({
               visited={visited}
               superSpent={superUsed}
               vetoSpent={vetoUsed}
+              groupRound={groupRound}
               onSwipe={(choice) => send({ type: "swipe", ...choice })}
               onUndo={(choice) =>
                 send({
@@ -120,67 +104,17 @@ export function SwipingRoom({
               onAnnounce={onAnnounce}
               aside={
                 <>
-                  {progress?.tastePulse && <GroupTasteMap pulse={progress.tastePulse} />}
-                  {session?.filters.revealVoters &&
+                  {groupRound && progress && (
+                    <RoundProgress progress={progress} isHost={isHost} disabled={votingPaused} send={send} />
+                  )}
+                  {groupRound && progress && <LiveVotes count={progress.votesCast ?? 0} />}
+                  {groupRound && progress?.tastePulse && <GroupTasteMap pulse={progress.tastePulse} />}
+                  {groupRound &&
+                    session?.filters.revealVoters &&
                     progress?.finishedIds &&
                     session.participants.length > 0 && (
                       <VoterAvatars participants={session.participants} finishedIds={progress.finishedIds} />
                     )}
-                  {progress && <LiveVotes count={progress.votesCast ?? 0} />}
-                  {progress && progress.totalParticipants > 0 && (
-                    <p className="mt-3 text-sm text-muted tabular-nums">
-                      {progress.finishedCount} of {progress.totalParticipants} done
-                      {/* -my-2 py-2 on the inline actions here: 20px tall is under the 24px tap floor on a
-                          phone, and these hurry or end a round. The negative margin keeps the line as it was. */}
-                      {isHost && progress.finishedCount < progress.totalParticipants && !confirmDecide && (
-                        <button
-                          disabled={hurryWait > 0 || votingPaused}
-                          onClick={() => {
-                            if (!send({ type: "nudge_them" })) return;
-                            setHurriedAt(Date.now());
-                            setNow(Date.now());
-                          }}
-                          className="ml-3 -my-2 py-2 underline transition-colors hover:text-cream disabled:cursor-default disabled:no-underline disabled:opacity-50 disabled:hover:text-muted"
-                        >
-                          {hurryWait > 0 ? `hurried (${hurryWait}s)` : "hurry them"}
-                        </button>
-                      )}
-                      {isHost &&
-                        progress.finishedCount < progress.totalParticipants &&
-                        (confirmDecide ? (
-                          /* Two steps in the same row: this ends the round for everybody, and the screen
-                             cannot afford another line. */
-                          <>
-                            <span className="ml-3 text-cream">
-                              {decideNowWarning(progress.finishedCount, progress.totalParticipants)}
-                            </span>
-                            <button
-                              disabled={votingPaused}
-                              onClick={() => {
-                                if (send({ type: "decide_now" })) setConfirmDecide(false);
-                              }}
-                              className="ml-3 font-semibold text-acid underline enabled:hover:text-cream disabled:opacity-60 transition-colors"
-                            >
-                              Decide anyway
-                            </button>
-                            <button
-                              onClick={() => setConfirmDecide(false)}
-                              className="ml-3 -my-2 py-2 underline hover:text-cream transition-colors"
-                            >
-                              Wait
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            disabled={votingPaused}
-                            onClick={() => setConfirmDecide(true)}
-                            className="ml-3 -my-2 py-2 underline enabled:hover:text-cream disabled:opacity-60 transition-colors"
-                          >
-                            just decide now
-                          </button>
-                        ))}
-                    </p>
-                  )}
                   <div className="mt-3">
                     <ReactionBar
                       disabled={status !== "open"}

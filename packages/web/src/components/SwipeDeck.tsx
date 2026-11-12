@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   line,
@@ -55,6 +55,7 @@ export function SwipeDeck({
   visited = [],
   superSpent = false,
   vetoSpent = false,
+  groupRound = true,
   onSwipe,
   onLoadPlace,
   onUndo,
@@ -73,6 +74,7 @@ export function SwipeDeck({
   superSpent?: boolean;
   /** Seeded from the server so a reconnect can't hand back a spent veto. */
   vetoSpent?: boolean;
+  groupRound?: boolean;
   onSwipe: (choice: BallotChoice) => boolean;
   // The deck owns its status rail; the group panel joins it on desktop and follows it on phones.
   aside?: ReactNode;
@@ -249,9 +251,10 @@ export function SwipeDeck({
       data-deck-control
       onClick={undoLast}
       disabled={disabled}
+      aria-label="Undo last vote"
       className="vote-undo inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium enabled:hover:underline disabled:opacity-60"
     >
-      Undo last vote
+      <span aria-hidden>↶</span> Undo
     </button>
   );
 
@@ -261,16 +264,22 @@ export function SwipeDeck({
         <div className="table-panel text-center">
           <PlateState art="waiting" />
           <h2 ref={waitingHeading} tabIndex={-1} className="mt-4 font-display text-3xl font-bold">
-            Waiting for the group
+            {groupRound ? "Waiting for the group" : "Finding your dinner"}
           </h2>
-          <p className="mt-2 text-muted">{waitingLine}</p>
+          <p className="mt-2 text-muted">
+            {groupRound ? waitingLine : "Your votes are in. Choosing your dinner…"}
+          </p>
           {undoControl}
           {choices.length > 0 && (
             <PrivateShortlist liked={likedChoices} restaurants={restaurants} onOpen={openDetail} />
           )}
         </div>
         {/* Waiting on other people is exactly when their progress is worth looking at. */}
-        {aside && <div className={RAIL}>{aside}</div>}
+        {aside && (
+          <div className={RAIL}>
+            <Fragment key="round-status">{aside}</Fragment>
+          </div>
+        )}
         {detail && (
           <RestaurantDetail
             restaurant={detail.restaurant}
@@ -321,20 +330,25 @@ export function SwipeDeck({
         <p className="text-sm text-muted tabular-nums">
           Place {index + 1} of {restaurants.length}
         </p>
-        <p className="mt-3 hidden flex-wrap gap-x-3 gap-y-1 text-xs text-muted lg:flex">
-          <Key label="pass">←</Key>
-          <Key label="eat">→</Key>
-          <Key label="super" dim={superUsed}>
-            ↑
-          </Key>
-          <Key label="veto" dim={vetoUsed}>
-            V
-          </Key>
-          <Key label="undo" dim={!canUndo}>
-            ⌫
-          </Key>
-        </p>
-        {aside}
+        <Fragment key="round-status">{aside}</Fragment>
+        <details className="mt-3 hidden border-t border-white/10 lg:block">
+          <summary className="min-h-11 cursor-pointer content-center text-xs text-muted hover:text-cream">
+            Shortcuts
+          </summary>
+          <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+            <Key label="pass">←</Key>
+            <Key label="eat">→</Key>
+            <Key label="super" dim={superUsed}>
+              ↑
+            </Key>
+            <Key label="veto" dim={vetoUsed}>
+              V
+            </Key>
+            <Key label="undo" dim={!canUndo}>
+              ⌫
+            </Key>
+          </p>
+        </details>
       </div>
 
       {detail && (

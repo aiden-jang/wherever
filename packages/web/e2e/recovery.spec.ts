@@ -35,7 +35,7 @@ test("an unavailable location search keeps the query and can be retried", async 
   await expect(dialog.getByRole("textbox", { name: "Your name" })).toHaveValue("Alex");
   available = true;
   await dialog.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(dialog.getByText("Denver, CO", { exact: true })).toBeVisible();
+  await expect(dialog.locator(".location-picker").getByText("Denver, CO", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("alert")).toHaveCount(0);
 });
 
@@ -207,7 +207,7 @@ test("changing a location preserves the selected town until a replacement is cho
   await dialog.getByRole("textbox", { name: "Your name" }).fill("Alex");
   await dialog.getByRole("textbox", { name: "ZIP code or town" }).fill("Denver");
   await dialog.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(dialog.getByText("Denver, CO", { exact: true })).toBeVisible();
+  await expect(dialog.locator(".location-picker").getByText("Denver, CO", { exact: true })).toBeVisible();
   const change = dialog.getByRole("button", { name: "Change", exact: true });
   await change.click();
   const search = dialog.getByRole("textbox", { name: "ZIP code or town" });
@@ -220,11 +220,11 @@ test("changing a location preserves the selected town until a replacement is cho
   }
   await dialog.getByRole("button", { name: "Cancel location change" }).click();
   await expect(change).toBeFocused();
-  await expect(dialog.getByText("Denver, CO", { exact: true })).toBeVisible();
+  await expect(dialog.locator(".location-picker").getByText("Denver, CO", { exact: true })).toBeVisible();
   await change.click();
   await search.fill("Boulder");
   await dialog.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(dialog.getByText("Boulder, CO", { exact: true })).toBeVisible();
+  await expect(dialog.locator(".location-picker").getByText("Boulder, CO", { exact: true })).toBeVisible();
   await expect(change).toBeFocused();
   expect(selected).toEqual([]);
 });

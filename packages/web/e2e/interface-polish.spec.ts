@@ -58,7 +58,7 @@ test("photo controls are explicit and undo keeps the vote controls steady", asyn
   await expect(page.getByRole("button", { name: "just decide now" })).toHaveCount(0);
   await expect(page.getByText("0 of 1 done")).toHaveCount(0);
   const shortcuts = page.getByText("Shortcuts", { exact: true });
-  const passShortcut = page.getByText("pass", { exact: true });
+  const passShortcut = page.getByText(/^←\s*pass$/);
   await expect(passShortcut).toBeHidden();
   await shortcuts.focus();
   await page.keyboard.press("Enter");

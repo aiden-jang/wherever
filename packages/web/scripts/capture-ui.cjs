@@ -203,7 +203,7 @@ async function setup(page, name) {
       : name === "missing"
         ? "This code leads nowhere."
         : name === "empty-deck"
-          ? "Nothing survived the filters."
+          ? "No places match these filters."
           : name === "no-match"
             ? "No eligible pick."
             : ["winner", "winner-share-error", "directions"].includes(name)

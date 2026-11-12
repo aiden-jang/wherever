@@ -8,7 +8,10 @@ swipe on one common deck, and turn the result into a dinner plan.
 ## The experience
 
 - No accounts: join with a name, code, invite link, or QR.
-- Vote by gesture, buttons, or arrow keys. Undo a local vote before the round ends.
+- Vote by gesture, buttons, or arrow keys. Undo only the most recent vote before the
+  round ends; voting again enables one new Undo. V vetoes; the down arrow scrolls.
+- The landing page gently cycles fictional example cards. Hover, focus, open dialogs,
+  page visibility, an explicit pause and reduced motion govern automatic playback.
 - The highest weighted score wins. Each person gets one super-like and one anonymous
   veto per round; a veto removes the restaurant from contention.
 - Set food and location filters together in the lobby. Optional timers and host

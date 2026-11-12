@@ -30,12 +30,14 @@ export type AmenityKey =
 export interface PhotoCredit {
   name: string;
   url?: string;
+  avatarUrl?: string;
 }
 
 export interface Restaurant {
   source?: "google";
   detailsStatus?: "pending" | "unavailable";
   photoCredits?: Record<string, PhotoCredit[]>;
+  photoMapsUris?: Record<string, string>;
   id: string;
   name: string;
   /** Short category label, e.g. "Tacos", "Ramen". */

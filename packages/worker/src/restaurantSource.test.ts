@@ -35,7 +35,14 @@ describe("mapGooglePlace", () => {
       photos: [
         {
           name: "places/g1/photos/x",
-          authorAttributions: [{ displayName: "Photographer", uri: "//maps.google.com/user" }],
+          googleMapsUri: "https://maps.google.com/photo/x",
+          authorAttributions: [
+            {
+              displayName: "Photographer",
+              uri: "//maps.google.com/user",
+              photoUri: "//lh3.googleusercontent.com/avatar",
+            },
+          ],
         },
       ],
     };
@@ -46,8 +53,15 @@ describe("mapGooglePlace", () => {
       priceUnknown: false,
       photoCredits: {
         "https://api.example.com/api/photo?ref=places%2Fg1%2Fphotos%2Fx": [
-          { name: "Photographer", url: "https://maps.google.com/user" },
+          {
+            name: "Photographer",
+            url: "https://maps.google.com/user",
+            avatarUrl: "https://lh3.googleusercontent.com/avatar",
+          },
         ],
+      },
+      photoMapsUris: {
+        "https://api.example.com/api/photo?ref=places%2Fg1%2Fphotos%2Fx": "https://maps.google.com/photo/x",
       },
       category: "Pizza restaurant",
       priceTier: 2,

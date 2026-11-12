@@ -35,8 +35,10 @@ deduplicated across reconnect overlap.
 
 `SessionRoom` delegates voting and transitions to `RoundController`. A start or replay
 guard spans external fetches and status writes. Only dealt restaurant IDs accept
-votes, each participant's keyed vote replaces its predecessor, and undo removes
-that participant's choice. Completion, the host, or the round alarm can decide.
+votes, each participant's keyed vote replaces its predecessor, and Undo removes
+only that participant's most recent choice. A round-scoped Undo state blocks
+another step back until a new vote is cast. It is written in the ballot transaction
+and sent on resume and private ballot updates. Completion, the host, or the round alarm can decide.
 The pure decision core ranks non-vetoed places and retains backups.
 
 Room creation reserves the host seat using the creator's browser credential. An

@@ -33,7 +33,7 @@ export function SwipeCard({
   restaurant: Restaurant;
   revisit: string | null;
   onCommit: (dir: SwipeDirection) => void;
-  onOpenDetail: (r: Restaurant) => void;
+  onOpenDetail: (r: Restaurant, photoIndex?: number) => void;
 }) {
   const reduce = useReducedMotion();
   const x = useMotionValue(0);
@@ -88,7 +88,7 @@ export function SwipeCard({
         ) {
           nextPhoto();
         } else {
-          onOpenDetail(restaurant);
+          onOpenDetail(restaurant, photoIdx);
         }
       }}
       onDragEnd={(_, info) => {
@@ -113,7 +113,7 @@ export function SwipeCard({
         onPointerUp={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.currentTarget.focus({ preventScroll: true });
-          onOpenDetail(restaurant);
+          onOpenDetail(restaurant, photoIdx);
         }}
         data-deck-control
         data-card-info

@@ -46,6 +46,7 @@ export interface SessionState {
   demo: DemoReason | null;
   alreadyVoted: string[];
   ballot: BallotChoice[];
+  canUndo: boolean;
   superUsed: boolean;
   deckNote: string | null;
   behindBy: number;
@@ -72,6 +73,7 @@ export const initialSessionState: SessionState = {
   demo: null,
   alreadyVoted: [],
   ballot: [],
+  canUndo: false,
   superUsed: false,
   deckNote: null,
   behindBy: 0,
@@ -131,6 +133,7 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
         roundEndsAt: msg.roundEndsAt ?? null,
         alreadyVoted: msg.alreadyVoted ?? [],
         ballot: msg.ballot ?? [],
+        canUndo: msg.canUndo ?? Boolean(msg.ballot?.length),
         error: null,
         reactions: [],
       };
@@ -139,6 +142,7 @@ export function sessionReducer(state: SessionState, action: Action): SessionStat
       return {
         ...state,
         ballot: msg.choices,
+        canUndo: msg.canUndo ?? msg.choices.length > 0,
         alreadyVoted: msg.choices.map((choice) => choice.restaurantId),
         superUsed: msg.choices.some((choice) => choice.super),
         vetoUsed: msg.choices.some((choice) => choice.veto),

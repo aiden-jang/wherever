@@ -141,6 +141,8 @@ export interface DeckMessage {
   /** Restaurant ids this client already voted on, for resume after reconnect. */
   alreadyVoted?: string[];
   ballot?: BallotChoice[];
+  /** One step back; another vote enables Undo again. */
+  canUndo?: boolean;
   /** Whether this client already spent its one super-like this round (for resume after reconnect). */
   superUsed?: boolean;
   /** Whether this client already spent its one veto this round (for resume after reconnect). */
@@ -279,4 +281,4 @@ export type ServerMessage =
   | NudgeMessage
   | { type: "round_place"; roundId: number; restaurant: Restaurant }
   | { type: "round_clock"; roundEndsAt: null }
-  | { type: "ballot"; roundId: number; choices: BallotChoice[]; conflict?: boolean };
+  | { type: "ballot"; roundId: number; choices: BallotChoice[]; canUndo?: boolean; conflict?: boolean };

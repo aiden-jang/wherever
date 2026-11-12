@@ -105,6 +105,55 @@
 .preview-photo {
   height: clamp(155px, 21vw, 260px);
 }
+.preview-card-viewport {
+  display: grid;
+  overflow: hidden;
+}
+.preview-card-content {
+  --preview-offset: 18px;
+  grid-area: 1 / 1;
+  min-width: 0;
+  animation: preview-cycle-in 320ms ease-out both;
+}
+.preview-card-content[data-direction="1"] {
+  --preview-offset: -18px;
+}
+@keyframes preview-cycle-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--preview-offset));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-card-content {
+    animation: none;
+  }
+}
+.preview-title {
+  min-height: 2.5em;
+}
+.preview-card-actions {
+  padding: 0 clamp(16px, 2.5vw, 28px) 12px;
+}
+.preview-playback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  color: #59604f;
+  font-size: 11px;
+}
+.preview-playback button {
+  min-height: 44px;
+  padding: 4px 0 4px 8px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .preview-card-body {
   display: grid;
   gap: 10px;

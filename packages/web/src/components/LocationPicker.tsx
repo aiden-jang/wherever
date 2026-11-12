@@ -143,7 +143,7 @@ export function LocationPicker({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="location-picker flex flex-col gap-2">
       <FieldLabel>Search area</FieldLabel>
 
       {filters.locationLabel && (
@@ -162,40 +162,42 @@ export function LocationPicker({
           </button>
         </div>
       )}
-      {showLocationControls && (
+      <div className="location-methods">
+        {showLocationControls && (
+          <button
+            type="button"
+            aria-pressed={nearMe}
+            onClick={() => void useNearMe()}
+            disabled={deferDeviceLocation || busy}
+            className={`min-h-11 shrink-0 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+              nearMe ? "bg-acid text-ink border-acid" : "border-white/15 text-cream hover:border-white/30"
+            }`}
+          >
+            📍 Near me
+          </button>
+        )}
         <button
           type="button"
-          aria-pressed={nearMe}
-          onClick={() => void useNearMe()}
-          disabled={deferDeviceLocation || busy}
-          className={`shrink-0 rounded-2xl border px-3 py-2 text-sm font-semibold transition-colors ${
-            nearMe ? "bg-acid text-ink border-acid" : "border-white/15 text-cream hover:border-white/30"
-          }`}
+          aria-expanded={nycOpen}
+          aria-controls={neighborhoodsId}
+          onClick={toggleNeighborhoods}
+          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
         >
-          📍 Near me
-        </button>
-      )}
-      <button
-        type="button"
-        aria-expanded={nycOpen}
-        aria-controls={neighborhoodsId}
-        onClick={toggleNeighborhoods}
-        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-cream hover:border-white/25 transition-colors"
-      >
-        <span className="flex min-w-0 flex-wrap items-center gap-2">
-          <span>
-            {activeNeighborhood ? "NYC neighborhoods" : nycOpen ? "Back to ZIP or town" : "Explore NYC"}
-          </span>
-          {activeNeighborhood && (
-            <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
-              {activeNeighborhood.label}
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <span>
+              {activeNeighborhood ? "NYC neighborhoods" : nycOpen ? "Back to ZIP or town" : "Explore NYC"}
             </span>
-          )}
-        </span>
-        <span className="shrink-0 text-muted">
-          <Chevron open={nycOpen} />
-        </span>
-      </button>
+            {activeNeighborhood && (
+              <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
+                {activeNeighborhood.label}
+              </span>
+            )}
+          </span>
+          <span className="shrink-0 text-muted">
+            <Chevron open={nycOpen} />
+          </span>
+        </button>
+      </div>
       {activeNeighborhood && !filters.locationLabel && !showTownSearch && (
         <button
           type="button"

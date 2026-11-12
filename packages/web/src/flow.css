@@ -109,6 +109,24 @@
 .restaurant-gallery {
   position: relative;
 }
+.photo-credits {
+  max-width: calc(100% - 96px);
+}
+.gallery-source {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: calc(100% - 76px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 90%);
+  color: white;
+  font-size: 12px;
+  text-decoration: underline;
+}
 .detail-photo {
   height: 220px;
 }
@@ -164,9 +182,16 @@
   border-top: 1px solid rgb(24 27 23 / 18%);
   padding-top: 16px;
 }
-.filter-fields > div + div {
-  border-top: 1px solid rgb(244 241 231 / 12%);
-  padding-top: 16px;
+.filter-fields {
+  gap: 24px;
+}
+.location-methods {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.location-methods > :only-child {
+  grid-column: 1 / -1;
 }
 .filter-fields button {
   min-height: 44px;
@@ -175,6 +200,10 @@
   box-shadow: inset 0 0 0 1px var(--color-ember);
 }
 .filter-editor {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgb(244 241 231 / 12%);
+  border-radius: 16px;
   background: var(--color-ink-soft);
 }
 .lobby-heading {
@@ -210,7 +239,7 @@
 }
 .lobby-search {
   min-width: 0;
-  padding: 10px clamp(12px, 2vw, 20px);
+  padding: 16px clamp(12px, 2vw, 20px);
   border-block: 1px solid rgb(244 241 231 / 14%);
 }
 .lobby-start,
@@ -254,8 +283,14 @@
 /* A code must fit its invite panel even when glyphs are wide or text is enlarged. */
 
 .filter-fields,
+.location-picker,
 .round-rule-fields {
   container-type: inline-size;
+}
+@container (min-width: 26rem) {
+  .location-methods {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
 }
 .filter-options {
   display: grid;

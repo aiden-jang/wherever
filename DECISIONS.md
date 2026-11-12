@@ -55,6 +55,16 @@ surface that requested it; canceling a native share sheet does not copy instead.
 Voting stays one column on phones and uses the adjacent rail on desktop. Only the
 active interactive card is mounted, so outgoing cards cannot retain gestures or
 focus. Details and keyboard controls offer the same choices as dragging.
+Keyboard votes focus their matching action, so a previously clicked button never
+looks selected after switching to keys. Undo goes back one card; another vote
+enables it again. The room persists and restores that eligibility across tabs and
+reconnects. V remains the deliberate veto shortcut; the down arrow scrolls.
+
+The landing example cycles quietly with stable controls, pauses during interaction
+or an open form, and stays manual with reduced motion. Automatic changes are not
+announced as votes. Compact cards omit photo-author overlays; the larger detail
+gallery opens on the selected photo and retains its author, available avatar/profile
+and individual Google Maps photo link.
 
 The winner is a dinner plan: ticket, tally, reasons, backups, directions, and a
 share action. Motion, synthesized sound, haptics, and display effects respect their

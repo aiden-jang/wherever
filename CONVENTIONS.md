@@ -27,6 +27,8 @@ vote budgets, and the result. A hidden control does not enforce a rule.
 
 Votes are keyed by participant and restaurant. Only dealt restaurants accept votes;
 undo removes the requesting participant's vote while a round is still active.
+Undo goes back one card; a new vote enables it again. Persist its eligibility so
+another tab or reconnect cannot expose an older vote for Undo.
 One super-like and one veto are allowed per person per round. Vetoes remove places
 from the ranking and never reveal who used them or which top choice was removed.
 Identified completion is sent only when the host enabled voter disclosure.

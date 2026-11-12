@@ -23,6 +23,8 @@ export function VoteControls({
       <div className="vote-main">
         <button
           data-deck-control
+          data-vote-action="left"
+          aria-keyshortcuts="ArrowLeft"
           type="button"
           disabled={disabled || detailsStatus === "pending"}
           onClick={() => onVote("left")}
@@ -32,6 +34,8 @@ export function VoteControls({
         </button>
         <button
           data-deck-control
+          data-vote-action="right"
+          aria-keyshortcuts="ArrowRight"
           type="button"
           disabled={disabled || Boolean(detailsStatus)}
           onClick={() => onVote("right")}
@@ -44,6 +48,8 @@ export function VoteControls({
       <div className="vote-special">
         <button
           data-deck-control
+          data-vote-action="veto"
+          aria-keyshortcuts="V"
           type="button"
           disabled={disabled || Boolean(detailsStatus)}
           aria-disabled={vetoUsed}
@@ -54,6 +60,8 @@ export function VoteControls({
         </button>
         <button
           data-deck-control
+          data-vote-action="super"
+          aria-keyshortcuts="ArrowUp"
           type="button"
           disabled={disabled || Boolean(detailsStatus)}
           aria-disabled={superUsed}

@@ -143,7 +143,7 @@ export function FilterSummary({
       </ul>
       <div id={editorId} hidden={!open || !editable}>
         {open && editable && (
-          <fieldset disabled={locked} className="filter-editor mt-3 min-w-0 border-t border-white/10 pt-4">
+          <fieldset disabled={locked} className="filter-editor min-w-0">
             <FilterFields
               filters={active}
               onChange={update}

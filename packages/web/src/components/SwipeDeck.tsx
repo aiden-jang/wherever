@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   line,
@@ -20,6 +20,7 @@ import { useAppBadge } from "../useAppBadge.js";
 
 import { ActiveSwipeCard } from "./ActiveSwipeCard.js";
 import { PrivateShortlist } from "./PrivateShortlist.js";
+import { useDeckKeys } from "./useDeckKeys.js";
 
 const HINT_KEY = "wherever:swipe-hint-seen";
 
@@ -50,6 +51,7 @@ export function SwipeDeck({
   demo = false,
   alreadyVoted = [],
   ballot = [],
+  undoAllowed,
   visited = [],
   superSpent = false,
   vetoSpent = false,
@@ -65,6 +67,7 @@ export function SwipeDeck({
   onLoadPlace: (id: string) => void;
   alreadyVoted?: string[];
   ballot?: BallotChoice[];
+  undoAllowed?: boolean;
   /** Where the group has already been, so a place out of cooldown says so instead of arriving as new. */
   visited?: VisitedPlace[];
   superSpent?: boolean;
@@ -97,11 +100,17 @@ export function SwipeDeck({
   const [superUsed, setSuperUsed] = useState(superSpent);
   const [vetoUsed, setVetoUsed] = useState(vetoSpent);
   const [choices, setChoices] = useState(ballot);
-  const canUndo = choices.length > 0;
+  const [undoAvailable, setUndoAvailable] = useState(undoAllowed ?? ballot.length > 0);
+  const undoAvailableRef = useRef(undoAvailable);
+  const canUndo = undoAvailable && choices.length > 0;
   useAppBadge(Math.max(0, restaurants.length - restoredVotes.size - choices.length));
   // The card whose full details are open in the sheet (null = closed). Tapping a card opens it;
   // it never blocks voting since a drag isn't a tap.
-  const [detail, setDetail] = useState<Restaurant | null>(null);
+  const [detail, setDetail] = useState<{ restaurant: Restaurant; photoIndex: number } | null>(null);
+
+  const openDetail = useCallback((restaurant: Restaurant, photoIndex = 0) => {
+    setDetail({ restaurant, photoIndex });
+  }, []);
 
   // A first swipe confirms the hint was understood; a timeout cannot establish that.
   const [showHint, setShowHint] = useState(() => {
@@ -159,6 +168,8 @@ export function SwipeDeck({
         veto: isVeto,
       };
       if (!onSwipe(choice)) return;
+      undoAvailableRef.current = true;
+      setUndoAvailable(true);
       const next = nextUnvoted(i);
       if (restaurants[next]?.detailsStatus === "pending") {
         document.activeElement?.closest("main")?.focus({ preventScroll: true });
@@ -191,16 +202,15 @@ export function SwipeDeck({
 
   const undoButton = useRef<HTMLButtonElement>(null);
   const undoLast = useCallback(() => {
-    if (disabled) return;
+    if (disabled || !undoAvailableRef.current) return;
     const previous = historyRef.current.at(-1);
     if (!previous || !onUndo(previous)) return;
     const previousIndex = restaurants.findIndex((restaurant) => restaurant.id === previous.restaurantId);
     if (previousIndex < 0) return;
     historyRef.current = historyRef.current.slice(0, -1);
-    if (
-      undoButton.current === document.activeElement &&
-      (historyRef.current.length === 0 || indexRef.current >= restaurants.length)
-    ) {
+    undoAvailableRef.current = false;
+    setUndoAvailable(false);
+    if (undoButton.current === document.activeElement) {
       undoButton.current?.closest("main")?.focus({ preventScroll: true });
     }
     indexRef.current = previousIndex;
@@ -213,52 +223,7 @@ export function SwipeDeck({
     if (back) onAnnounce?.(undoAnnouncement(back.name, previousIndex + 1, restaurants.length));
   }, [disabled, onUndo, onAnnounce, restaurants]);
 
-  // Desktop: arrow keys swipe. Suspended while the detail sheet is open so arrows don't vote the
-  // card behind it (the sheet has its own concerns, e.g. dismissing).
-  const keyHandler = useRef<(event: KeyboardEvent) => void>(() => undefined);
-  useLayoutEffect(() => {
-    keyHandler.current = (e: KeyboardEvent) => {
-      if (
-        disabled ||
-        detail ||
-        e.defaultPrevented ||
-        e.isComposing ||
-        e.repeat ||
-        e.altKey ||
-        e.shiftKey ||
-        (e.target instanceof HTMLElement &&
-          e.target.closest(
-            'input, textarea, select, button:not([data-deck-control]), a, [contenteditable]:not([contenteditable="false"])',
-          )) ||
-        window.getSelection()?.isCollapsed === false ||
-        !(e.target instanceof HTMLElement && e.target.closest("#main-content")) ||
-        Boolean(e.target.closest("[data-card-info]"))
-      )
-        return;
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() !== "z") return;
-      if ((e.key === "Backspace" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z")) && canUndo) {
-        e.preventDefault();
-        undoLast();
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        commit("left");
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        commit("right");
-      } else if (e.key === "ArrowUp" && !superUsed) {
-        e.preventDefault();
-        commit("right", true);
-      } else if (e.key.toLowerCase() === "v" && !vetoUsed) {
-        e.preventDefault();
-        commit("left", false, true);
-      }
-    };
-  }, [canUndo, commit, detail, disabled, superUsed, undoLast, vetoUsed]);
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => keyHandler.current(event);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  useDeckKeys({ disabled, detailOpen: Boolean(detail), canUndo, superUsed, vetoUsed, commit, undoLast });
 
   const done = index >= restaurants.length;
   const waitingLine = useLine("waiting");
@@ -301,12 +266,19 @@ export function SwipeDeck({
           <p className="mt-2 text-muted">{waitingLine}</p>
           {undoControl}
           {choices.length > 0 && (
-            <PrivateShortlist liked={likedChoices} restaurants={restaurants} onOpen={setDetail} />
+            <PrivateShortlist liked={likedChoices} restaurants={restaurants} onOpen={openDetail} />
           )}
         </div>
         {/* Waiting on other people is exactly when their progress is worth looking at. */}
         {aside && <div className={RAIL}>{aside}</div>}
-        {detail && <RestaurantDetail restaurant={detail} demo={demo} onClose={() => setDetail(null)} />}
+        {detail && (
+          <RestaurantDetail
+            restaurant={detail.restaurant}
+            initialPhotoIndex={detail.photoIndex}
+            demo={demo}
+            onClose={() => setDetail(null)}
+          />
+        )}
       </div>
     );
   }
@@ -325,7 +297,7 @@ export function SwipeDeck({
             restaurant={active}
             revisit={revisitNote(visited, active.id)}
             onCommit={commit}
-            onOpenDetail={setDetail}
+            onOpenDetail={openDetail}
           />
         </div>
         <VoteControls
@@ -365,7 +337,14 @@ export function SwipeDeck({
         {aside}
       </div>
 
-      {detail && <RestaurantDetail restaurant={detail} demo={demo} onClose={() => setDetail(null)} />}
+      {detail && (
+        <RestaurantDetail
+          restaurant={detail.restaurant}
+          initialPhotoIndex={detail.photoIndex}
+          demo={demo}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   );
 }

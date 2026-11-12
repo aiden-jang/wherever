@@ -104,3 +104,9 @@ history. Use synthetic data and remove private information from shared evidence.
 Location editing keeps the current town until a new result or “Near me” is chosen.
 Cancel closes the editor without changing the room’s location. Create and join
 forms retain visible field labels after typing.
+
+Voting regressions cover one-step Undo across tabs/reconnects, preservation of
+earlier special votes, and focus when switching between pointer and keyboard votes.
+Photo cases check that compact cards omit author overlays and the larger gallery
+opens the selected photo with its matching attribution and source. Landing cases
+cover quiet cycling, stable controls, interaction pauses and reduced motion.

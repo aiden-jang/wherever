@@ -3,6 +3,7 @@ import { readDeck, readDemoMode } from "./deckSource.js";
 import { sendTo } from "./roomSockets.js";
 import { readRoundNumber, readVotes, socketIdentity, type SessionMeta } from "./roomState.js";
 import type { RoomPlaces } from "./roomPlaces.js";
+import { undoBlocked, type UndoState } from "./undoState.js";
 
 export function ownBallot(votes: Vote[], participantId: string): BallotChoice[] {
   return votes
@@ -28,12 +29,13 @@ export async function sendResumedDeck(
   participantId: string,
   lazyPlaces: boolean,
 ): Promise<boolean> {
-  const [deck, votes, roundId, demo, deadline] = await Promise.all([
+  const [deck, votes, roundId, demo, deadline, undo] = await Promise.all([
     readDeck(storage),
     readVotes(storage),
     readRoundNumber(storage),
     readDemoMode(storage),
     storage.get<number>("roundEndsAt"),
+    storage.get<UndoState>("undoState"),
   ]);
   if (!(await currentRound(storage, roundId))) return false;
   const mine = ownBallot(votes, participantId);
@@ -50,6 +52,7 @@ export async function sendResumedDeck(
     restaurants,
     alreadyVoted,
     ballot: mine,
+    canUndo: mine.length > 0 && !undoBlocked(undo, roundId).includes(participantId),
     superUsed: mine.some((vote) => vote.super),
     vetoUsed: mine.some((vote) => vote.veto),
     ...(behindBy > 0 ? { behindBy } : {}),

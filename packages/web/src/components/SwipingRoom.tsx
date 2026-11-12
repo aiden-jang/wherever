@@ -105,6 +105,7 @@ export function SwipingRoom({
               onLoadPlace={loadPlace}
               alreadyVoted={alreadyVoted}
               ballot={ballot}
+              undoAllowed={state.canUndo}
               visited={visited}
               superSpent={superUsed}
               vetoSpent={vetoUsed}

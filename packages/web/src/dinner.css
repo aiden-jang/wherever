@@ -230,9 +230,6 @@
   background: var(--color-ink);
   color: var(--color-cream);
 }
-.vote-main button:hover {
-  transform: translateY(-2px);
-}
 .vote-main button:active {
   transform: scale(0.96);
 }

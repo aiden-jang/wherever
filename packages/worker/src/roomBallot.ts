@@ -3,6 +3,7 @@ import { attachmentsOn, broadcastTo, sendTo } from "./roomSockets.js";
 import { readRoundNumber, socketIdentity, type SessionMeta, type VoteMap } from "./roomState.js";
 import { ownBallot } from "./roundResume.js";
 import { assertRoomLive } from "./sessionRetention.js";
+import { undoBlocked, type UndoState } from "./undoState.js";
 
 export async function changeBallot(
   ctx: DurableObjectState,
@@ -31,12 +32,19 @@ export async function changeBallot(
     const votes = (await storage.get<VoteMap>("votes")) ?? {};
     const key = `${participantId}:${restaurantId}`;
     const own = ownBallot(Object.values(votes), participantId);
+    const blocked = undoBlocked(await storage.get<UndoState>("undoState"), roundId);
     const last = own.at(-1);
     const undoMatches =
+      !blocked.includes(participantId) &&
       last?.restaurantId === restaurantId &&
       (expectedChoiceId === undefined || (last.choiceId ?? null) === expectedChoiceId);
     if (choice ? Boolean(votes[key]) : !undoMatches) {
-      return { roundId, choices: own, conflict: true } as const;
+      return {
+        roundId,
+        choices: own,
+        canUndo: own.length > 0 && !blocked.includes(participantId),
+        conflict: true,
+      } as const;
     }
 
     if (choice) {
@@ -49,7 +57,13 @@ export async function changeBallot(
         ...(choice.direction === "left" && choice.veto && !own.some((v) => v.veto) ? { veto: true } : {}),
       };
     } else delete votes[key];
-    await storage.put("votes", votes);
+    await storage.put({
+      votes,
+      undoState: {
+        roundId,
+        blocked: choice ? blocked.filter((id) => id !== participantId) : [...blocked, participantId],
+      } satisfies UndoState,
+    });
     const accepted = votes[key];
     const adjusted =
       choice &&
@@ -59,6 +73,7 @@ export async function changeBallot(
       meta,
       roundId,
       choices: ownBallot(Object.values(votes), participantId),
+      canUndo: Boolean(choice),
       accepted,
       adjusted,
     } as const;
@@ -74,6 +89,7 @@ export async function changeBallot(
       type: "ballot",
       roundId: result.roundId,
       choices: result.choices,
+      canUndo: result.canUndo,
       ...(socket === ws && result.conflict ? { conflict: true } : {}),
     });
   }

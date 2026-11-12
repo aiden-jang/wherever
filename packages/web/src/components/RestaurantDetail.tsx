@@ -26,10 +26,12 @@ const actionClass =
 export function RestaurantDetail({
   restaurant,
   demo,
+  initialPhotoIndex = 0,
   onClose,
 }: {
   restaurant: Restaurant;
   demo: boolean;
+  initialPhotoIndex?: number;
   onClose: () => void;
 }) {
   useScrollLock();
@@ -93,7 +95,7 @@ export function RestaurantDetail({
             </svg>
           </button>
         </div>
-        <RestaurantGallery key={restaurant.id} restaurant={restaurant} />
+        <RestaurantGallery key={restaurant.id} restaurant={restaurant} initialIndex={initialPhotoIndex} />
 
         <div className="p-5">
           <h2 tabIndex={-1} className="font-display text-3xl font-bold leading-tight">

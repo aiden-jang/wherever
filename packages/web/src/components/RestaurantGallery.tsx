@@ -5,17 +5,20 @@ import { RestaurantPhoto } from "./RestaurantPhoto.js";
 export function RestaurantGallery({
   restaurant,
   className = "",
+  initialIndex = 0,
 }: {
   restaurant: Restaurant;
   className?: string;
+  initialIndex?: number;
 }) {
   const photos = restaurant.photos?.length
     ? restaurant.photos
     : restaurant.imageUrl
       ? [restaurant.imageUrl]
       : [];
-  const [index, setIndex] = useState(0);
-  const current = Math.min(index, Math.max(0, photos.length - 1));
+  const [index, setIndex] = useState(initialIndex);
+  const current = Math.max(0, Math.min(index, photos.length - 1));
+  const source = restaurant.photoMapsUris?.[photos[current] ?? ""];
   return (
     <div
       className={`restaurant-gallery ${className}`}
@@ -40,6 +43,11 @@ export function RestaurantGallery({
         category={restaurant.category}
         className="detail-photo"
       />
+      {source && (
+        <a href={source} target="_blank" rel="noopener noreferrer" className="gallery-source">
+          View photo on Google Maps
+        </a>
+      )}
       {photos.length > 1 && (
         <>
           <button

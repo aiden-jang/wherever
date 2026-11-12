@@ -10,7 +10,11 @@ export interface GooglePlace {
   /** Enum string: PRICE_LEVEL_FREE | _INEXPENSIVE | _MODERATE | _EXPENSIVE | _VERY_EXPENSIVE. */
   priceLevel?: string;
   formattedAddress?: string;
-  photos?: { name: string; authorAttributions?: { displayName?: string; uri?: string }[] }[];
+  photos?: {
+    name: string;
+    googleMapsUri?: string;
+    authorAttributions?: { displayName?: string; uri?: string; photoUri?: string }[];
+  }[];
   currentOpeningHours?: { openNow?: boolean; weekdayDescriptions?: string[] };
   googleMapsUri?: string;
   websiteUri?: string;
@@ -147,7 +151,14 @@ export function mapGooglePlace(
       (photo.authorAttributions ?? []).flatMap((author) => {
         if (!author.displayName) return [];
         const url = author.uri?.startsWith("//") ? `https:${author.uri}` : author.uri;
-        return [{ name: author.displayName, ...(url?.startsWith("https://") ? { url } : {}) }];
+        const avatarUrl = author.photoUri?.startsWith("//") ? `https:${author.photoUri}` : author.photoUri;
+        return [
+          {
+            name: author.displayName,
+            ...(url?.startsWith("https://") ? { url } : {}),
+            ...(avatarUrl?.startsWith("https://") ? { avatarUrl } : {}),
+          },
+        ];
       }),
     ]),
   );
@@ -168,6 +179,11 @@ export function mapGooglePlace(
     id: p.id,
     source: "google",
     photoCredits,
+    photoMapsUris: Object.fromEntries(
+      photos.flatMap((photo, index) =>
+        photo.googleMapsUri?.startsWith("https://") ? [[photoUrls[index]!, photo.googleMapsUri]] : [],
+      ),
+    ),
     name: p.displayName?.text ?? "Unknown spot",
     category: p.primaryTypeDisplayName?.text ?? "Food",
     priceTier: (p.priceLevel ? GOOGLE_PRICE_TIER[p.priceLevel] : undefined) ?? 2,

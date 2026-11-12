@@ -28,7 +28,7 @@ export function RestaurantPhoto({
 
   return (
     <div
-      className={`flex items-center justify-center ${thumbnail ? "overflow-hidden text-2xl" : "text-7xl"} ${className}`}
+      className={`relative flex items-center justify-center ${thumbnail ? "overflow-hidden text-2xl" : "text-7xl"} ${className}`}
       style={{ background: showImage ? undefined : s.gradient }}
     >
       {showImage ? (
@@ -45,9 +45,10 @@ export function RestaurantPhoto({
             onError={() => setFailedUrl(imageUrl)}
           />
           {credits && credits.length > 0 && (
-            <span className="absolute bottom-1 left-1 max-w-[90%] rounded bg-black/90 px-2 py-1 text-xs text-white">
+            <span className="photo-credits absolute bottom-1 left-1 rounded bg-black/90 px-2 py-1 text-xs text-white">
               {credits.map((credit) => (
-                <span className="mr-2" key={credit.name}>
+                <span className="mr-2 inline-flex items-center gap-1.5" key={credit.name}>
+                  {credit.avatarUrl && <img src={credit.avatarUrl} alt="" className="h-6 w-6 rounded-full" />}
                   {credit.url ? (
                     <a
                       href={credit.url}

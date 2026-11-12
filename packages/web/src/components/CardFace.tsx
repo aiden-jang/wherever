@@ -25,12 +25,7 @@ export function CardFace({
   return (
     <>
       <div data-card-photo className="relative">
-        <RestaurantPhoto
-          imageUrl={photoUrl ?? null}
-          credits={restaurant.photoCredits?.[photoUrl ?? ""]}
-          category={restaurant.category}
-          className="table-photo"
-        />
+        <RestaurantPhoto imageUrl={photoUrl ?? null} category={restaurant.category} className="table-photo" />
         {photoCount > 1 && (
           <button
             type="button"

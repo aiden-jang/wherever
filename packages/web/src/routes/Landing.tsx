@@ -279,7 +279,7 @@ export default function Landing({ needsRoomReload }: { needsRoomReload: () => bo
           <p className="landing-footnote">No accounts. Just names and questionable taste.</p>
         </section>
         <section aria-label="Interactive example of restaurant voting">
-          <LandingPreview />
+          <LandingPreview suspended={modal !== null} />
         </section>
       </div>
       <section className="landing-how" aria-label="How it works">

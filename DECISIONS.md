@@ -52,6 +52,11 @@ surface that requested it; canceling a native share sheet does not copy instead.
 
 ## Interface choices
 
+The lobby opens group preferences above the host’s dinner filters. Both sections
+can still collapse, and guests keep access to their own preferences without editing
+shared filters. A neighborhood selection closes its choices, retains the selected
+label and returns focus to that control. The landing demo cycles every three seconds.
+
 Voting stays one column on phones and uses the adjacent rail on desktop. Only the
 active interactive card is mounted, so outgoing cards cannot retain gestures or
 focus. Details and keyboard controls offer the same choices as dragging.

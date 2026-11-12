@@ -19,7 +19,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
-const advance = (milliseconds = 6500) => act(() => vi.advanceTimersByTime(milliseconds));
+const advance = (milliseconds = 3000) => act(() => vi.advanceTimersByTime(milliseconds));
 it("quietly cycles example cards while keeping vote controls in place", () => {
   render(<LandingPreview />);
   const yes = screen.getByRole("button", { name: "Yes, please" });

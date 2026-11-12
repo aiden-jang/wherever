@@ -28,9 +28,10 @@ export function LocationPicker({
   const [editing, setEditing] = useState(false);
   const searchField = useRef<HTMLInputElement>(null);
   const changeButton = useRef<HTMLButtonElement>(null);
+  const neighborhoodsButton = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [nycOpen, setNycOpen] = useState(() => NEIGHBORHOODS.some((n) => n.value === filters.area));
+  const [nycOpen, setNycOpen] = useState(false);
 
   const latest = useRef({ filters, onChange });
   const request = useRef(0);
@@ -64,7 +65,9 @@ export function LocationPicker({
   function select(next: SessionFilters) {
     stopSearch();
     setEditing(false);
+    setNycOpen(false);
     onChange(next);
+    if (next.area) requestAnimationFrame(() => neighborhoodsButton.current?.focus());
   }
 
   const nearMe =
@@ -105,7 +108,6 @@ export function LocationPicker({
         return;
       }
       select({ ...latest.current.filters, ...position, area: undefined, locationLabel: undefined });
-      setNycOpen(false);
     } finally {
       if (version === request.current) setSearchPending(false);
     }
@@ -132,7 +134,6 @@ export function LocationPicker({
         locationLabel: hit.label,
         area: undefined,
       });
-      setNycOpen(false);
       requestAnimationFrame(() => changeButton.current?.focus());
     } catch (error) {
       if (version === request.current)
@@ -178,6 +179,7 @@ export function LocationPicker({
         )}
         <button
           type="button"
+          ref={neighborhoodsButton}
           aria-expanded={nycOpen}
           aria-controls={neighborhoodsId}
           onClick={toggleNeighborhoods}
@@ -186,7 +188,7 @@ export function LocationPicker({
           <span className="flex min-w-0 flex-wrap items-center gap-2">
             <span>
               {activeNeighborhood ? "NYC neighborhoods" : nycOpen ? "Back to ZIP or town" : "Explore NYC"}
-            </span>
+            </span>{" "}
             {activeNeighborhood && (
               <span className="shrink-0 rounded-full bg-acid px-2 py-0.5 text-xs font-bold text-ink">
                 {activeNeighborhood.label}

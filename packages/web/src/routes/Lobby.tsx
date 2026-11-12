@@ -287,11 +287,21 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
       <div className="table-layout table-lobby">
         <div className="lobby-main">
           <RoomInvite code={code} />
+          <details className="lobby-preferences table-panel" open>
+            <summary className="text-sm font-semibold">Group preferences</summary>
+            <VibeDial
+              disabled={starting || status !== "open"}
+              counts={vibeCounts}
+              mine={myVibe}
+              groupSize={count}
+              onPick={(vibe) => send({ type: "set_vibe", vibe })}
+            />
+          </details>
           <FilterSummary
             filters={session.filters}
             editable={isHost}
             locked={starting || status !== "open"}
-            initiallyOpen={state.roundId > 0 && isHost}
+            initiallyOpen={isHost}
             onSavingChange={setSavingFilters}
             onChange={(filters) => send({ type: "set_filters", filters })}
             locationStatus={locationStatus}
@@ -342,16 +352,6 @@ function LobbyRoom({ code, displayName }: { code: string; displayName: string })
           </div>
         </div>
         <div className="min-w-0">
-          <details className="lobby-preferences table-panel">
-            <summary className="text-sm font-semibold">Group preferences</summary>
-            <VibeDial
-              disabled={starting || status !== "open"}
-              counts={vibeCounts}
-              mine={myVibe}
-              groupSize={count}
-              onPick={(vibe) => send({ type: "set_vibe", vibe })}
-            />
-          </details>
           <HowItWorks />
         </div>
       </div>

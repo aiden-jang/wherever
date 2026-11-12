@@ -187,7 +187,7 @@ async function setup(page, name) {
     await page.getByRole("textbox", { name: "Dinner plan to copy" }).waitFor();
   }
   if (name === "filters") {
-    await page.getByRole("button", { name: /Edit dinner filters/ }).click();
+    await page.getByRole("button", { name: "Done editing", exact: true }).waitFor();
     await page.getByRole("button", { name: /House rules/ }).click();
   }
   if (name === "details") await page.locator("[data-card-info]").click();

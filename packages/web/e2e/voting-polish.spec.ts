@@ -44,7 +44,7 @@ test("the landing preview cycles quietly, can pause, and stays still with reduce
   const yes = preview.getByRole("button", { name: "Yes, please", exact: true });
   await expect(preview.getByRole("heading", { name: "Late Night Pizza Decisions" })).toBeVisible();
   const before = await yes.boundingBox();
-  await page.clock.fastForward(7000);
+  await page.clock.fastForward(3500);
   await expect(preview.getByRole("heading", { name: "Noodle Situation" })).toBeVisible();
   expect((await yes.boundingBox())!.y).toBeCloseTo(before!.y, 0);
   await preview.getByRole("button", { name: "Pause preview" }).click();

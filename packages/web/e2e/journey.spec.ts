@@ -79,9 +79,14 @@ test("a second person joins and participates in a shared anonymous round", async
   });
   const code = await createRoom(page);
   const start = page.getByRole("button", { name: "Start swiping", exact: true });
+  const roomCode = page.getByRole("button", { name: `Copy room code ${code}` });
+  await roomCode.scrollIntoViewIfNeeded();
+  await expect(roomCode).toBeInViewport({ ratio: 1 });
+  const searchArea = page.getByRole("heading", { name: "Search area" });
+  await searchArea.scrollIntoViewIfNeeded();
+  await expect(searchArea).toBeInViewport({ ratio: 1 });
+  await start.scrollIntoViewIfNeeded();
   await expect(start).toBeInViewport({ ratio: 1 });
-  await expect(page.getByRole("heading", { name: "Search area" })).toBeInViewport({ ratio: 1 });
-  await expect(page.getByRole("button", { name: `Copy room code ${code}` })).toBeInViewport({ ratio: 1 });
   await expect(page.getByRole("button", { name: "Invite the group" })).toHaveCSS("min-height", "44px");
   const guest = await browser.newContext({
     baseURL: new URL(page.url()).origin,
@@ -279,7 +284,7 @@ test("enlarged text and stronger contrast keep phone filters usable", async ({ p
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "20px";
   });
-  await page.getByRole("button", { name: /Edit dinner filters/ }).click();
+  await expect(page.getByRole("button", { name: "Done editing" })).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("button", { name: "Change", exact: true }).click();
   const query = page.getByRole("textbox", { name: "ZIP code or town" });
   await query.fill("Brooklyn");

@@ -128,7 +128,7 @@ test("a guest can return to a finished group without losing their chance to vote
 test("the host can edit the search in the same room after exhausting new places", async ({ page }) => {
   await createRoom(page);
   const roomUrl = page.url();
-  await button(page, "Edit dinner filters").click();
+  await expect(button(page, "Done editing")).toHaveAttribute("aria-expanded", "true");
   await page.getByText("10 mi", { exact: true }).click();
   await page.getByRole("button", { name: /Pizza/ }).click();
   await button(page, "Done editing").click();

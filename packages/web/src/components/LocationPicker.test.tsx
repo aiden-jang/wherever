@@ -1,4 +1,5 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_FILTERS } from "@wherever/shared";
 import { LocationPicker } from "./LocationPicker.js";
@@ -9,6 +10,29 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 describe("location search", () => {
+  it("keeps the selected neighborhood collapsed and closes the choices after a new selection", async () => {
+    function Picker() {
+      const [filters, setFilters] = useState({ ...DEFAULT_FILTERS, area: "west-village" });
+      return (
+        <LocationPicker
+          filters={filters}
+          onChange={(next) => setFilters({ ...next, area: next.area ?? "" })}
+        />
+      );
+    }
+    render(<Picker />);
+    const selected = screen.getByRole("button", { name: "NYC neighborhoods West Village" });
+    expect(selected.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("group", { name: "NYC neighborhoods" })).toBeNull();
+    fireEvent.click(selected);
+    fireEvent.click(screen.getByRole("button", { name: "Williamsburg" }));
+    const updated = screen.getByRole("button", { name: "NYC neighborhoods Williamsburg" });
+    expect(updated.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("group", { name: "NYC neighborhoods" })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(updated));
+    fireEvent.click(updated);
+    expect(screen.getByRole("button", { name: "Williamsburg" }).getAttribute("aria-pressed")).toBe("true");
+  });
   it("distinguishes an unavailable search from a place with no matches", async () => {
     vi.mocked(geocode).mockRejectedValue(new Error("Location search is unavailable. Try again shortly."));
     render(<LocationPicker filters={DEFAULT_FILTERS} onChange={vi.fn()} />);

@@ -68,7 +68,7 @@ export function LandingPreview({ suspended = false }: { suspended?: boolean }) {
           direction: -1,
           manual: false,
         })),
-      6500,
+      3000,
     );
     return () => clearTimeout(timer);
   }, [reduce, paused, hovered, focused, visible, suspended, frame.index]);

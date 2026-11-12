@@ -114,7 +114,8 @@ test("a resumed deck requests only the visible card and waits before enabling vo
 
 test("the selected group preference stays readable", async ({ page }) => {
   await createRoom(page);
-  await page.getByText("Group preferences", { exact: true }).click();
+  await expect(page.locator(".lobby-preferences")).toHaveAttribute("open", "");
+  await expect(page.getByRole("button", { name: "Done editing" })).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("button", { name: /^quick/ }).click();
   await expect(page.getByText("The deck prioritizes quick places within your dinner filters.")).toBeVisible();
   await audit(page);
